@@ -1,0 +1,167 @@
+[![mcta](https://img.shields.io/pypi/v/mcta?style=flat-square)](https://pypi.org/project/mcta/)
+[![mcta](https://img.shields.io/pypi/pyversions/mcta?style=flat-square)](https://pypi.org/project/mcta/)
+[![mcta](https://img.shields.io/pypi/l/mcta?style=flat-square)](https://pypi.org/project/mcta/)
+[![mcta](https://img.shields.io/pypi/dm/mcta?style=flat-square)](https://pypi.org/project/mcta/)
+[![mcta](https://img.shields.io/pypi/wheel/mcta?style=flat-square)](https://pypi.org/project/mcta/)
+[![mcta](https://img.shields.io/github/last-commit/lkccrr/mcta?style=flat-square)](https://github.com/lkccrr/mcta)
+[![mcta](https://img.shields.io/github/release-date/lkccrr/mcta?style=flat-square)](https://github.com/lkccrr/mcta)
+
+### Meta Crystal Toolkit & Analysis (mcta)
+
+* Install (Python &ge; 3.9; core dependencies: `numpy`, `matplotlib`, `ase`):
+```bash
+pip install mcta                          # plotting tools only
+pip install "mcta[seeker]"                # + mt.seeker (pymatgen, mp-api, scikit-learn, joblib, openai)
+pip install "mcta[skl]"                   # + mt.skl (scikit-learn, joblib)
+pip install "mcta[sqs]"                   # + mt.sqs (sqsgenerator)
+pip install "mcta[mc]"                    # + mt.mc (numba)
+pip install "mcta[all]"                   # all : seeker + skl + sqs + mc
+```
+Every extra is optional: the core install stays small and only the tools that need them ask for one (`mt.seeker` &rarr; `mcta[seeker]`, `mt.skl` &rarr; `mcta[skl]`, `mt.sqs` &rarr; `mcta[sqs]`, `mt.mc` &rarr; `mcta[mc]`).
+***
+<b style="color:blue;"><i>mt</b></i> prints an overview, checks the current directory and suggests the next command.
+***
+<b style="color:blue;"><i>mt.band</b></i> — VASP output is the default data source, `vaspkit` is optional
+* `-i` takes a directory (default: current). VASP output (`EIGENVAL` / `DOSCAR` / `PROCAR`) is preferred, otherwise `BAND.dat` / `PBAND*.dat` / `PDOS*.dat` are used.
+* `-i` alone plots bands, `-i -d` adds the DOS panel on the right sharing the vertical energy axis, `-d` alone plots the DOS only (for a standalone figure with energy on the horizontal axis use `mt.dos`); `-r -p Mo-d` adds projected bands (needs `PROCAR`, `LORBIT = 11`); `-D -d` spin-polarized mirror plot (`--no-mirror` to keep both positive); `-m` effective masses from `EIGENVAL`; two or three directories compare calculations.
+* Energies are shifted to the Fermi level (`--no-shift` keeps raw values); k-path labels come from `KPOINTS`/`KLABELS` or are computed automatically; `--export-dat DIR` dumps vaspkit-style `.dat` files.
+* Some runs (e.g. HSE hybrids) do the SCF mesh and the band path in one calculation: in `EIGENVAL` / `vasprun.xml` the mesh k points carry a non-zero weight and the path points a weight of 0. Only the zero-weight path points are plotted (the `PROCAR` projections are re-indexed to match), `--keep-weights` keeps every k point. vaspkit `.dat` files are already cleaned, so they are used as they are.
+```bash
+mt.band                               # bands of the current directory
+mt.band -i calc_PBE -l g m k g        # given directory, VASP or .dat auto-detected
+mt.band -i calc_PBE -d -z             # bands + DOS (DOSCAR or PDOS*.dat)
+mt.band -i calc_PBE -r -p Mo-d        # projected bands from PROCAR
+mt.band -i calc_PBE -D -d             # spin polarized: up/down panels + mirror DOS
+mt.band -i calc_PBE -m 0.15           # effective masses from EIGENVAL
+mt.band -i calc_PBE calc_HSE          # compare calculations
+mt.band -i BAND.dat -d PDOS*.dat      # vaspkit .dat route
+mt.band -i calc_HSE --keep-weights    # keep the weighted k points as well
+```
+***
+<b style="color:blue;"><i>mt.dos</b></i> — DOS / PDOS as a standalone figure, energy on the horizontal axis
+* Same data as `mt.band`: `DOSCAR` (needs `LORBIT = 11`) or vaspkit `PDOS*.dat` / `TDOS*.dat`; `-i` takes a directory or the `.dat` files, default: current directory.
+* Default orientation is **energy on the x axis**, DOS on the y axis. `-n` exchanges the axes (energy vertical), which is the orientation used by the `mt.band -d` panel.
+* `-p` picks the projections (`s p d`, `Mo-d`, `all`), `-e` renames the legend, `-x` sets the DOS range, `-y` the energy window, `-z` fills the curves, `--no-mirror` keeps the spin-down DOS positive.
+```bash
+mt.dos -i calc                       # DOS from DOSCAR / PDOS*.dat (energy on x)
+mt.dos -i calc -p d -x 0 30          # d-orbital PDOS with a fixed DOS range
+mt.dos -i calc -o PDOS.png -z        # filled curves
+mt.dos -i calc -n                    # energy vertical (mt.band -d orientation)
+```
+***
+<b style="color:blue;"><i>mt.phband</i></b> — phonon band structure (and the DOS panel next to it)
+* `-i` takes `BAND.dat` written by `phonopy-bandplot --gnuplot` (default: `BAND.dat`); `-l` labels the high-symmetry points, `-y` sets the frequency window.
+* `-d [FILE]` adds the phonon DOS panel on the right, sharing the vertical frequency axis (`projected_dos.dat` / `total_dos.dat`, auto-detected when no file is given); for a standalone phonon DOS figure with frequency on the horizontal axis use `mt.phdos`.
+* `-B start end` breaks the axis for the optical branches; two or three files are compared side by side.
+```bash
+mt.phband -h                                                    # all parameters
+mt.phband -i BAND.dat -o BAND.png -l g m k g -d projected_dos.dat -z
+mt.phband -B 23 100 -l g m k g -y -2 110                        # broken axis
+mt.phband -i BAND1.dat BAND2.dat -B 20 100                      # several files
+```
+***
+<b style="color:blue;"><i>mt.phdos</b></i> — phonon DOS as a standalone figure, frequency on the horizontal axis
+* Reads `projected_dos.dat` or `total_dos.dat` (written by `mt.ph dos`); `-i` takes a directory or the `.dat` file, default: current directory.
+* Default orientation is **frequency on the x axis**, DOS on the y axis. `-n` exchanges the axes (frequency vertical), which is the orientation used by the `mt.phband -d` panel.
+* `-e` renames the legend, `-x` sets the DOS range, `-y` the frequency window, `-z` fills the curves.
+```bash
+mt.phdos                             # DOS of the current directory
+mt.phdos -i calc -z                  # filled curves
+mt.phdos -i calc -x 0 0.6            # fix the DOS range
+mt.phdos -i calc -n                  # frequency vertical (mt.phband -d orientation)
+```
+***
+<b style="color:blue;"><i>mt.ph</b></i> — phonopy workflow helper
+* `mt.ph -b -d` writes <b style="color:darkred;"><i>band.conf</i></b> + <b style="color:darkred;"><i>mesh.conf</i></b> (names via `-B` / `-D`). Without `-b`/`-d` it walks the phonopy steps one by one (supercell &rarr; force constants &rarr; band &rarr; DOS), printing and confirming each command; `-Y` runs without asking, `-y` only prints. `B` + Enter goes back one level, `Q` + Enter quits.
+* The unit cell file is auto-detected (`POSCAR-unitcell` &rarr; `CONTCAR` &rarr; `POSCAR`), or give `-c FILE`.
+* By default the <b style="color:blue;">phonopy v4+</b> commands are used (`phonopy-init` for setup steps, `phonopy_params.yaml` for band/DOS); add `-O` to use the legacy (v3) forms instead.
+* `-n` values (for the force-extraction step, implied by `-n` alone) may be directories, `vasprun.xml` suffixes or brace ranges; `dir-{001..003}` stays compact and bash expands it.
+```bash
+mt.ph                                           # supercell step (default; -s 2 2 1 sets DIM)
+mt.ph -b -d --band "0 0 0 0.5 0 0 0.5 0.5 0.5 0 0 0" --labels "G X M G"
+mt.ph supercell -s 2 2 1 -c POSCAR-unitcell     # explicit supercell
+mt.ph -r                                        # force constants from ./vasprun.xml
+mt.ph -n 001-003                                # extract forces -> phonopy-init -f vasprun.xml-{001..003}
+mt.ph band                                      # band.conf -> band.yaml -> BAND.dat
+mt.ph dos --total                               # mesh.conf -> projected_dos.dat (+ total_dos.dat)
+mt.ph -O -y supercell -s 2 2 1                  # preview the legacy v3 command only
+```
+
+| Option | Meaning | Default |
+|---|---|---|
+| `-c FILE` | unit cell file | auto-detected |
+| `-s N [N ...]` | supercell `DIM`, 1-3 integers (`2x2x1`, `(2,2,1)` also accepted) | `1 1 1` |
+| `-r [FILE]` | forces source; alone runs `fc`; with `-n` the forces file name inside each directory | `vasprun.xml` |
+| `-n NAME [NAME ...]` | directories / `vasprun.xml` suffixes / ranges for the `f` step | &mdash; |
+| `-b` / `-d` | write `band.conf` / `mesh.conf` only | &mdash; |
+| `-B` / `-D` | names written by `-b` / `-d` | `band.conf` / `mesh.conf` |
+| `--band` / `--labels` / `--points` / `--mp` | `BAND` path, labels, points, mesh used with `-b` / `-d` | built-in, `20 20 20` |
+| `-O` / `-Y` / `-y` | legacy v3 commands / run without asking / print only | &mdash; |
+***
+<b style="color:blue;"><i>mt.seeker</b></i> — Materials Project retrieval and curation
+
+Retrieves crystal structures from the **Materials Project**, writes CIF / POSCAR / JSON and packs them into bundles ready for `scp` to a server (with optional INCAR / KPOINTS / slurm templates). Local structures can be filtered, deduplicated and re-exported. No calculations are executed locally. Special quasirandom structures (SQS) from a custom unit cell is handled by the separate `mt.sqs` tool.
+
+Set the API key once (free account at https://next-gen.materialsproject.org):
+
+```bash
+mkdir -p ~/.config/mcta
+echo 'MP_API_KEY=your-key' >> ~/.config/mcta/config
+chmod 600 ~/.config/mcta/config
+# or: export MP_API_KEY=... (lookup order: env -> $MT_SEEKER_CONFIG -> the file above -> ./mcseeker.conf)
+```
+
+Typical usage:
+
+```bash
+mt.seeker --offline                                  # offline self-check, no key needed
+mt.seeker -c Ti-C -k 3 -n ti-c                       # search by chemsys, export top 3
+mt.seeker -f MoS2 -k 5 -F cif,poscar                 # search by formula
+mt.seeker -I mp-149 mp-2658                          # or give mp_ids directly
+mt.seeker -c Cr-I -k 2 --job-template                # + INCAR/KPOINTS/slurm templates
+mt.seeker -t "find 2D candidates in Cr-I" -p deepseek  # natural language (needs mcta[seeker])
+mt.seeker -L                                         # list previous bundles
+
+# local curation (dedup, filter, diversity, top-up)
+mt.seeker -d                                         # dataset summary
+mt.seeker -w "ehull<=0.05 and is_2d and has('Mn')"   # rule filter (-y previews only)
+mt.seeker -r -D 8 -o my-pick                         # dedup + pick 8 most dissimilar
+mt.seeker -T 5 -c Mn-P-S                             # download 5 more structures
+```
+
+Each bundle lands in `exports/<name>/` (`structures/<id>/`, `manifest.csv` with 14 columns, `README.md`, `results/`) plus `exports/<name>.tar.gz`. Upload with `scp exports/<name>.tar.gz user@server:~/calc/`.
+
+Short options are case-sensitive: `-t` task vs `-T` top-up, `-r` dedup vs `-R` refresh. `mt.seeker -h` prints the full option list; LLM engines (`-p openai/deepseek/qwen/glm/kimi/siliconflow/gemini/openrouter/ollama/vllm`, any OpenAI-compatible endpoint) and all `MT_SEEKER_*` environment variables are documented there and in the code (`mcta/seeker/config.py`).
+***
+<b style="color:blue;"><i>mt.sqs</b></i> — special quasirandom structures from a custom unit cell
+
+mt.sqs reads a POSCAR / CONTCAR / CIF / JSON, expands it to a supercell, and randomises a single sublattice into a quasirandom solid solution with a specified target composition (objective: weighted sum of pair-correlation deviations, smaller = closer to perfect randomness). The engine is `sqsgenerator` (C++ + Python), no network access required.
+
+```bash
+mt.sqs -c cell.vasp -a "Cu:0.5,Au:0.5" -x 4,4,4 -n cuau-sqs
+mt.sqs -c LaAlO3.cif --host La -a "La:0.5,Sr:0.5" -x 2,2,2     # A-site only
+mt.sqs -c cell.vasp -a Cu,Au --iterations 1000 --number 5 -y   # dry-run: no disk write
+```
+
+SQS bundles additionally contain `sqs.json` and `sqs_summary.csv`. `mt.sqs -h` lists every flag and default. The algorithm lives in `mcta.seeker.sqs`; the rest of `mt.seeker` no longer pulls in sqsgenerator.
+***
+<b style="color:blue;"><i>mt.mc</b></i> — Monte Carlo simulation of the phase transition in 2D/3D magnetic materials (merged from `spins2`)
+* `mt.mc` runs a Metropolis Monte Carlo simulation of the Ising model on square, triangular and bilayer lattices (`-c square|triangular|bilayer-aa|bilayer-ab|bilayer-ab-u-3`) and writes a `.log` file with magnetization, susceptibility and specific heat per temperature.
+* `-x/-y/-z` lattice size (default 64&times;64), `-e/-w` equilibration and sampling sweeps (default 1000/1000), `-t` temperature list (default 35), `-p/-j/-k` exchange couplings in meV, `-a` single-ion anisotropy in meV, `-i` initial state (`fm`, `afm1`...`afm5`, `random`), `-n` number of threads, `-r` plot the result when the run finishes, `-o FILE` plot an existing `.log`, `-f` image format (png/pdf/svg/jpg/tif), `-l` legend.
+* The kernels are compiled with `numba`, an optional dependency: `pip install "mcta[mc]"`. Without it `mt.mc` prints how to install it and stops; the other `mt` tools are unaffected.
+```bash
+mt.mc -h
+mt.mc -x 100 -y 100 -e 200 -w 1000 -t 35 -r
+mt.mc -c bilayer-ab -a 0.1 -t 0 60 2                 # 0-60 K in 2 K steps
+mt.mc -o square_Ising_64_64.log -f pdf               # re-plot a finished run
+```
+***
+<b style="color:blue;"><i>mt.sh</b></i> — run bash helper scripts by short name
+* `mt.sh NAME [args...]` executes script `NAME` with bash and forwards the arguments unchanged, e.g. `mt.sh xy POSCAR` runs `xy.sh POSCAR`. The exit code of the script is returned.
+* Script lookup order: the current directory (`./NAME.sh`, local overrides first) &rarr; directories listed in `$MTSH_SCRIPTS` (colon/semicolon-separated) &rarr; the scripts bundled with the package (`mcta/sh/scripts/`).
+* Bare `mt.sh` (or `mt.sh -l`) lists every script found with a one-line description taken from the first comment line.
+* Bundled scripts (VASP workflow helpers, best run on Linux/WSL; Windows needs Git Bash on PATH and the scripts use `sed`/`awk`/`bc`):
+
+## Citation
+
+Structure data comes from the Materials Project: A. Jain et al., *APL Materials* 1, 011002 (2013).
