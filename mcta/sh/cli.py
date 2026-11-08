@@ -21,7 +21,10 @@ from pathlib import Path
 from mcta import __version__
 
 BUILTIN_DIR = Path(__file__).resolve().parent / "scripts"
-SUFFIXES = (".sh")          # 允许的脚本后缀； NAME 不带后缀时逐个尝试
+# 允许的脚本后缀。必须是元组：写成字符串 ".sh" 时 for s in SUFFIXES 会
+# 逐字符遍历，得到 '.', 's', 'h'，于是 "mt.sh x" 去找的是 x. / xs / xh，
+# 找不到 x.sh。
+SUFFIXES = (".sh",)         # NAME 不带后缀时逐个尝试
 
 
 def search_dirs():

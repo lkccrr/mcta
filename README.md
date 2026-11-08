@@ -10,12 +10,12 @@
 
 * Install (Python &ge; 3.9; core dependencies: `numpy`, `matplotlib`, `ase`):
 ```bash
-pip install mcta                          # plotting tools only
-pip install "mcta[seeker]"                # + mt.seeker (pymatgen, mp-api, scikit-learn, joblib, openai)
-pip install "mcta[skl]"                   # + mt.skl (scikit-learn, joblib)
-pip install "mcta[sqs]"                   # + mt.sqs (sqsgenerator)
-pip install "mcta[mc]"                    # + mt.mc (numba)
-pip install "mcta[all]"                   # all : seeker + skl + sqs + mc
+pip install mcta                      # plotting tools only
+pip install "mcta[seeker]"            # + mt.seeker (pymatgen, mp-api, openai); also enables mt.skl
+pip install "mcta[skl]"               # + mt.skl (scikit-learn, joblib)
+pip install "mcta[sqs]"               # + mt.sqs (sqsgenerator)
+pip install "mcta[mc]"                # + mt.mc (numba)
+pip install "mcta[all]"               # all : seeker + skl + sqs + mc
 ```
 Every extra is optional: the core install stays small and only the tools that need them ask for one (`mt.seeker` &rarr; `mcta[seeker]`, `mt.skl` &rarr; `mcta[skl]`, `mt.sqs` &rarr; `mcta[sqs]`, `mt.mc` &rarr; `mcta[mc]`).
 ***
@@ -81,22 +81,12 @@ mt.ph                                           # supercell step (default; -s 2 
 mt.ph -b -d --band "0 0 0 0.5 0 0 0.5 0.5 0.5 0 0 0" --labels "G X M G"
 mt.ph supercell -s 2 2 1 -c POSCAR-unitcell     # explicit supercell
 mt.ph -r                                        # force constants from ./vasprun.xml
-mt.ph -n 001-003                                # extract forces -> phonopy-init -f vasprun.xml-{001..003}
+mt.ph -n 001-003                                # phonopy-init -f vasprun.xml-{001..003}
 mt.ph band                                      # band.conf -> band.yaml -> BAND.dat
 mt.ph dos --total                               # mesh.conf -> projected_dos.dat (+ total_dos.dat)
 mt.ph -O -y supercell -s 2 2 1                  # preview the legacy v3 command only
 ```
 
-| Option | Meaning | Default |
-|---|---|---|
-| `-c FILE` | unit cell file | auto-detected |
-| `-s N [N ...]` | supercell `DIM`, 1-3 integers (`2x2x1`, `(2,2,1)` also accepted) | `1 1 1` |
-| `-r [FILE]` | forces source; alone runs `fc`; with `-n` the forces file name inside each directory | `vasprun.xml` |
-| `-n NAME [NAME ...]` | directories / `vasprun.xml` suffixes / ranges for the `f` step | &mdash; |
-| `-b` / `-d` | write `band.conf` / `mesh.conf` only | &mdash; |
-| `-B` / `-D` | names written by `-b` / `-d` | `band.conf` / `mesh.conf` |
-| `--band` / `--labels` / `--points` / `--mp` | `BAND` path, labels, points, mesh used with `-b` / `-d` | built-in, `20 20 20` |
-| `-O` / `-Y` / `-y` | legacy v3 commands / run without asking / print only | &mdash; |
 ***
 <b style="color:blue;"><i>mt.seeker</b></i> — Materials Project retrieval and curation
 
@@ -108,25 +98,25 @@ Set the API key once (free account at https://next-gen.materialsproject.org):
 mkdir -p ~/.config/mcta
 echo 'MP_API_KEY=your-key' >> ~/.config/mcta/config
 chmod 600 ~/.config/mcta/config
-# or: export MP_API_KEY=... (lookup order: env -> $MT_SEEKER_CONFIG -> the file above -> ./mcseeker.conf)
+# or: export MP_API_KEY=... (lookup order: env -> $MT_SEEKER_CONFIG -> the file above -> ./mt.seeker.conf)
 ```
 
 Typical usage:
 
 ```bash
-mt.seeker --offline                                  # offline self-check, no key needed
-mt.seeker -c Ti-C -k 3 -n ti-c                       # search by chemsys, export top 3
-mt.seeker -f MoS2 -k 5 -F cif,poscar                 # search by formula
-mt.seeker -I mp-149 mp-2658                          # or give mp_ids directly
-mt.seeker -c Cr-I -k 2 --job-template                # + INCAR/KPOINTS/slurm templates
+mt.seeker --offline                                    # offline self-check, no key needed
+mt.seeker -c Ti-C -k 3 -n ti-c                         # search by chemsys, export top 3
+mt.seeker -f MoS2 -k 5 -F cif,poscar                   # search by formula
+mt.seeker -I mp-149 mp-2658                            # or give mp_ids directly
+mt.seeker -c Cr-I -k 2 --job-template                  # + INCAR/KPOINTS/slurm templates
 mt.seeker -t "find 2D candidates in Cr-I" -p deepseek  # natural language (needs mcta[seeker])
-mt.seeker -L                                         # list previous bundles
+mt.seeker -L                                           # list previous bundles
 
 # local curation (dedup, filter, diversity, top-up)
-mt.seeker -d                                         # dataset summary
-mt.seeker -w "ehull<=0.05 and is_2d and has('Mn')"   # rule filter (-y previews only)
-mt.seeker -r -D 8 -o my-pick                         # dedup + pick 8 most dissimilar
-mt.seeker -T 5 -c Mn-P-S                             # download 5 more structures
+mt.seeker -d                                           # dataset summary
+mt.seeker -w "ehull<=0.05 and is_2d and has('Mn')"     # rule filter (-y previews only)
+mt.seeker -r -D 8 -o my-pick                           # dedup + pick 8 most dissimilar
+mt.seeker -T 5 -c Mn-P-S                               # download 5 more structures
 ```
 
 Each bundle lands in `exports/<name>/` (`structures/<id>/`, `manifest.csv` with 14 columns, `README.md`, `results/`) plus `exports/<name>.tar.gz`. Upload with `scp exports/<name>.tar.gz user@server:~/calc/`.
@@ -148,12 +138,18 @@ SQS bundles additionally contain `sqs.json` and `sqs_summary.csv`. `mt.sqs -h` l
 <b style="color:blue;"><i>mt.mc</b></i> — Monte Carlo simulation of the phase transition in 2D/3D magnetic materials (merged from `spins2`)
 * `mt.mc` runs a Metropolis Monte Carlo simulation of the Ising model on square, triangular and bilayer lattices (`-c square|triangular|bilayer-aa|bilayer-ab|bilayer-ab-u-3`) and writes a `.log` file with magnetization, susceptibility and specific heat per temperature.
 * `-x/-y/-z` lattice size (default 64&times;64), `-e/-w` equilibration and sampling sweeps (default 1000/1000), `-t` temperature list (default 35), `-p/-j/-k` exchange couplings in meV, `-a` single-ion anisotropy in meV, `-i` initial state (`fm`, `afm1`...`afm5`, `random`), `-n` number of threads, `-r` plot the result when the run finishes, `-o FILE` plot an existing `.log`, `-f` image format (png/pdf/svg/jpg/tif), `-l` legend.
+* `-t` accepts several forms: `-t 35` (0&ndash;34 K), `-t 20 25` (every integer from 20 to 25 K), `-t 20 26 2` (20, 22, 24, 26 K &mdash; start, stop, step) and `-t 20 25 30` (three separate temperatures, used when the step would be larger than the range). Several ranges can be chained: `-t 20 26 2 30 40 2`.
 * The kernels are compiled with `numba`, an optional dependency: `pip install "mcta[mc]"`. Without it `mt.mc` prints how to install it and stops; the other `mt` tools are unaffected.
 ```bash
 mt.mc -h
 mt.mc -x 100 -y 100 -e 200 -w 1000 -t 35 -r
-mt.mc -c bilayer-ab -a 0.1 -t 0 60 2                 # 0-60 K in 2 K steps
-mt.mc -o square_Ising_64_64.log -f pdf               # re-plot a finished run
+mt.mc -x 128 -y 128 -t 0 40 2 -R 6 --seed 42 -r        # 6 chains in parallel, reproducible
+mt.mc -x 64 -y 64 -t 20 40 2 --swap 20 --seed 42 -r    # replica exchange
+mt.mc -c triangular -t 0 60 2 --seed 42 -r             # any configuration, multi-core
+mt.mc -c bilayer-ab -t 0 60 2 --swap 20 --seed 42 -r   # any configuration, replica exchange
+mt.mc -c square -a 0.1 -t 20 40 2 --seed 42 -r         # vector spins with anisotropy
+mt.mc -c square -t 20 25 30 --seed 42 -r               # three separate temperatures
+mt.mc -o square_Ising_64_64.log -f pdf                 # re-plot a finished run
 ```
 ***
 <b style="color:blue;"><i>mt.sh</b></i> — run bash helper scripts by short name
@@ -161,6 +157,13 @@ mt.mc -o square_Ising_64_64.log -f pdf               # re-plot a finished run
 * Script lookup order: the current directory (`./NAME.sh`, local overrides first) &rarr; directories listed in `$MTSH_SCRIPTS` (colon/semicolon-separated) &rarr; the scripts bundled with the package (`mcta/sh/scripts/`).
 * Bare `mt.sh` (or `mt.sh -l`) lists every script found with a one-line description taken from the first comment line.
 * Bundled scripts (VASP workflow helpers, best run on Linux/WSL; Windows needs Git Bash on PATH and the scripts use `sed`/`awk`/`bc`):
+* Strain scans: `mt.sh x|y|xy [POSCAR] [NPOINTS] [STEP]` rescales the lattice vectors of a POSCAR and writes one directory per strain value. `NPOINTS` is the number of points on **each** side of zero (default 4, so 2&times;N points in total, zero itself excluded) and `STEP` is the strain increment (default 0.01). The result lands in `x/`, `y/` or `xy/`, each holding `<factor>/POSCAR` where `factor = 1 + k*STEP` (`k` from `-N`&hellip;`-1` and `1`&hellip;`N`).
+
+```bash
+mt.sh x                    # x strain: x/0.960 ... x/1.040 (8 points, step 0.01)
+mt.sh y POSCAR 2 0.02      # y strain, 2 points per side, step 0.02
+mt.sh xy POSCAR            # x and y strained together
+```
 
 ## Citation
 
