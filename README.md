@@ -98,7 +98,8 @@ Set the API key once (free account at https://next-gen.materialsproject.org):
 mkdir -p ~/.config/mcta
 echo 'MP_API_KEY=your-key' >> ~/.config/mcta/config
 chmod 600 ~/.config/mcta/config
-# or: export MP_API_KEY=... (lookup order: env -> $MT_SEEKER_CONFIG -> the file above -> ./mt.seeker.conf)
+# or: export MP_API_KEY=...
+#(lookup order: env -> $MT_SEEKER_CONFIG -> the file above -> ./mt.seeker.conf)
 ```
 
 Typical usage:
@@ -158,11 +159,13 @@ mt.mc -o square_Ising_64_64.log -f pdf                 # re-plot a finished run
 * Bare `mt.sh` (or `mt.sh -l`) lists every script found with a one-line description taken from the first comment line.
 * Bundled scripts (VASP workflow helpers, best run on Linux/WSL; Windows needs Git Bash on PATH and the scripts use `sed`/`awk`/`bc`):
 * Strain scans: `mt.sh x|y|xy [POSCAR] [NPOINTS] [STEP]` rescales the lattice vectors of a POSCAR and writes one directory per strain value. `NPOINTS` is the number of points on **each** side of zero (default 4, so 2&times;N points in total, zero itself excluded) and `STEP` is the strain increment (default 0.01). The result lands in `x/`, `y/` or `xy/`, each holding `<factor>/POSCAR` where `factor = 1 + k*STEP` (`k` from `-N`&hellip;`-1` and `1`&hellip;`N`).
+* `kb`: `mt.sh kb [POSCAR] [a [b [c]]] [OUT]` expands the structure `a&times;b&times;c` times with ASE and writes `SPOSCAR` (VASP 5 format, direct coordinates, species sorted). Arguments are read left to right: the first token is the input file unless it is a natural number (then the input defaults to `POSCAR`); up to three natural numbers are the multipliers, missing ones default to 1 (`2` &rarr; 2&times;1&times;1, `2 3` &rarr; 2&times;3&times;1, none &rarr; 1&times;1&times;1); a fourth token after three multipliers is the output file name (default `SPOSCAR`). `POSCAR` may be anything ASE can read (POSCAR, CONTCAR, `*.cif`). The interpreter is resolved automatically: `$PYTHON` if set, otherwise the first `python3` / conda-environment python that can `import ase` (no manual `conda activate` needed); if none works it prints a one-line error instead of a traceback.
 
 ```bash
 mt.sh x                    # x strain: x/0.960 ... x/1.040 (8 points, step 0.01)
 mt.sh y POSCAR 2 0.02      # y strain, 2 points per side, step 0.02
 mt.sh xy POSCAR            # x and y strained together
+mt.sh kb POSCAR 2 2 1      # POSCAR -> SPOSCAR (2x2x1)
 ```
 
 ## Citation

@@ -52,6 +52,44 @@ def _fixed_width_row(line):
     return [_num(v) for v in values]
 
 
+def _procar_values(line, ncols):
+    """取 PROCAR 离子行里的数值，返回 ``[离子编号, 轨道1..轨道n, tot]``。
+
+    VASP 用 Fortran 定宽输出，**数字之间没有空格**；数值变大时（如
+    1000.00000 占满列宽）相邻数字还会粘在一起，空白切分完全失效。
+    所以这里按列宽切：列宽 = (行宽 - 前缀) / (轨道数 + 1)，多出来的那
+    一列是表头末尾的 tot。
+
+    前缀（离子编号所在处）的长度在不同版本/工具里不一样（"    1" 是 5
+    字符，"   1" 是 4 字符），所以两种都试，取能成功解析的那个。
+
+    空格分隔的变体由 :func:`_row` 先处理，这里只是定宽时的兜底。
+    """
+    body = line.rstrip()
+    total = ncols + 1                       # 各轨道 + tot
+    for prefix in (5, 4):
+        width = (len(body) - prefix) / float(total)
+        if width < 8 or width > 20:         # 不像定宽数值列
+            continue
+        try:
+            ion = float(body[:prefix].strip())
+        except ValueError:
+            continue
+        out = [ion]
+        ok = True
+        for i in range(total):
+            start = prefix + int(round(i * width))
+            end = prefix + int(round((i + 1) * width))
+            try:
+                out.append(_num(body[start:end].strip()))
+            except ValueError:
+                ok = False
+                break
+        if ok:
+            return out
+    return None
+
+
 def _is_float(token):
     try:
         _num(token)
@@ -185,10 +223,14 @@ def read_eigenval(path):
     with open(path, "r", errors="ignore") as handle:
         lines = handle.read().splitlines()
 
+    # 表头是 "NBANDS NIONS NKPTS NELECT"（VASP 5）或 "NELECT NKPTS NBANDS"
+    # （VASP 6），只有 4 个整数。标准 EIGENVAL 的表头就在**第 1 行**，所以
+    # 不能要求它出现在第 5 行之后——数据行里的数都是浮点数，不会被误判成
+    # 表头。这里在前 12 行里找第一个"全是整数且至少 3 个"的行。
     header, start = None, None
     for index, line in enumerate(lines[:12]):
         tokens = line.split()
-        if index >= 4 and len(tokens) >= 3 and all(_INT.match(t) for t in tokens):
+        if len(tokens) >= 3 and all(_INT.match(t) for t in tokens):
             header = [int(t) for t in tokens]
             start = index + 1
             break
@@ -196,8 +238,10 @@ def read_eigenval(path):
         raise ValueError("%s 表头无法识别，可能不是 EIGENVAL" % path)
 
     if len(header) >= 4:
-        nbands, nkpts, nelect = header[1], header[2], header[3]
+        # VASP 5：NBANDS NIONS NKPTS NELECT
+        nbands, nkpts, nelect = header[0], header[2], header[3]
     else:
+        # VASP 6：NELECT NKPTS NBANDS
         nelect, nkpts, nbands = header[:3]
 
     kpoints, weights, blocks = [], [], []
@@ -464,16 +508,34 @@ def read_procar(path):
 
     返回 ``{"blocks": {(ik, ib): [array(nions, n_orb), ...]},
     "orbitals": [...], "nspin": 1|2}``；具有两个离子块即自旋极化。
+
+    真实 VASP 的 PROCAR 结构是::
+
+        ion      s     py     pz     px    dxy    dyz    dz2    dxz    dx2    tot
+            1  0.100  0.200 ...                                    1.000
+            2  ...
+
+    注意 "tot" 只是**表头的最后一列**（每行末尾的总权重数值），并没有
+    单独一行 "tot"。所以一个离子块的结束要看下一处结构性标记：新的
+    "ion" 表头行，或者 "band" / "k-point" 行；单独一行 "tot" 的写法
+    也一并兼容。
     """
     blocks, orbitals = {}, []
     kweights = {}
     current, atoms = None, []
     ik = ib = -1
+
+    def flush():
+        """把当前累积的离子块存下来。"""
+        if current is not None and atoms:
+            blocks.setdefault((ik, ib), []).append(np.array(atoms))
+
     with open(path, "r", errors="ignore") as handle:
         for line in handle:
             stripped = line.lstrip()
             lowered = stripped.lower()
             if lowered.startswith("k-point"):
+                flush()
                 tokens = stripped.split()
                 try:
                     ik = int(tokens[1]) - 1
@@ -487,6 +549,7 @@ def read_procar(path):
                         pass
                 current = None
             elif lowered.startswith("band"):
+                flush()
                 tokens = stripped.split()
                 try:
                     ib = int(tokens[1]) - 1
@@ -494,23 +557,28 @@ def read_procar(path):
                     ib += 1
                 current = None
             elif lowered.startswith("ion"):
+                flush()
                 names = stripped.split()[1:]
-                if names and names[-1].lower() == "tot":
+                if names and names[-1].lower() == 'tot':
                     names = names[:-1]
                 orbitals = names
                 atoms = []
                 current = atoms
             elif lowered.startswith("tot"):
-                if current is not None and atoms:
-                    blocks.setdefault((ik, ib), []).append(np.array(atoms))
+                flush()
                 current = None
             elif current is not None:
                 values = _row(stripped)
-                if len(values) >= 2:
+                if len(values) < len(orbitals) + 1:
+                    # 定宽输出（数字间无空格，或数值大到粘连）时，
+                    # 空白切分读不出来，改按列宽切。
+                    values = _procar_values(stripped, len(orbitals)) or []
+                if len(values) >= len(orbitals) + 1:
                     row = values[1:len(orbitals) + 1]
                     if len(row) < len(orbitals):
                         row = row + [0.0] * (len(orbitals) - len(row))
                     atoms.append(row)
+    flush()
     nspin = max((len(v) for v in blocks.values()), default=1)
     return {"blocks": blocks, "orbitals": orbitals, "nspin": nspin,
             "kweights": kweights}

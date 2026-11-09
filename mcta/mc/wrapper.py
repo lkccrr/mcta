@@ -30,14 +30,9 @@ temperatures = 35
 
 multi-core (works for every configuration):
 -R  number of independent chains; the statistics are averaged over the chains.
-    Default: the same as the thread count. The extra chains cost almost no
-    wall-clock time but give a much better error estimate. On a machine with
-    only one physical core it falls back to a single chain.
+    Default: the same as the thread count.
 -n  maximum number of threads (0 = automatic). Default: a little over half
-    of the physical cores (e.g. 4 on a 6-core machine) -- filling every core
-    measured slower, because the two hyperthreads of a core share one
-    execution unit and this kernel is memory bound. The threads and the
-    chains share one thread pool, so they never fight over the cores.
+    of the physical cores (e.g. 4 on a 6-core machine).
 --seed  fix the random numbers: the result no longer depends on the thread count
 --swap  replica exchange (parallel tempering): one chain per temperature, the
     configurations of neighbouring temperatures are exchanged every N sweeps so

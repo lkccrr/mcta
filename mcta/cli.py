@@ -124,8 +124,8 @@ TOOLS = (
     {
         "key": "sh",
         "name": "mt.sh",
-        "what": "执行内置/本地 bash 脚本",
-        "source": "当前目录、$MTSH_SCRIPTS 或随包分发的 scripts/ 目录",
+        "what": "执行内置*.sh脚本",
+        "source": "随包分发的 scripts/ 目录脚本",
         "examples": (
             ("mt.sh", "列出可用脚本及来源"),
             ("mt.sh xy", "执行内置 xy.sh（参数原样转给脚本）"),
