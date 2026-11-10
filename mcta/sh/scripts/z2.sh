@@ -1,5 +1,5 @@
 #!/bin/bash
-# z2：ASE 格式转换器
+# z2：ASE 格式转换
 #   z2 IN [OUT]
 #     IN   输入结构文件（ASE 能读的格式均可）
 #     OUT  可选：扩展名(.cif / cif / .xyz …) 或完整路径；省略默认 .cif

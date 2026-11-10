@@ -7,7 +7,6 @@
 # 赝势目录查找优先级：
 #   1. 环境变量 PBE_PATH / LDA_PATH / GGA_PATH（按此次序检查）
 #   2. ~/.config/mcta/config 里同名 KEY=VALUE
-#   3. 当前目录下 pot_path（旧兼容）
 
 PO=sh.sh; [ -f "$PO" ] || PO="$(dirname "${BASH_SOURCE[0]}")/sh.sh"
 

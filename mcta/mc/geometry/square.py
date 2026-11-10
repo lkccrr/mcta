@@ -31,10 +31,7 @@ NL, NB = 2, 8          # 层数、每层块数
 def _neighbors_of(f, g):
     """返回 (f, g) 这个 cell 的 12 个邻居。
 
-    每个邻居是 (目标层, 目标块, dj, di, 通道)。这里逐条对应
-    原 spins2 实现 mcta/mc/ising/square_update.py 的 update3 里的
-    能量表达式（该子包已被本架构取代并删除；同样的公式作为参考实现
-    保留在 tests/test_geometry_tables.py 里）。
+    每个邻居是 (目标层, 目标块, dj, di, 通道)。
     """
     go = 1 - g
     f2 = f % 2
@@ -164,7 +161,7 @@ def _groups():
     return out
 
 
-def build(X, Y):
+def build(X, Y, Z=None):
     """生成方格晶格的表。
 
     参数

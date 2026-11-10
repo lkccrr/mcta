@@ -5,10 +5,6 @@
 
 这个构型与 bilayer-ab 的块索引规则相同，但耦合更少：
 J1 把 J1_ 的两个邻居也包进来，所以只有 3 条通道。
-
-每条邻居都对照原 spins2 实现 mcta/mc/ising/bilayer_ab_u_3_update.py
-的 update3 列出（该子包已被本架构取代并删除；参考实现保留在
-tests/test_geometry_tables.py 里）。
 """
 
 import numpy as np
@@ -183,7 +179,7 @@ def _groups():
     return out
 
 
-def build(X, Y):
+def build(X, Y, Z=None):
     """生成双层 AB (S=3/2) 晶格的表。"""
     X_s, Y_s = X // 2, Y // 2
     nbr_cell, nbr_dj, nbr_di, nbr_ch, nbr_ptr = _build()

@@ -500,7 +500,7 @@ def _observables(Nw, Ew, groups, val, factor, arrays_T2, num):
 
 
 def run(lattice, file, init, J, arrays_temperatures, nequilibrium, nworks,
-        replicas=1, seed=None, swap=0):
+        chains=1, seed=None, swap=0):
     """用给定的表跑一次 Ising 蒙特卡洛。
 
     参数
@@ -511,7 +511,7 @@ def run(lattice, file, init, J, arrays_temperatures, nequilibrium, nworks,
     J                耦合常数列表，按 ``lattice.channels`` 的顺序
     arrays_temperatures  温度列表 (K)
     nequilibrium, nworks  平衡 / 采样 sweep 数
-    replicas         独立链数（多核加速）
+    chains         独立链数（多核加速）
     seed             随机数种子，给定则可复现
     swap             replica exchange 的交换间隔（0 = 关闭）
     """
@@ -533,6 +533,9 @@ def run(lattice, file, init, J, arrays_temperatures, nequilibrium, nworks,
         "configuration:", lattice.name, "lattice dimensions:",
         lattice.X, lattice.Y, "iterations:", nequilibrium, nworks,
         "Atom number:", num))
+    logger.info("{} {:<8} {} {:<8}".format(
+        "init:", init, "parameters(meV):",
+        " ".join("%g" % c for c in coup)))
 
     groups = lattice.groups.get(init)
     if groups is None:
@@ -551,15 +554,15 @@ def run(lattice, file, init, J, arrays_temperatures, nequilibrium, nworks,
         return
 
     logger.info("{} {:<8} {}".format(
-        "chains:", replicas,
+        "chains:", chains,
         "seed:" if seed is not None else "seed: random"))
-    latts = np.zeros((replicas, ncell, Y_s, X_s), dtype=np.int8)
-    for r in range(replicas):
+    latts = np.zeros((chains, ncell, Y_s, X_s), dtype=np.int8)
+    for r in range(chains):
         latts[r] = lattice.initial_state(init)
-    Nw_all = np.zeros((replicas, nworks, ncell))
-    Ew_all = np.zeros((replicas, nworks))
-    Ecur = np.zeros(replicas)
-    seeds = _chain_seeds(seed, replicas, rng)
+    Nw_all = np.zeros((chains, nworks, ncell))
+    Ew_all = np.zeros((chains, nworks))
+    Ecur = np.zeros(chains)
+    seeds = _chain_seeds(seed, chains, rng)
     sweep_id = 0
 
     _log_header(logger, groups, single, latts[0])
@@ -567,7 +570,7 @@ def run(lattice, file, init, J, arrays_temperatures, nequilibrium, nworks,
     for i in range(lav):
         t0 = time.time()
         val = arrays_values[i]
-        vals = np.full(replicas, val)
+        vals = np.full(chains, val)
         # 每个温度重新开始计数：旧实现每个温度都会重新生成随机数，
         # 这里保持一致，让同一个 seed 的结果可复现
         sweep_id = 0
@@ -600,7 +603,7 @@ def _random_directions(rng, shape):
 
 
 def run_vector(lattice, file, init, J, A, arrays_temperatures, nequilibrium,
-               nworks, replicas=1, seed=None, swap=0):
+               nworks, chains=1, seed=None, swap=0):
     """用给定的表跑一次矢量自旋（经典 Heisenberg 型）蒙特卡洛。
 
     参数与 :func:`run` 相同，另外：
@@ -626,6 +629,9 @@ def run_vector(lattice, file, init, J, A, arrays_temperatures, nequilibrium,
         "configuration:", lattice.name, "lattice dimensions:",
         lattice.X, lattice.Y, "iterations:", nequilibrium, nworks,
         "Atom number:", num))
+    logger.info("{} {:<8} {} {:<8}".format(
+        "init:", init, "parameters(meV):",
+        " ".join("%g" % c for c in coup)))
     logger.info("{} {:<8} {} {:<8} {:<8} {:<8}".format(
         "init:", init, "parameters(meV):",
         " ".join("%g" % c for c in coup), "anisotropy:", "%g" % Aa))
@@ -647,7 +653,7 @@ def run_vector(lattice, file, init, J, A, arrays_temperatures, nequilibrium,
         return st
 
     logger.info("{} {:<8} {}".format(
-        "chains:", replicas,
+        "chains:", chains,
         "seed:" if seed is not None else "seed: random"))
 
     if swap > 0 and lav >= 2:
@@ -658,13 +664,13 @@ def run_vector(lattice, file, init, J, A, arrays_temperatures, nequilibrium,
                                      swap, rng, seed)
         return
 
-    latts = np.zeros((replicas, ncell, Y_s, X_s, 3), dtype=np.float32)
-    for r in range(replicas):
+    latts = np.zeros((chains, ncell, Y_s, X_s, 3), dtype=np.float32)
+    for r in range(chains):
         latts[r] = make_state()
-    Nw_all = np.zeros((replicas, nworks, ncell))
-    Ew_all = np.zeros((replicas, nworks))
-    Ecur = np.zeros(replicas)
-    seeds = _chain_seeds(seed, replicas, rng)
+    Nw_all = np.zeros((chains, nworks, ncell))
+    Ew_all = np.zeros((chains, nworks))
+    Ecur = np.zeros(chains)
+    seeds = _chain_seeds(seed, chains, rng)
     sweep_id = 0
 
     _log_header(logger, groups, single, latts[0])
@@ -672,7 +678,7 @@ def run_vector(lattice, file, init, J, A, arrays_temperatures, nequilibrium,
     for i in range(lav):
         t0 = time.time()
         val = arrays_values[i]
-        vals = np.full(replicas, val)
+        vals = np.full(chains, val)
         sweep_id = 0
         # 随机取向提议：每个 sweep 重新随机
         chunk = 32
@@ -680,7 +686,7 @@ def run_vector(lattice, file, init, J, A, arrays_temperatures, nequilibrium,
             done = 0
             while done < nsteps:
                 n = min(chunk, nsteps - done)
-                las = _random_directions(rng, (replicas, n, ncell, Y_s, X_s, 3))
+                las = _random_directions(rng, (chains, n, ncell, Y_s, X_s, 3))
                 sweeps_vector(latts, las, seeds, vals, sweep_id, n, X_s, Y_s,
                               coup, Aa, Ab, lattice.nbr_cell, lattice.nbr_dj,
                               lattice.nbr_di, lattice.nbr_ch, lattice.nbr_ptr,
@@ -701,7 +707,7 @@ def _run_replica_exchange_vector(logger, lattice, init, coup, Aa, Ab, make_state
     nT = len(arrays_values)
     X_s, Y_s = lattice.X_s, lattice.Y_s
     ncell = lattice.ncell
-    logger.info("{} {:<8} {} {}".format("replicas:", nT, "swap every:",
+    logger.info("{} {:<8} {} {}".format("chains:", nT, "swap every:",
                                          "%d sweeps" % swap))
     latts = np.zeros((nT, ncell, Y_s, X_s, 3), dtype=np.float32)
     for t in range(nT):
@@ -784,7 +790,7 @@ def _run_replica_exchange(logger, lattice, init, coup, arrays_values,
     nT = len(arrays_values)
     X_s, Y_s = lattice.X_s, lattice.Y_s
     ncell = lattice.ncell
-    logger.info("{} {:<8} {} {}".format("replicas:", nT, "swap every:",
+    logger.info("{} {:<8} {} {}".format("chains:", nT, "swap every:",
                                          "%d sweeps" % swap))
     latts = np.zeros((nT, ncell, Y_s, X_s), dtype=np.int8)
     for t in range(nT):

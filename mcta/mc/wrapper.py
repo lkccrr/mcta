@@ -20,6 +20,7 @@ triangular            fm, afm1, afm2, afm3                  Ja, Jb, Jc
 bilayer-aa            fm, afm1, afm2, afm3                  J0, J1, Ja
 bilayer-ab            fm, afm1, afm2, afm3, afm4, afm5      J0, J1, Ja, Jb, J1_
 bilayer-ab-u-3        fm, afm1, afm2, afm3                  J0, J1, Ja
+simple-cubic          fm, afm1, afm2                        Ja, Jb, Jc
 
 default values:
 x, y, z = 64, 64, 64
@@ -28,49 +29,33 @@ exchange coupling (meV) = 1.0
 single-ion anisotropy (meV) = 0.1
 temperatures = 35
 
-multi-core (works for every configuration):
--R  number of independent chains; the statistics are averaged over the chains.
-    Default: the same as the thread count.
--n  maximum number of threads (0 = automatic). Default: a little over half
-    of the physical cores (e.g. 4 on a 6-core machine).
---seed  fix the random numbers: the result no longer depends on the thread count
---swap  replica exchange (parallel tempering): one chain per temperature, the
-    configurations of neighbouring temperatures are exchanged every N sweeps so
-    that the low-temperature runs do not get stuck. Use it when the machine has
-    few cores, or to speed up a long low-temperature scan.
-
-note: the geometry of every configuration is stored as a data table; the
-      simulation engine only reads that table, so a new atomic arrangement
-      needs a new table generator only.
-
 Example:
-mt.mc -x 100 -y 100 -e 2000 -w 5000 -n 8 -t 35 -r
-mt.mc -x 128 -y 128 -t 0 40 2 -R 6 --seed 42 -r
-mt.mc -x 64 -y 64 -t 0 60 2 --swap 10 --seed 42 -r   # replica exchange
+mt.mc -x 100 -y 100 -e 2000 -w 5000 -N 8 -t 35 -r
+mt.mc -x 128 -y 128 -t 0 40 2 -C 6 -S 42 -r
 ''',
     formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('-h', '-H', "--help",     action="help",        help='show this help message and exit')
     parser.add_argument('-v', '-V', "--version",  action="version",     version=version_string())
-    parser.add_argument('-n', "--np",           type=int,   default=0   , help="numba 线程数，默认取物理核数")
-    parser.add_argument('-R', "--replicas",     type=int,   default=0   , help="并行推进的独立链数（多核加速），0 表示与线程数相同")
-    parser.add_argument("--seed",               type=int,   default=None, help="随机数种子，给定后结果可复现")
-    parser.add_argument("--swap",               type=int,   default=0   , help="replica exchange：每多少个 sweep 交换一次相邻温度的构型（0=关闭，链数=温度点数）")
-    parser.add_argument('-x', "--length",       type=int,   default=64  )
-    parser.add_argument('-y', "--width",        type=int,   default=64  )
-    parser.add_argument('-z', "--height",       type=int,   default=64  )
-    parser.add_argument('-e', "--equilibrium",  type=int,   default=1000)
-    parser.add_argument('-w', "--works",        type=int,   default=1000)
-    parser.add_argument('-a', "--single",       type=float, default=None,  nargs='*')
-    parser.add_argument('-p', "--parameters",   type=float, default=[1.0], nargs='+')
-    parser.add_argument('-j', "--parameterX",   type=float, default=[],    nargs='+')
-    parser.add_argument('-k', "--parameterY",   type=float, default=[],    nargs='+')
-    parser.add_argument('-t', "--temperatur",   type=float, default=[35],  nargs='+')
-    parser.add_argument('-l', "--labl",         type=str,   default='',    help='图例')
-    parser.add_argument('-r', "--export",       action='store_true',       help="结束后绘图")
-    parser.add_argument('-o', "--plot",         type=str,                  help="日志文件绘图")
-    parser.add_argument('-f', "--format",       default="png",             type=str.lower, choices=['png', 'pdf', 'svg', 'jpg', 'tif'])
-    parser.add_argument('-i', "--init",         default="fm",              type=str.lower, choices=['fm', 'afm1', 'afm2','afm3', 'afm4', 'afm5', 'random'])
-    parser.add_argument('-c', "--config",       default="square",          type=str.lower, choices=['square', 'triangular', 'bilayer-aa', 'bilayer-ab', 'bilayer-ab-u-3'])
+    parser.add_argument('-x', "--length",         type=int,   default=64  )
+    parser.add_argument('-y', "--width",          type=int,   default=64  )
+    parser.add_argument('-z', "--height",         type=int,   default=64  )
+    parser.add_argument('-e', "--equilibrium",    type=int,   default=1000)
+    parser.add_argument('-w', "--works",          type=int,   default=1000)
+    parser.add_argument('-a', "--single",         type=float, default=None,  nargs='*')
+    parser.add_argument('-p', "--parameters",     type=float, default=[1.0], nargs='+')
+    parser.add_argument('-j', "--parameterX",     type=float, default=[],    nargs='+')
+    parser.add_argument('-k', "--parameterY",     type=float, default=[],    nargs='+')
+    parser.add_argument('-t', "--temperatur",     type=float, default=[35],  nargs='+')
+    parser.add_argument('-l', "--labl",           type=str,   default='',    help='图例')
+    parser.add_argument('-r', "--export",         action='store_true',       help="结束后绘图")
+    parser.add_argument('-o', "--plot",           type=str,                  help="日志文件绘图")
+    parser.add_argument('-f', "--format",         default="png",             type=str.lower, choices=['png', 'pdf', 'svg', 'jpg', 'tif'])
+    parser.add_argument('-i', "--init",           default="fm",              type=str.lower, choices=['fm', 'afm1', 'afm2','afm3', 'afm4', 'afm5', 'random'])
+    parser.add_argument('-c', "--config",         default="square",          type=str.lower, choices=['square', 'triangular', 'bilayer-aa', 'bilayer-ab', 'bilayer-ab-u-3', 'simple-cubic'])
+    parser.add_argument('-N', "--np",             type=int,   default=0   ,  help="numba 线程数；0=自动（略多于物理核数一半，不超过逻辑核数）")
+    parser.add_argument('-C', "--chains",         type=int,   default=0   ,  help="并行推进的独立链数（多核加速），0 表示与线程数相同")
+    parser.add_argument('-S', "--seed",           type=int,   default=None,  help="随机数种子，给定后结果可复现")
+    parser.add_argument('-W', "--swap",           type=int,   default=0   ,  help="每多少个 sweep 交换一次相邻温度的构型（0=关闭，链数=温度点数）")
     args = parser.parse_args()
 
     if numba is None:
@@ -90,7 +75,7 @@ mt.mc -x 64 -y 64 -t 0 60 2 --swap 10 --seed 42 -r   # replica exchange
     # 把核心跑满实测反而更慢，超线程的边际收益也很小。
     # 用户显式给了 -R / -n 就按用户说的来。
     mode = "tempering" if swap > 0 else "chains"
-    NP, replicas = parallel.thread_plan(mode, args.replicas, args.np,
+    NP, chains = parallel.thread_plan(mode, args.chains, args.np,
                                         n_temps=len(arrays_temperatures))
     numba.set_num_threads(NP)
 
@@ -120,17 +105,17 @@ mt.mc -x 64 -y 64 -t 0 60 2 --swap 10 --seed 42 -r   # replica exchange
             from mcta.mc import geometry
             from mcta.mc import engine
             file = '{}_single_{}_{}.log'.format(config, X, Y)
-            lattice = geometry.build(config, X, Y)
+            lattice = geometry.build(config, X, Y, Z)
             engine.run_vector(lattice, file, init, J, A, arrays_temperatures,
-                              nequilibrium, nworks, replicas, seed, swap)
+                              nequilibrium, nworks, chains, seed, swap)
         else:
             # Ising（标量自旋）：表驱动。几何只在表里，计算代码通用。
             from mcta.mc import geometry
             from mcta.mc import engine
             file = '{}_Ising_{}_{}.log'.format(config, X, Y)
-            lattice = geometry.build(config, X, Y)
+            lattice = geometry.build(config, X, Y, Z)
             engine.run(lattice, file, init, J, arrays_temperatures,
-                       nequilibrium, nworks, replicas, seed, swap)
+                       nequilibrium, nworks, chains, seed, swap)
 
         if args.export and os.path.exists(file):
             from mcta.mc import plots

@@ -65,7 +65,7 @@ def _list_scripts():
     width = max(len(n) for n in scripts) + 2
     for name, (_p, desc) in scripts.items():
         print("  " + name.ljust(width) + desc)
-    print("\n用法: mt.sh NAME [args...]   执行脚本，参数原样转给脚本")
+    print("")
     return 0
 
 
@@ -76,9 +76,8 @@ def main(argv=None):
         print(version_string())
         return 0
     if not args or args[0] in ("-h", "-H", "--help", "help", "-l", "--list", "list"):
-        if args and args[0] in ("-h", "-H", "--help", "help"):
-            print(__doc__.strip())
-            print()
+        print(__doc__.strip())
+        print()
         return _list_scripts()
 
     name, rest = args[0], args[1:]

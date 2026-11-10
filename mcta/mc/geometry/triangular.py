@@ -3,10 +3,7 @@
 几何：2 层，每层 4 个块，块内 X_s x Y_s 的周期格点。
 耦合：3 条通道 Ja / Jb / Jc，每个格点 6+6+6 = 18 个邻居。
 
-每条邻居都对照原 spins2 实现 mcta/mc/ising/triangular_update.py 的
-update3 列出（该子包已被本架构取代并删除；参考实现保留在
-tests/test_geometry_tables.py 里）。
-原实现用 k1/k2/k3 和 x_inn/x_ipp/y_jnn/y_jpp 描述邻居块与坐标偏移，
+实现用 k1/k2/k3 和 x_inn/x_ipp/y_jnn/y_jpp 描述邻居块与坐标偏移，
 这里把它们展开成 (目标层, 目标块, dj, di)。
 """
 
@@ -21,12 +18,6 @@ NL, NB = 2, 4          # 层数、每层块数
 
 def _neighbors_of(f, g):
     """返回 (f, g) 这个 cell 的 18 个邻居。
-
-    对应 ising/triangular_update.py 的 update3：
-        for l in range(2): for k in prange(4): ...
-    其中 l 是层、k 是块。旧实现的遍历顺序是"层在外、块在内"，
-    这里的 cell 编号是"层优先"（cell = g * NB + f），更新顺序由
-    cell_order 单独给出。
     """
     lo = 1 - g
     k1 = 3 - f
@@ -183,7 +174,7 @@ def _groups():
     return out
 
 
-def build(X, Y):
+def build(X, Y, Z=None):
     """生成三角晶格的表。"""
     X_s, Y_s = X // 2, Y // 2
     nbr_cell, nbr_dj, nbr_di, nbr_ch, nbr_ptr = _build()

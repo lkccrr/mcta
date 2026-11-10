@@ -75,16 +75,16 @@ def resolve_inputs(paths):
     """
     dirs, files, missing = _expand_inputs(paths)
     if missing:
-        print("ERROR: 找不到输入：%s" % ", ".join(missing))
+        _error("ERROR: 找不到输入：%s" % ", ".join(missing))
         return None, [], [], []
     if dirs and files:
-        print("ERROR: 目录与 .dat 文件不能混在一起比较，请分开指定。")
+        _error("ERROR: 目录与 .dat 文件不能混在一起比较，请分开指定。")
         return None, [], [], []
     if dirs:
         vasp = [d for d in dirs if _is_vasp_dir(d)]
         if vasp and len(vasp) != len(dirs):
             others = [d for d in dirs if d not in vasp]
-            print("ERROR: 目录类型不一致：%s 是 VASP 输出，%s 里只有 .dat。"
+            _error("ERROR: 目录类型不一致：%s 是 VASP 输出，%s 里只有 .dat。"
                   % (", ".join(vasp), ", ".join(others)))
             return None, [], [], []
         if vasp:
@@ -92,7 +92,7 @@ def resolve_inputs(paths):
         band = [f for d in dirs for f in _dat_band_files(d)]
         dos = [f for d in dirs for f in _dat_dos_files(d)]
         if not band and not dos:
-            print("ERROR: %s 里既没有 VASP 输出（EIGENVAL/DOSCAR/PROCAR/vasprun.xml），"
+            _error("ERROR: %s 里既没有 VASP 输出（EIGENVAL/DOSCAR/PROCAR/vasprun.xml），"
                   "也没有 BAND.dat / PBAND*.dat / PDOS*.dat。" % ", ".join(dirs))
             return None, [], [], []
         return "dat", dirs, band, dos
@@ -100,7 +100,18 @@ def resolve_inputs(paths):
     return "dat", [], files, _dat_dos_files(workdir)
 
 # mt.band
+
+_ERROR = False
+
+
+def _error(msg):
+    """打印错误并标记本次运行失败，供 main 返回非零退出码。"""
+    global _ERROR
+    _ERROR = True
+    print(msg)
 def main():
+    global _ERROR
+    _ERROR = False
     parser = argparse.ArgumentParser(description='Plot the band structure or DOS from VASP output or vaspkit result.',
                                      add_help=False,
                                      epilog='''
@@ -162,7 +173,7 @@ mt.band -i BAND.dat -d PDOS*.dat             # 处理vaspkit输出的.dat文件
 
     mode, dirs, bandfiles, autodos = resolve_inputs(list(args.input) if args.input else ["."])
     if mode is None:
-        return
+        return 1 if _ERROR else 0
 
     dosfiles = None
     if want_dos:
@@ -172,13 +183,13 @@ mt.band -i BAND.dat -d PDOS*.dat             # 处理vaspkit输出的.dat文件
         elif args.dos:
             dosfiles = _expand_dos(args.dos)
             if not dosfiles:
-                print("ERROR: -d 没找到 DOS 文件：%s" % " ".join(args.dos))
-                return
+                _error("ERROR: -d 没找到 DOS 文件：%s" % " ".join(args.dos))
+                return 1 if _ERROR else 0
         else:
             dosfiles = autodos or _dat_dos_files(".")
             if not dosfiles:
-                print("ERROR: 没有找到 PDOS*.dat 或 TDOS*.dat；请用 -d 指定文件。")
-                return
+                _error("ERROR: 没有找到 PDOS*.dat 或 TDOS*.dat；请用 -d 指定文件。")
+                return 1 if _ERROR else 0
     if not want_bands:
         bandfiles = []
 
@@ -267,7 +278,7 @@ mt.band -i BAND.dat -d PDOS*.dat             # 处理vaspkit输出的.dat文件
 # VASP 输出为默认通路；只有目录里没有 VASP 文件时才走 .dat
     if mode == "vasp":
         vasp_plot(dirs, args, labels, elements, fig_p, want_bands=want_bands)
-        return
+        return 1 if _ERROR else 0
 # calculate the effective masses
     if args.mass is not None:
         if not fig_p.vertical:
@@ -281,15 +292,15 @@ mt.band -i BAND.dat -d PDOS*.dat             # 处理vaspkit输出的.dat文件
         if not bandfile:
             bandfile = sorted(glob.glob(os.path.join(workdir, 'PBAND*.dat')))
         if not bandfile:
-            print("ERROR: 没有 PBAND*.dat；投影能带需要 vaspkit 321 或 --export-dat。")
-            return
+            _error("ERROR: 没有 PBAND*.dat；投影能带需要 vaspkit 321 或 --export-dat。")
+            return 1 if _ERROR else 0
         if bandfile:
             from mcta.bandplot import projected
             try:
                 darr, dbands, composition, s_elements = projected.bands(bandfile)
             except ValueError as e:
-                print("ERROR: %s" % e)
-                return
+                _error("ERROR: %s" % e)
+                return 1 if _ERROR else 0
             index_f, labels_elements = projected.select(s_elements, args.partial)
             if len(index_f) > 0:
                 ispin = [0 if s_elements[i][0].endswith('_DW') else 1 for i, j in index_f]
@@ -300,7 +311,7 @@ mt.band -i BAND.dat -d PDOS*.dat             # 处理vaspkit输出的.dat文件
                 else:
                     projected.pplot2(darr, dbands, composition, ticks, labels, index_f, elements, ispin, legend, fig_p)
             else:
-                print("ERROR: -p %s 没有匹配到任何投影；"
+                _error("ERROR: -p %s 没有匹配到任何投影；"
                       "可用 -p Mo-d（元素-轨道）、-p d（按轨道）、-p all。"
                       % " ".join(args.partial))
 # plot Band Structure
@@ -343,7 +354,7 @@ mt.band -i BAND.dat -d PDOS*.dat             # 处理vaspkit输出的.dat文件
                 print("已保存：" + fig_p.output)
                 print("提示：只画 DOS 可用 mt.dos（默认 Energy 为横轴）。")
             else:
-                print("ERROR: 没有能带数据（EIGENVAL / BAND.dat / PBAND*.dat）；若只想看 DOS 请加 -d。")
+                _error("ERROR: 没有能带数据（EIGENVAL / BAND.dat / PBAND*.dat）；若只想看 DOS 请加 -d。")
 # compare two Band Structures
         elif len_bandfile == 2:
             if not fig_p.vertical:
@@ -361,8 +372,8 @@ mt.band -i BAND.dat -d PDOS*.dat             # 处理vaspkit输出的.dat文件
             elif all(x == "Ispin" for x in ispin):
                 plots.Dispin2(arr, bands, ticks, labels, legend, fig_p)
             else:
-                print("ERROR: 两个体系的自旋设置不一致（ISPIN=1 与 ISPIN=2）。")
-                return
+                _error("ERROR: 两个体系的自旋设置不一致（ISPIN=1 与 ISPIN=2）。")
+                return 1 if _ERROR else 0
             print("已保存：" + fig_p.output)
 # compare three Band Structures
         elif len_bandfile == 3:
@@ -382,13 +393,14 @@ mt.band -i BAND.dat -d PDOS*.dat             # 处理vaspkit输出的.dat文件
             elif all(x == "Ispin" for x in ispin):
                 plots.Dispin3(arr, bands, ticks, labels, legend, fig_p)
             else:
-                print("ERROR: 三个体系的自旋设置不一致（ISPIN=1 与 ISPIN=2）。")
-                return
+                _error("ERROR: 三个体系的自旋设置不一致（ISPIN=1 与 ISPIN=2）。")
+                return 1 if _ERROR else 0
             print("已保存：" + fig_p.output)
         else:
             print("Input file mismatch.")
 
 # VASP direct mode (EIGENVAL / PROCAR / DOSCAR / OUTCAR / KPOINTS / POSCAR)
+    return 1 if _ERROR else 0
 def _vasp_formula(structure):
     formula = ''
     for name, count in zip(structure["species"], structure["counts"]):
@@ -427,7 +439,7 @@ def _dat_mass(workdir, args, ticks, labels, legend, fig_p):
     from mcta.bandplot import mass
     band_gap = os.path.join(workdir, "BAND_GAP")
     if not os.path.exists(band_gap):
-        print("ERROR: BAND_GAP file does not exist in %s." % workdir)
+        _error("ERROR: BAND_GAP file does not exist in %s." % workdir)
         return
     scale = 0.15 if args.mass > 0.75 or args.mass < 0.05 else args.mass
     caller = os.getcwd()
@@ -438,7 +450,7 @@ def _dat_mass(workdir, args, ticks, labels, legend, fig_p):
         lumo, homo, homo_c, filename = mass.get_vbm_cbm("BAND_GAP")
         extension = [len(lumo), len(homo), len(homo_c), len(filename)]
         if not all(x == 1 for x in extension) and not all(x == 2 for x in extension):
-            print("ERROR: Input file mismatch.")
+            _error("ERROR: Input file mismatch.")
             return
         data = mass.bs_dat_read(filename)
         if all(x == 1 for x in extension):
@@ -463,12 +475,12 @@ def _vasp_mass(vd, args, ticks, labels, legend, fig_p):
         fig_p.vertical = [-5.0, 5.0]
     scale = 0.15 if args.mass > 0.75 or args.mass < 0.05 else args.mass
     if vd.distances.size < 12:
-        print("ERROR: k 点只有 %d 个，太稀疏，无法做带边抛物线拟合。" % vd.distances.size)
+        _error("ERROR: k 点只有 %d 个，太稀疏，无法做带边抛物线拟合。" % vd.distances.size)
         return
     data, pairs = vd.mass_data()
     for homo, lumo in pairs:
         if homo < 1 or lumo >= data[0].shape[1] - 1:
-            print("ERROR: 带边落在首/末条能带，无法做抛物线拟合；请检查费米能与能带范围。")
+            _error("ERROR: 带边落在首/末条能带，无法做抛物线拟合；请检查费米能与能带范围。")
             return
     if len(pairs) == 1:
         homo, lumo = pairs[0]
@@ -491,14 +503,14 @@ def _vasp_mass(vd, args, ticks, labels, legend, fig_p):
 def _vasp_projected(vd, args, ticks, labels, legend, fig_p):
     from mcta.bandplot import projected
     if not vd.has("procar"):
-        print("ERROR: 目录中没有 PROCAR；投影能带请在计算中设置 LORBIT = 11。")
+        _error("ERROR: 目录中没有 PROCAR；投影能带请在计算中设置 LORBIT = 11。")
         return
     if not fig_p.vertical:
         fig_p.vertical = [-5.0, 5.0]
     darr, dbands, composition, s_elements = vd.projected()
     index_f, labels_elements = projected.select(s_elements, args.partial)
     if not index_f:
-        print("ERROR: 投影筛选无匹配，可用 -p Mo-d、-p d 或 -p all。")
+        _error("ERROR: 投影筛选无匹配，可用 -p Mo-d、-p d 或 -p all。")
         return
     ispin = [0 if s_elements[i][0].endswith('_DW') else 1 for i, j in index_f]
     elements = args.elements or [re.sub(r'-\$tot\$$', '', i).replace('(dw)', '(down)')
@@ -524,12 +536,12 @@ def _clean_dos_labels(labels):
 def _vasp_dos(vd, args, elements, ticks, labels, legend, fig_p, bands=True):
     from mcta.bandplot import plots, readdata
     if not vd.has("doscar"):
-        print("ERROR: 目录中没有 DOSCAR；请设置 LORBIT = 11 并保留 DOSCAR。")
+        _error("ERROR: 目录中没有 DOSCAR；请设置 LORBIT = 11 并保留 DOSCAR。")
         return
     darr, dele, s_elements = vd.dos()
     index_f, labels_elements = readdata.select(s_elements, args.partial)
     if not index_f:
-        print("ERROR: 没有匹配的 DOS 列，可用 -p s,p,d 或 -p Mo-d。")
+        _error("ERROR: 没有匹配的 DOS 列，可用 -p s,p,d 或 -p Mo-d。")
         return
     if not elements:
         elements = _clean_dos_labels(labels_elements)
@@ -553,7 +565,7 @@ def vasp_plot(dirs, args, labels, elements, fig_p, want_bands=True):
     from mcta.bandplot import plots, vaspread
     for directory in dirs:
         if not os.path.isdir(directory):
-            print("ERROR: %s is not a directory." % directory)
+            _error("ERROR: %s is not a directory." % directory)
             return
     datas = [vaspread.VaspData(d, shift=not args.no_shift,
                                 drop_weighted=not args.keep_weights) for d in dirs]
@@ -565,7 +577,7 @@ def vasp_plot(dirs, args, labels, elements, fig_p, want_bands=True):
                        for t, d in zip(targets, dirs)]
         for vd, target in zip(datas, targets):
             if not vd.has("eigenval") and not vd.has("doscar"):
-                print("ERROR: %s 中既没有 EIGENVAL/vasprun.xml 也没有 DOSCAR。" % vd.dir)
+                _error("ERROR: %s 中既没有 EIGENVAL/vasprun.xml 也没有 DOSCAR。" % vd.dir)
                 continue
             written = vd.export_dat(target)
             print("已导出 %d 个文件到 %s" % (len(written), target))
@@ -586,7 +598,7 @@ def vasp_plot(dirs, args, labels, elements, fig_p, want_bands=True):
                 print("提示：%s 中没有 EIGENVAL/vasprun.xml，改为只画 DOS。" % vd.dir)
                 want_bands = False
             else:
-                print("ERROR: %s 中没有 EIGENVAL/vasprun.xml，无法绘制能带；若只想看 DOS 请加 -d。" % vd.dir)
+                _error("ERROR: %s 中没有 EIGENVAL/vasprun.xml，无法绘制能带；若只想看 DOS 请加 -d。" % vd.dir)
                 return
         has_bands = want_bands and vd.has("eigenval")
         arr = vd.distances if has_bands else None
@@ -596,7 +608,7 @@ def vasp_plot(dirs, args, labels, elements, fig_p, want_bands=True):
             ticks, names = [0.0, 1.0], ['', '']
         if args.mass is not None:
             if not has_bands:
-                print("ERROR: 有效质量需要 EIGENVAL 或 vasprun.xml。")
+                _error("ERROR: 有效质量需要 EIGENVAL 或 vasprun.xml。")
                 return
             _vasp_mass(vd, args, ticks, names, legend, fig_p)
         elif args.projected:
@@ -617,12 +629,12 @@ def vasp_plot(dirs, args, labels, elements, fig_p, want_bands=True):
         return
 
     if len(datas) > 3:
-        print("ERROR: 最多支持 3 个目录对比。")
+        _error("ERROR: 最多支持 3 个目录对比。")
         return
     arrs, bandss, ispins = [], [], []
     for vd in datas:
         if not vd.has("eigenval"):
-            print("ERROR: %s 中没有 EIGENVAL/vasprun.xml。" % vd.dir)
+            _error("ERROR: %s 中没有 EIGENVAL/vasprun.xml。" % vd.dir)
             return
         arr, ban, ispin = vd.bands()
         arrs.append(arr)
@@ -640,12 +652,14 @@ def vasp_plot(dirs, args, labels, elements, fig_p, want_bands=True):
         (plots.Dispin2 if len(datas) == 2 else plots.Dispin3)(
             arrs, bandss, ticks, names, legend, fig_p)
     else:
-        print("ERROR: 对比的体系自旋设置不一致（有的 ISPIN=1，有的 ISPIN=2）。")
+        _error("ERROR: 对比的体系自旋设置不一致（有的 ISPIN=1，有的 ISPIN=2）。")
         return
     print("已保存：" + fig_p.output)
 
 # mt.phband
 def pmain():
+    global _ERROR
+    _ERROR = False
     parser = argparse.ArgumentParser(description='Plot the phonon band structure or DOS from phonopy results.',
                                      add_help=False,
                                      epilog=r'''
@@ -748,72 +762,76 @@ mt.phband -B 23 100 -l g m k g -y -2 110      # broken axis for the optical bran
                     color=color, linestyle=linestyle, linewidth=linewidth, location=location, dpi=args.dpi,
                     height_ratio=height_ratio, width_ratios=width_ratios, exchange=args.exchange, fill=args.fill)
 # plot Phonon Band Structure
-    bandfile = [f for i in args.input for f in glob.glob(i)]
-    len_bandfile = len(bandfile)
-    if len_bandfile == 1:
-        arr, fre, ticks = readdata.pbands(bandfile[0])
-        if len(ticks) > len(labels):
-            labels += [''] * (len(ticks) - len(labels))
-        elif len(ticks) < len(labels):
-            labels = labels[:len(ticks)]
-        if dosfile:
-            darr, dele = readdata.pdos(dosfile)
-            if args.broken is None:
-                pplots.NobrokenWd(arr, fre, ticks, labels, darr, dele, elements, legend, fig_p)
+    try:
+        bandfile = [f for i in args.input for f in glob.glob(i)]
+        len_bandfile = len(bandfile)
+        if len_bandfile == 1:
+            arr, fre, ticks = readdata.pbands(bandfile[0])
+            if len(ticks) > len(labels):
+                labels += [''] * (len(ticks) - len(labels))
+            elif len(ticks) < len(labels):
+                labels = labels[:len(ticks)]
+            if dosfile:
+                darr, dele = readdata.pdos(dosfile)
+                if args.broken is None:
+                    pplots.NobrokenWd(arr, fre, ticks, labels, darr, dele, elements, legend, fig_p)
+                else:
+                    pplots.BrokenWd(arr, fre, ticks, labels, broken, darr, dele, elements, legend, fig_p)
             else:
-                pplots.BrokenWd(arr, fre, ticks, labels, broken, darr, dele, elements, legend, fig_p)
-        else:
-            if args.broken is None:
-                pplots.Nobroken(arr, fre, ticks, labels, legend, fig_p)
+                if args.broken is None:
+                    pplots.Nobroken(arr, fre, ticks, labels, legend, fig_p)
+                else:
+                    pplots.Broken(arr, fre, ticks, labels, broken, legend, fig_p)
+    # plot Phonon DOS
+        elif len_bandfile == 0:
+            if dosfile:
+                if fig_p.output == "BAND.png":
+                        fig_p.output = "PHDOS.png"
+                darr, dele = readdata.pdos(dosfile)
+                pplots.pdosfile(darr, dele, elements, legend, fig_p)
+                print("提示：只画声子态密度可用 mt.phdos（默认 Frequency 为横轴）。")
             else:
-                pplots.Broken(arr, fre, ticks, labels, broken, legend, fig_p)
-# plot Phonon DOS
-    elif len_bandfile == 0:
-        if dosfile:
-            if fig_p.output == "BAND.png":
-                    fig_p.output = "PHDOS.png"
-            darr, dele = readdata.pdos(dosfile)
-            pplots.pdosfile(darr, dele, elements, legend, fig_p)
-            print("提示：只画声子态密度可用 mt.phdos（默认 Frequency 为横轴）。")
-        else:
-            print("No *.dat file. 只画声子态密度请用 mt.phdos。")
-# compare two Phonon Band Structures
-    elif len_bandfile == 2:
-        arr = [''] * 2
-        fre = [''] * 2
-        ticks = [''] * 2
-        arr[0], fre[0], ticks[0] = readdata.pbands(bandfile[0])
-        arr[1], fre[1], ticks[1] = readdata.pbands(bandfile[1])
-        if len(ticks[0]) > len(labels):
-            labels += [''] * (len(ticks[0]) - len(labels))
-        elif len(ticks[0]) < len(labels):
-            labels = labels[:len(ticks[0])]
-        if len(legend) < 3:
-            legend += [''] * (3 - len(legend))
+                _error("ERROR: 没有找到 *.dat 文件；只画声子态密度请用 mt.phdos。")
+    # compare two Phonon Band Structures
+        elif len_bandfile == 2:
+            arr = [''] * 2
+            fre = [''] * 2
+            ticks = [''] * 2
+            arr[0], fre[0], ticks[0] = readdata.pbands(bandfile[0])
+            arr[1], fre[1], ticks[1] = readdata.pbands(bandfile[1])
+            if len(ticks[0]) > len(labels):
+                labels += [''] * (len(ticks[0]) - len(labels))
+            elif len(ticks[0]) < len(labels):
+                labels = labels[:len(ticks[0])]
+            if len(legend) < 3:
+                legend += [''] * (3 - len(legend))
 
-        if args.broken is None:
-            pplots.Nobroken2(arr, fre, ticks[0], labels, legend, fig_p)
-        else:
-            pplots.Broken2(arr, fre, ticks[0], labels, broken, legend, fig_p)
-# compare three Phonon Band Structures
-    elif len_bandfile == 3:
-        arr = [''] * 3
-        fre = [''] * 3
-        ticks = [''] * 3
-        arr[0], fre[0], ticks[0] = readdata.pbands(bandfile[0])
-        arr[1], fre[1], ticks[1] = readdata.pbands(bandfile[1])
-        arr[2], fre[2], ticks[2] = readdata.pbands(bandfile[2])
-        if len(ticks[0]) > len(labels):
-            labels += [''] * (len(ticks[0]) - len(labels))
-        elif len(ticks[0]) < len(labels):
-            labels = labels[:len(ticks[0])]
-        if len(legend) < 4:
-            legend += [''] * (4 - len(legend))
+            if args.broken is None:
+                pplots.Nobroken2(arr, fre, ticks[0], labels, legend, fig_p)
+            else:
+                pplots.Broken2(arr, fre, ticks[0], labels, broken, legend, fig_p)
+    # compare three Phonon Band Structures
+        elif len_bandfile == 3:
+            arr = [''] * 3
+            fre = [''] * 3
+            ticks = [''] * 3
+            arr[0], fre[0], ticks[0] = readdata.pbands(bandfile[0])
+            arr[1], fre[1], ticks[1] = readdata.pbands(bandfile[1])
+            arr[2], fre[2], ticks[2] = readdata.pbands(bandfile[2])
+            if len(ticks[0]) > len(labels):
+                labels += [''] * (len(ticks[0]) - len(labels))
+            elif len(ticks[0]) < len(labels):
+                labels = labels[:len(ticks[0])]
+            if len(legend) < 4:
+                legend += [''] * (4 - len(legend))
 
-        if args.broken is None:
-            pplots.Nobroken3(arr, fre, ticks[0], labels, legend, fig_p)
+            if args.broken is None:
+                pplots.Nobroken3(arr, fre, ticks[0], labels, legend, fig_p)
+            else:
+                pplots.Broken3(arr, fre, ticks[0], labels, broken, legend, fig_p)
         else:
-            pplots.Broken3(arr, fre, ticks[0], labels, broken, legend, fig_p)
-    else:
-        print("Input file mismatch.")
+            _error("ERROR: 输入能带文件数量不匹配（只支持 1~3 个）。")
+    except (ValueError, IndexError, KeyError, TypeError, OSError, UnicodeDecodeError) as exc:
+        _error("ERROR: 解析声子输入文件失败：%s" % exc)
+    return 1 if _ERROR else 0
 

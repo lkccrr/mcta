@@ -57,24 +57,24 @@ def _resolve(paths):
         else:
             missing.append(value)
     if missing:
-        print("ERROR: 找不到输入：%s" % ", ".join(missing))
+        _error("ERROR: 找不到输入：%s" % ", ".join(missing))
         return None, None
     if dirs and files:
-        print("ERROR: 目录与 .dat 文件不能混在一起，请只给一种。")
+        _error("ERROR: 目录与 .dat 文件不能混在一起，请只给一种。")
         return None, None
     if dirs:
         if len(dirs) > 1:
-            print("ERROR: mt.phdos 一次只画一个体系；对比请分别画图。")
+            _error("ERROR: mt.phdos 一次只画一个体系；对比请分别画图。")
             return None, None
         directory = dirs[0]
         dosfile = _pick(directory)
         if dosfile is None:
-            print("ERROR: %s 里没有 projected_dos.dat 或 total_dos.dat；"
+            _error("ERROR: %s 里没有 projected_dos.dat 或 total_dos.dat；"
                   "先用 mt.ph dos 生成。" % directory)
             return None, None
         return dosfile, directory
     if not files:
-        print("ERROR: 没有输入文件。")
+        _error("ERROR: 没有输入文件。")
         return None, None
     if len(files) > 1:
         print("提示：mt.phdos 一次只画一个文件，已使用 %s。" % files[0])
@@ -116,7 +116,18 @@ def _expand(values, literal=False):
     return out
 
 
+
+_ERROR = False
+
+
+def _error(msg):
+    """打印错误并标记本次运行失败，供 main 返回非零退出码。"""
+    global _ERROR
+    _ERROR = True
+    print(msg)
 def main(argv=None):
+    global _ERROR
+    _ERROR = False
     parser = argparse.ArgumentParser(
         description='Plot the phonon density of states (Phonon DOS) from phonopy results; '
                     'the frequency is on the horizontal axis by default.',
@@ -152,7 +163,7 @@ mt.phdos -i projected_dos.dat -n                 # 交换坐标轴，纵轴 Freq
 
     dosfile, workdir = _resolve(list(args.input) if args.input else ["."])
     if dosfile is None:
-        return
+        return 1 if _ERROR else 0
 
     darr, dele = readdata.pdos(dosfile)
     atoms, formula = _unitcell(workdir)
@@ -173,6 +184,7 @@ mt.phdos -i projected_dos.dat -n                 # 交换坐标轴，纵轴 Freq
 
     pplots.pdosfile(darr, dele, elements, legend, fig_p)
     print("已保存：" + fig_p.output)
+    return 1 if _ERROR else 0
 
 
 if __name__ == "__main__":

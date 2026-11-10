@@ -3,10 +3,6 @@
 几何：2 层，每层 8 个块，块内 X_s x Y_s 的周期格点。
 耦合：原实现用 5 个耦合常数 J0 / J1 / Ja / Jb / J1_，但 J1 与 J1_ 是
       两条不同的通道，所以表里是 5 条通道。
-
-每条邻居都对照原 spins2 实现 mcta/mc/ising/bilayer_ab_update.py 的
-update3 列出（该子包已被本架构取代并删除；参考实现保留在
-tests/test_geometry_tables.py 里）。
 """
 
 import numpy as np
@@ -248,7 +244,7 @@ def _groups():
     return out
 
 
-def build(X, Y):
+def build(X, Y, Z=None):
     """生成双层 AB 晶格的表。"""
     X_s, Y_s = X // 2, Y // 2
     nbr_cell, nbr_dj, nbr_di, nbr_ch, nbr_ptr = _build()

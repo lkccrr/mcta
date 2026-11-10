@@ -51,14 +51,14 @@ def _resolve(paths):
         else:
             missing.append(value)
     if missing:
-        print("ERROR: 找不到输入：%s" % ", ".join(missing))
+        _error("ERROR: 找不到输入：%s" % ", ".join(missing))
         return None, None
     if dirs and files:
-        print("ERROR: 目录与 .dat 文件不能混在一起，请只给一种。")
+        _error("ERROR: 目录与 .dat 文件不能混在一起，请只给一种。")
         return None, None
     if dirs:
         if len(dirs) > 1:
-            print("ERROR: mt.dos 一次只画一个体系；对比请分别画图。")
+            _error("ERROR: mt.dos 一次只画一个体系；对比请分别画图。")
             return None, None
         directory = dirs[0]
         if os.path.exists(os.path.join(directory, "DOSCAR")):
@@ -67,12 +67,12 @@ def _resolve(paths):
         if dats:
             return "dat", dats
         if _is_vasp_dir(directory):
-            print("ERROR: %s 里没有 DOSCAR；计算时请设置 LORBIT = 11。" % directory)
+            _error("ERROR: %s 里没有 DOSCAR；计算时请设置 LORBIT = 11。" % directory)
         else:
-            print("ERROR: %s 里没有 DOSCAR、PDOS*.dat 或 TDOS*.dat。" % directory)
+            _error("ERROR: %s 里没有 DOSCAR、PDOS*.dat 或 TDOS*.dat。" % directory)
         return None, None
     if not files:
-        print("ERROR: 没有输入文件。")
+        _error("ERROR: 没有输入文件。")
         return None, None
     return "dat", sorted(files)
 
@@ -109,7 +109,18 @@ def _expand(values, literal=False):
     return out
 
 
+
+_ERROR = False
+
+
+def _error(msg):
+    """打印错误并标记本次运行失败，供 main 返回非零退出码。"""
+    global _ERROR
+    _ERROR = True
+    print(msg)
 def main(argv=None):
+    global _ERROR
+    _ERROR = False
     parser = argparse.ArgumentParser(
         description='Plot the density of states (DOS/PDOS) from VASP output or vaspkit results; '
                     'the energy is on the horizontal axis by default.',
@@ -149,7 +160,7 @@ mt.dos -i PDOS*.dat                              # 直接给 vaspkit 的 .dat �
 
     mode, target = _resolve(list(args.input) if args.input else ["."])
     if mode is None:
-        return
+        return 1 if _ERROR else 0
 
     if mode == "vasp":
         from mcta.bandplot import vaspread
@@ -162,8 +173,8 @@ mt.dos -i PDOS*.dat                              # 直接给 vaspkit 的 .dat �
 
     index_f, labels_elements = readdata.select(s_elements, args.partial)
     if not index_f:
-        print("ERROR: 没有匹配的 DOS 列，可用 -p s,p,d 或 -p Mo-d。")
-        return
+        _error("ERROR: 没有匹配的 DOS 列，可用 -p s,p,d 或 -p Mo-d。")
+        return 1 if _ERROR else 0
 
     elements = args.elements or _clean_dos_labels(labels_elements)
     legend = args.legend or [_formula(workdir) or os.path.basename(os.path.abspath(workdir)) or "."]
@@ -185,6 +196,7 @@ mt.dos -i PDOS*.dat                              # 直接给 vaspkit 的 .dat �
 
     plots.pdosfiles(darr, dele, index_f, elements, legend, fig_p)
     print("已保存：" + fig_p.output)
+    return 1 if _ERROR else 0
 
 
 if __name__ == "__main__":

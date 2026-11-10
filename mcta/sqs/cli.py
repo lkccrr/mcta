@@ -74,7 +74,8 @@ def build_parser() -> argparse.ArgumentParser:
                     help="导出包名称（默认 sqs-化学式-原子数）")
     ap.add_argument('-F', "--formats", type=str,
                     default=",".join(config.DEFAULT_FORMATS),
-                    help="结构文件格式，逗号分隔：cif,poscar,json,xyz（默认 poscar）")
+                    help="结构文件格式，逗号分隔：cif,poscar,json,xyz"
+                         f"（默认 {','.join(config.DEFAULT_FORMATS)}）")
     ap.add_argument("--job-template", action="store_true",
                     help="同时生成 INCAR / KPOINTS / slurm 模板")
     ap.add_argument('-y', "--dry-run", action="store_true",

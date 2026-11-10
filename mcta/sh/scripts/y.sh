@@ -1,5 +1,5 @@
 #!/bin/bash
-# y：y 方向应变扫描
+# y ：y 方向应变扫描
 #   y POSCAR [NPOINTS] [STEP]
 #     POSCAR   晶格文件（默认 POSCAR）
 #     NPOINTS  正负各取几个点（默认 4），实际扫描 2*N 个点，不含 0 应变

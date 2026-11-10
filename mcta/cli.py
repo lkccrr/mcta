@@ -113,11 +113,11 @@ TOOLS = (
     {
         "key": "mc",
         "name": "mt.mc",
-        "what": "自旋（Ising）蒙特卡洛模拟",
-        "source": "内置的方格/三角/双层 Ising 模型（需要 numba：pip install \"mcta[mc]\"）",
+        "what": "自旋（Ising/Heisenberg）蒙特卡洛模拟",
+        "source": "内置的方格/三角/双层……模型（需要 numba：pip install \"mcta[mc]\"）",
         "examples": (
             ("mt.mc -h", "全部参数"),
-            ("mt.mc -x 100 -y 100 -t 35 -r", "方格晶格 100×100，35 K，结束后绘图"),
+            ("mt.mc -x 100 -y 100 -t 35 -r", "方格子 100×100，35 K，结束后绘图"),
             ("mt.mc -c bilayer-ab -t 0 60 2", "双层反平行，0–60 K 扫描"),
         ),
     },

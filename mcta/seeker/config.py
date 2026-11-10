@@ -173,6 +173,3 @@ def get_pseudopotential_path() -> Path | None:
                 return p
     return None
 
-
-# mt.sh 脚本里用 pot_path，这里提供一个可用的路径（如果有）
-pot_path = str(get_pseudopotential_path()) if get_pseudopotential_path() else ""
