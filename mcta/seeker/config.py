@@ -120,7 +120,7 @@ LLM_MODEL = _LLM["model"]
 
 
 def set_llm_provider(provider: str) -> dict:
-    """运行时切换 LLM 引擎（供 --provider 使用），返回生效的配置。"""
+    """运行时切换 LLM 引擎（供 --provs 使用），返回生效的配置。"""
     global LLM_PROVIDER, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
     cfg = _resolve_llm(provider)
     LLM_PROVIDER = cfg["provider"]

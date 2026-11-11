@@ -258,10 +258,10 @@ def format_report(result: dict) -> str:
         matched, top_k = result.get("n_matched"), result.get("top_k")
         if matched is not None and top_k and matched < top_k:
             lines.append(f"提示：ehull 阈值内只匹配到 {matched} 个相，"
-                         f"--top-k {top_k} 未用满")
+                         f"--topks {top_k} 未用满")
         if result.get("search_cached"):
             lines.append("提示：检索结果来自本地缓存（12 小时内有效），"
-                         "-R/--refresh 可强制刷新")
+                         "-Q/--refsh 可强制刷新")
         lines.append(f"包裹目录：{b['bundle_dir']}")
         lines.append(f"压缩包：  {b['tar_gz']}")
         lines.append(f"清单：    {b['manifest']}")

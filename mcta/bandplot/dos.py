@@ -29,6 +29,7 @@ from mcta.bandplot.wrapper import (cla_fig, _clean_dos_labels,
 plt.rcParams['xtick.direction'] = 'in'
 plt.rcParams['ytick.direction'] = 'in'
 plt.rcParams['ytick.minor.visible'] = True
+plt.rcParams['font.family'] = 'STIXGeneral'
 plt.rcParams["mathtext.fontset"] = 'cm'
 
 DEFAULT_ENERGY = [-5.0, 5.0]
@@ -139,23 +140,22 @@ mt.dos -i PDOS*.dat                              # 直接给 vaspkit 的 .dat �
     parser.add_argument('-v', '-V', "--version",    action="version",     version=version_string())
     parser.add_argument('-i', "--input",      type=str, nargs='*', default=None, metavar="PATH",
                         help="directory with DOSCAR or PDOS*.dat/TDOS*.dat, or .dat files; default: current directory")
-    parser.add_argument('-o', "--output",     type=str, help="plot figure filename, default: DOS.png", default="DOS.png")
-    parser.add_argument('-q', "--dpi",        type=int, help="dpi of the figure, default: 500", default=500)
-    parser.add_argument('-S', "--size",       type=float, nargs=2, help='figure size: width, height', metavar=('width', 'height'))
-    parser.add_argument('-y', "--energy",     type=float, nargs=2, help="energy (eV) range, default: [-5.0, 5.0]", metavar=('start', 'end'))
-    parser.add_argument('-x', "--horizontal", type=float, nargs=2, help="Density of states, electrons/eV range", metavar=('start', 'end'))
-    parser.add_argument('-p', "--partial",    type=str, nargs='+', default=[], help='the partial DOS to plot, s p d, or symbol-s,p,d')
-    parser.add_argument('-e', "--elements",   type=str, nargs='+', default=[], help="PDOS labels")
-    parser.add_argument('-n', "--exchange",   action='store_true', help="exchange the axes: energy vertical (mt.band -d style)")
-    parser.add_argument('-G', "--legend",     type=str, nargs='+', default=[], help="legend labels")
-    parser.add_argument('-A', "--location",   type=str.lower, nargs='+', default=[], help="arrange the legend location, default: best", metavar="str")
+    parser.add_argument('-o', "--outpt",     type=str, help="plot figure filename, default: DOS.png", default="DOS.png")
+    parser.add_argument('-q', "--resol",        type=int, help="dpi of the figure, default: 500", default=500)
+    parser.add_argument('-S', "--figsz",       type=float, nargs=2, help='figure size: width, height', metavar=('width', 'height'))
+    parser.add_argument('-y', "--energ",     type=float, nargs=2, help="energy (eV) range, default: [-5.0, 5.0]", metavar=('start', 'end'))
+    parser.add_argument('-x', "--horiz", type=float, nargs=2, help="Density of states, electrons/eV range", metavar=('start', 'end'))
+    parser.add_argument('-p', "--parts",    type=str, nargs='+', default=[], help='the partial DOS to plot, s p d, or symbol-s,p,d')
+    parser.add_argument('-e', "--elems",   type=str, nargs='+', default=[], help="PDOS labels")
+    parser.add_argument('-n', "--exchg",   action='store_true', help="exchange the axes: energy vertical (mt.band -d style)")
+    parser.add_argument('-G', "--legnd",     type=str, nargs='+', default=[], help="legend labels")
+    parser.add_argument('-A', "--locat",   type=str.lower, nargs='+', default=[], help="arrange the legend location, default: best", metavar="str")
     parser.add_argument('-C', "--color",      type=str, nargs='+', default=[], help="line color: b, blue; g, green; r, red; c, cyan; m, magenta; y, yellow; k, black; or a tuple like (0.1,0.2,0.3); a*3 repeats it 3 times", metavar="str")
-    parser.add_argument('-k', "--linestyle",  type=str, nargs='+', default=[], help="linestyle: solid, dashed, dashdot, dotted or tuple; default: solid", metavar="str")
-    parser.add_argument('-w', "--linewidth",  type=str, nargs='+', default=[], help="linewidth, default: 0.8", metavar="0.8")
-    parser.add_argument('-z', "--fill",       type=float, nargs='?', help='fill a shaded region between PDOS and axis, default: 0.2', default=None, const=0.2, metavar="alpha")
+    parser.add_argument('-k', "--style",  type=str, nargs='+', default=[], help="linestyle: solid, dashed, dashdot, dotted or tuple; default: solid", metavar="str")
+    parser.add_argument('-w', "--width",  type=str, nargs='+', default=[], help="linewidth, default: 0.8", metavar="0.8")
+    parser.add_argument('-z', "--alpha",       type=float, nargs='?', help='fill a shaded region between PDOS and axis, default: 0.2', default=None, const=0.2, metavar="alpha")
     parser.add_argument('--no-mirror',        action='store_true', help='keep the spin-down DOS positive (default: spin-up > 0, spin-down < 0)')
     parser.add_argument('--no-shift',         action='store_true', help='keep raw energies (do not shift by E-fermi)')
-    parser.add_argument('-f', "--font",       type=str, help="font to use", default='STIXGeneral')
     args = parser.parse_args(argv)
 
     mode, target = _resolve(list(args.input) if args.input else ["."])
@@ -171,28 +171,26 @@ mt.dos -i PDOS*.dat                              # 直接给 vaspkit 的 .dat �
         darr, dele, s_elements = readdata.dos(target)
         workdir = os.path.dirname(os.path.abspath(target[0]))
 
-    index_f, labels_elements = readdata.select(s_elements, args.partial)
+    index_f, labels_elements = readdata.select(s_elements, args.parts)
     if not index_f:
         _error("ERROR: 没有匹配的 DOS 列，可用 -p s,p,d 或 -p Mo-d。")
         return 1 if _ERROR else 0
 
-    elements = args.elements or _clean_dos_labels(labels_elements)
-    legend = args.legend or [_formula(workdir) or os.path.basename(os.path.abspath(workdir)) or "."]
+    elements = args.elems or _clean_dos_labels(labels_elements)
+    legend = args.legnd or [_formula(workdir) or os.path.basename(os.path.abspath(workdir)) or "."]
 
-    location = [int(i) if i.isdigit() else i for i in args.location]
-    font = args.font
-    plt.rcParams['font.family'] = '%s' % font
+    location = [int(i) if i.isdigit() else i for i in args.locat]
 
-    fig_p = cla_fig(output=args.output, size=args.size,
+    fig_p = cla_fig(output=args.outpt, size=args.figsz,
                     # vertical 始终表示能量范围；exchange=True 时能量在横轴
-                    vertical=args.energy or list(DEFAULT_ENERGY),
-                    horizontal=args.horizontal,
-                    color=_expand(args.color), linestyle=_expand(args.linestyle),
-                    linewidth=[float(i) for i in _expand(args.linewidth)],
-                    location=location, dpi=args.dpi, fill=args.fill,
+                    vertical=args.energ or list(DEFAULT_ENERGY),
+                    horizontal=args.horiz,
+                    color=_expand(args.color), linestyle=_expand(args.style),
+                    linewidth=[float(i) for i in _expand(args.width)],
+                    location=location, dpi=args.resol, fill=args.alpha,
                     mirror=not args.no_mirror,
                     # mt.dos 默认能量为横轴：pdosfiles 里 exchange=True 就是这个朝向
-                    exchange=not args.exchange)
+                    exchange=not args.exchg)
 
     plots.pdosfiles(darr, dele, index_f, elements, legend, fig_p)
     print("已保存：" + fig_p.output)

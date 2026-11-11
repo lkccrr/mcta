@@ -106,7 +106,7 @@ def _site_counts(st) -> dict:
 def pick_host(st, host: str = None) -> dict:
     """决定随机化哪个元素的位点。
 
-    晶胞里只有一种元素时自动选它；有多种元素时必须显式给 --sqs-host，
+    晶胞里只有一种元素时自动选它；有多种元素时必须显式给 --host，
     否则很难猜对（把 O 位随机化这种事一旦发生，算出来的东西没意义）。
     """
     counts = _site_counts(st)
@@ -120,8 +120,8 @@ def pick_host(st, host: str = None) -> dict:
         sym = next(iter(counts))
         return {"host": sym, "n_host_cell": counts[sym], "all_species": counts}
     listing = "  ".join(f"{k}×{v}" for k, v in sorted(counts.items()))
-    return {"error": f"晶胞里有多种元素（{listing}），请用 --sqs-host 指定要随机化的位点。\n"
-                     f"  例如：--sqs-host {sorted(counts)[0]} "
+    return {"error": f"晶胞里有多种元素（{listing}），请用 --host 指定要随机化的位点。\n"
+                     f"  例如：--host {sorted(counts)[0]} "
                      f"-a \"{sorted(counts)[0]}:0.5,X:0.5\""}
 
 
@@ -131,7 +131,7 @@ def parse_alloy(spec: str) -> dict:
     值 ≤1 视为分数，>1 视为原子个数；不写值即等分。
     """
     if not spec:
-        return {"error": "缺少 --sqs-alloy：请给出该位点上的合金成分，"
+        return {"error": "缺少 --alloy：请给出该位点上的合金成分，"
                          "如 -a \"Cu:0.5,Au:0.5\""}
     entries = []
     for chunk in re.split(r"[,;]+", str(spec).strip()):
@@ -194,7 +194,7 @@ def composition_counts(entries: list, n_sites: int) -> dict:
     zero = [s for s, c in out.items() if c == 0]
     if zero:
         return {"error": f"{'/'.join(zero)} 在这个超胞里分到 0 个原子："
-                         f"位点数 {n_sites} 太少，请加大 --sqs-supercell 或调整比例"}
+                         f"位点数 {n_sites} 太少，请加大 --supcl 或调整比例"}
     return {"counts": out, "fractions": dict(zip((s for s, _ in entries), fracs))}
 
 
@@ -297,7 +297,7 @@ def run_optimization(cfg: dict) -> dict:
     except Exception as e:  # noqa: BLE001
         return {"error": f"读取 SQS 结果失败：{type(e).__name__}: {e}"}
     if not rows:
-        return {"error": "sqsgenerator 没有返回任何结果：请加大 --sqs-iterations 后重试"}
+        return {"error": "sqsgenerator 没有返回任何结果：请加大 --iterations 后重试"}
     rows.sort(key=lambda t: t[0])
 
     out, seen = [], set()
@@ -427,9 +427,9 @@ def format_report(res: dict, info: dict) -> str:
     want = info.get("n_requested", 1)
     if want > len(res["candidates"]):
         lines.append(f"\n提示：只拿到 {len(res['candidates'])} 个互不相同的候选"
-                     f"（请求 {want} 个）；加大 --sqs-iterations 或换扩胞倍数可再多些。")
+                     f"（请求 {want} 个）；加大 --iterations 或换扩胞倍数可再多些。")
     if res.get("dry_run"):
-        lines += ["", "（-y 预览：只搜索、未写盘、未打包）"]
+        lines += ["", "（-R 预览：只搜索、未写盘、未打包）"]
         return "\n".join(lines)
     lines += ["", f"包裹目录：{b['bundle_dir']}",
               f"压缩包：  {b['tar_gz']}",
@@ -452,10 +452,10 @@ def run(cell_path: str, host: str = None, alloy: str = None, supercell=None,
         return {"error": engine_missing_hint()}
 
     if iterations < MIN_ITERATIONS:
-        return {"error": f"--sqs-iterations 太小（{iterations}），"
+        return {"error": f"--iterations 太小（{iterations}），"
                          f"至少 {MIN_ITERATIONS}；建议 100000 起步"}
     if iterations > MAX_ITERATIONS:
-        return {"error": f"--sqs-iterations 过大（{iterations}）"}
+        return {"error": f"--iterations 过大（{iterations}）"}
 
     cell = load_cell(cell_path)
     if "error" in cell:

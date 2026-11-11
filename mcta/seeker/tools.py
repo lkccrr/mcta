@@ -259,7 +259,7 @@ def search_mp(chemsys: str = None, formula: str = None, max_ehull: float = 0.05,
         n_matched = len(docs)
         ordered = sorted(docs, key=lambda d: (not getattr(d, "is_stable", False),
                                               d.energy_above_hull))
-        # 缓存完整候选（上限 300），否则先用 --top-k 5 缓存、再用 --top-k 20 就取不全
+        # 缓存完整候选（上限 300），否则先用 --topks 5 缓存、再用 --topks 20 就取不全
         all_cands = [{
             "mp_id": str(d.material_id),
             "formula": d.formula_pretty,
@@ -322,7 +322,7 @@ def _query_error(err, query: str) -> str:
         return ("MP_API_KEY 无效或已过期。到 materialsproject.org 重新获取后，"
                 "写入 ~/.config/mcta/config（MP_API_KEY=你的key）或导出环境变量。")
     if "429" in msg or "rate limit" in low:
-        return "请求过于频繁（429）：等几十秒再跑，或把 --top-k 调小、少跑几个体系。"
+        return "请求过于频繁（429）：等几十秒再跑，或把 --topks 调小、少跑几个体系。"
     return f"{type(err).__name__}: {msg}"
 
 

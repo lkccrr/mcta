@@ -37,3 +37,4 @@ Desktop.ini
 
 # --- Local scratch ---
 *.log
+.workbuddy/

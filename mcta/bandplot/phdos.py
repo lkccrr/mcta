@@ -26,6 +26,7 @@ from mcta.bandplot.wrapper import cla_fig
 plt.rcParams['xtick.direction'] = 'in'
 plt.rcParams['ytick.direction'] = 'in'
 plt.rcParams['ytick.minor.visible'] = True
+plt.rcParams['font.family'] = 'STIXGeneral'
 plt.rcParams["mathtext.fontset"] = 'cm'
 
 # phonopy 写出的两种 DOS 文件，projected_dos.dat 优先（列更全）
@@ -145,20 +146,19 @@ mt.phdos -i projected_dos.dat -n                 # 交换坐标轴，纵轴 Freq
     parser.add_argument('-v', '-V', "--version",    action="version",     version=version_string())
     parser.add_argument('-i', "--input",      type=str, nargs='*', default=None, metavar="PATH",
                         help="directory with projected_dos.dat/total_dos.dat, or .dat files; default: current directory")
-    parser.add_argument('-o', "--output",     type=str, help="plot figure filename, default: PHDOS.png", default="PHDOS.png")
-    parser.add_argument('-q', "--dpi",        type=int, help="dpi of the figure, default: 500", default=500)
-    parser.add_argument('-S', "--size",       type=float, nargs=2, help='figure size: width, height', metavar=('width', 'height'))
-    parser.add_argument('-y', "--frequency",  type=float, nargs=2, help="frequency (THz) range", metavar=('start', 'end'))
-    parser.add_argument('-x', "--horizontal", type=float, nargs=2, help="phonon DOS range", metavar=('start', 'end'))
-    parser.add_argument('-n', "--exchange",   action='store_true', help="exchange the axes: frequency vertical (mt.phband -d style)")
-    parser.add_argument('-e', "--elements",   type=str, nargs='+', default=[], help="PDOS labels")
-    parser.add_argument('-G', "--legend",     type=str, nargs='+', default=[], help="legend labels")
-    parser.add_argument('-A', "--location",   type=str.lower, nargs='+', default=[], help="arrange the legend location, default: best", metavar="str")
+    parser.add_argument('-o', "--outpt",     type=str, help="plot figure filename, default: PHDOS.png", default="PHDOS.png")
+    parser.add_argument('-q', "--resol",        type=int, help="dpi of the figure, default: 500", default=500)
+    parser.add_argument('-S', "--figsz",       type=float, nargs=2, help='figure size: width, height', metavar=('width', 'height'))
+    parser.add_argument('-y', "--freqs",  type=float, nargs=2, help="frequency (THz) range", metavar=('start', 'end'))
+    parser.add_argument('-x', "--horiz", type=float, nargs=2, help="phonon DOS range", metavar=('start', 'end'))
+    parser.add_argument('-n', "--exchg",   action='store_true', help="exchange the axes: frequency vertical (mt.phband -d style)")
+    parser.add_argument('-e', "--elems",   type=str, nargs='+', default=[], help="PDOS labels")
+    parser.add_argument('-G', "--legnd",     type=str, nargs='+', default=[], help="legend labels")
+    parser.add_argument('-A', "--locat",   type=str.lower, nargs='+', default=[], help="arrange the legend location, default: best", metavar="str")
     parser.add_argument('-C', "--color",      type=str, nargs='+', default=[], help="line color: b, blue; g, green; r, red; c, cyan; m, magenta; y, yellow; k, black; or a tuple like (0.1,0.2,0.3); a*3 repeats it 3 times", metavar="str")
-    parser.add_argument('-k', "--linestyle",  type=str, nargs='+', default=[], help="linestyle: solid, dashed, dashdot, dotted or tuple; default: solid", metavar="str")
-    parser.add_argument('-w', "--linewidth",  type=str, nargs='+', default=[], help="linewidth, default: 0.8", metavar="0.8")
-    parser.add_argument('-z', "--fill",       type=float, nargs='?', help='fill a shaded region between PDOS and axis, default: 0.2', default=None, const=0.2, metavar="alpha")
-    parser.add_argument('-f', "--font",       type=str, help="font to use", default='STIXGeneral')
+    parser.add_argument('-k', "--style",  type=str, nargs='+', default=[], help="linestyle: solid, dashed, dashdot, dotted or tuple; default: solid", metavar="str")
+    parser.add_argument('-w', "--width",  type=str, nargs='+', default=[], help="linewidth, default: 0.8", metavar="0.8")
+    parser.add_argument('-z', "--alpha",       type=float, nargs='?', help='fill a shaded region between PDOS and axis, default: 0.2', default=None, const=0.2, metavar="alpha")
     args = parser.parse_args(argv)
 
     dosfile, workdir = _resolve(list(args.input) if args.input else ["."])
@@ -167,20 +167,19 @@ mt.phdos -i projected_dos.dat -n                 # 交换坐标轴，纵轴 Freq
 
     darr, dele = readdata.pdos(dosfile)
     atoms, formula = _unitcell(workdir)
-    elements = [str(i) for i in args.elements] or atoms
-    legend = list(args.legend) or [formula or os.path.basename(os.path.abspath(workdir)) or "."]
+    elements = [str(i) for i in args.elems] or atoms
+    legend = list(args.legnd) or [formula or os.path.basename(os.path.abspath(workdir)) or "."]
 
-    plt.rcParams['font.family'] = '%s' % args.font
-    location = [int(i) if i.isdigit() else i for i in args.location]
-    fig_p = cla_fig(output=args.output, size=args.size,
+    location = [int(i) if i.isdigit() else i for i in args.locat]
+    fig_p = cla_fig(output=args.outpt, size=args.figsz,
                     # vertical 始终表示频率范围；exchange=True 时频率在横轴
-                    vertical=args.frequency,
-                    horizontal=args.horizontal,
-                    color=_expand(args.color), linestyle=_expand(args.linestyle),
-                    linewidth=[float(i) for i in _expand(args.linewidth)],
-                    location=location, dpi=args.dpi, fill=args.fill,
+                    vertical=args.freqs,
+                    horizontal=args.horiz,
+                    color=_expand(args.color), linestyle=_expand(args.style),
+                    linewidth=[float(i) for i in _expand(args.width)],
+                    location=location, dpi=args.resol, fill=args.alpha,
                     # mt.phdos 默认频率为横轴：pdosfile 里 exchange=True 就是这个朝向
-                    exchange=not args.exchange)
+                    exchange=not args.exchg)
 
     pplots.pdosfile(darr, dele, elements, legend, fig_p)
     print("已保存：" + fig_p.output)

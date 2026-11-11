@@ -430,7 +430,7 @@ def _chain_seeds(seed, n, rng):
     也不会因为线程调度而变。
 
     给了 seed 时，链种子由它**派生**（而不是随机生成）：这样同一个
-    --seed 一定得到同一批结果，且不同链之间互不相同。不给 seed 时
+    --seeds 一定得到同一批结果，且不同链之间互不相同。不给 seed 时
     才是随机的。
     """
     if seed is None:
@@ -555,7 +555,7 @@ def run(lattice, file, init, J, arrays_temperatures, nequilibrium, nworks,
 
     logger.info("{} {:<8} {}".format(
         "chains:", chains,
-        "seed:" if seed is not None else "seed: random"))
+        ("seed: %d" % seed) if seed is not None else "seed: random"))
     latts = np.zeros((chains, ncell, Y_s, X_s), dtype=np.int8)
     for r in range(chains):
         latts[r] = lattice.initial_state(init)
@@ -654,7 +654,7 @@ def run_vector(lattice, file, init, J, A, arrays_temperatures, nequilibrium,
 
     logger.info("{} {:<8} {}".format(
         "chains:", chains,
-        "seed:" if seed is not None else "seed: random"))
+        ("seed: %d" % seed) if seed is not None else "seed: random"))
 
     if swap > 0 and lav >= 2:
         _run_replica_exchange_vector(logger, lattice, init, coup, Aa, Ab,

@@ -6,6 +6,7 @@
     mt phband    [参数]   等价于 mt.phband    [参数]
     mt phdos     [参数]   等价于 mt.phdos     [参数]
     mt ph        [参数]   等价于 mt.ph        [参数]
+    mt ph3       [参数]   等价于 mt.ph3       [参数]
     mt seeker    [参数]   等价于 mt.seeker    [参数]
     mt sqs       [参数]   等价于 mt.sqs       [参数]
     mt mc        [参数]   等价于 mt.mc        [参数]
@@ -73,9 +74,26 @@ TOOLS = (
         "source": "POSCAR/CONTCAR + VASP 力计算输出（vasprun.xml）",
         "examples": (
             ("mt.ph -b -d", "写 band.conf 与 mesh.conf"),
-            ("mt.ph -r", "fc：用同目录的 vasprun.xml 生成力常数"),
-            ("mt.ph -n 001-003", "f：从位移目录提取力"),
+            ("mt.ph fs vasprun.xml", "fs：单份力文件走 --fc"),
+            ("mt.ph -n 001-003", "fs：多份位移力走 --sp -f"),
             ("mt.ph band", "画声子能带（输出 BAND.dat）"),
+            ("mt.ph tprop", "热学性质 -> thermal_properties.yaml/.dat（不出图）"),
+            ("mt.ph born", "从 vasprun.xml 生成 BORN（NAC）"),
+            ("mt.ph v", "列出本地 phonopy 用法词库（离线）"),
+            ("mt.ph v --dim", "查用法：先英文原文，后中文翻译"),
+            ("mt.ph qha -F e-v.dat thermal_properties.yaml-{00..10}", "准谐近似"),
+        ),
+    },
+    {
+        "key": "ph3",
+        "name": "mt.ph3",
+        "what": "phono3py 热导率流程引导",
+        "source": "POSCAR-unitcell + VASP 力计算输出（vasprun.xml）",
+        "examples": (
+            ("mt.ph3 -s 2 2 2 -S 4 4 4", "fc3/fc2 超胞 + 位移"),
+            ("mt.ph3 cf3 -n disp-{00001..00755}", "收集力 -> FORCES_FC3"),
+            ("mt.ph3 kappa -m 11 11 11", "RTA 热导率 -> kappa-m*.hdf5"),
+            ("mt.ph3 kaccum", "累积热导率 -> kaccum.dat"),
         ),
     },
     {
@@ -86,7 +104,7 @@ TOOLS = (
         "examples": (
             ("mt.seeker -c Ti-C -k 3", "按化学体系检索近稳定相并导出结构包"),
             ("mt.seeker -f MoS2 -k 5 -F cif,poscar", "按化学式检索，只留 CIF/POSCAR"),
-            ("mt.seeker -w \"ehull<=0.05 and is_2d\"", "规则筛选本地已下载结构（-y 预览）"),
+            ("mt.seeker -w \"ehull<=0.05 and is_2d\"", "规则筛选本地已下载结构（-R 预览）"),
         ),
     },
     {
@@ -107,7 +125,7 @@ TOOLS = (
         "examples": (
             ("mt.sqs -c cell.vasp -a \"Cu:0.5,Au:0.5\"", "CuAu 等比合金，默认 3³ 超胞 + 10 万次迭代"),
             ("mt.sqs -c LaAlO3.cif --host La -a \"La:0.5,Sr:0.5\"", "A 位随机化，Al/O 保持不变"),
-            ("mt.sqs -c cell.vasp -a Cu,Au -y", "-y 预览：只搜索、不写盘"),
+            ("mt.sqs -c cell.vasp -a Cu,Au -R", "-R 预览：只搜索、不写盘"),
         ),
     },
     {
@@ -117,7 +135,7 @@ TOOLS = (
         "source": "内置的方格/三角/双层……模型（需要 numba：pip install \"mcta[mc]\"）",
         "examples": (
             ("mt.mc -h", "全部参数"),
-            ("mt.mc -x 100 -y 100 -t 35 -r", "方格子 100×100，35 K，结束后绘图"),
+            ("mt.mc -x 100 -y 100 -t 35", "方格子 100×100，35 K，结束后绘图"),
             ("mt.mc -c bilayer-ab -t 0 60 2", "双层反平行，0–60 K 扫描"),
         ),
     },
@@ -139,6 +157,7 @@ _ALIAS = {
     "phband": "phband", "pbandplot": "phband", "pband": "phband",
     "phdos": "phdos",
     "ph": "ph", "phonon": "ph",
+    "ph3": "ph3", "phono3py": "ph3",
     "seeker": "seeker", "search": "seeker",
     "skl": "skl",
     "sqs": "sqs",
@@ -196,7 +215,7 @@ def _detect(directory="."):
         elif "vasprun.xml" in phonon:
             # vasprun.xml 既可能是能带计算的输出，也可能是声子的力计算
             hints.append("mt.band -i .")
-            hints.append("mt.ph -r")
+            hints.append("mt.ph -x")
         elif "FORCE_SETS" in phonon or "FORCE_CONSTANTS" in phonon:
             hints.append("mt.ph band")
         if "projected_dos.dat" in phonon or "total_dos.dat" in phonon:
@@ -208,8 +227,6 @@ def _detect(directory="."):
 
 
 def overview(directory="."):
-    print("mt %s —— %s (python %s)\n" % (__version__, os.path.dirname(os.path.abspath(__file__)),
-                                        platform.python_version()))
     for tool in TOOLS:
         print("  " + _line(tool["name"], _NAME_COL) + tool["what"])
         print(_IND + "数据来源：" + tool["source"])
@@ -231,6 +248,8 @@ def overview(directory="."):
             print("          " + hint)
     elif not found:
         print("无可识别的 VASP / phonopy 结果文件")
+    print("\nmt %s %s (python %s)\n" % (__version__, os.path.dirname(os.path.abspath(__file__)),
+                                        platform.python_version()))
 
 def which():
     print("mt %s (python %s)" % (__version__, platform.python_version()))
@@ -244,10 +263,10 @@ def which():
 # ------------------------------------------------------------------ 转发 ---
 def _run(key, argv):
     """在进程内调用对应入口，参数与 ``<命令> [参数]`` 完全一致。"""
-    from mcta.bandplot import dos, ph, phdos, wrapper
+    from mcta.bandplot import dos, ph, ph3, phdos, wrapper
 
     entry = {"band": wrapper.main, "dos": dos.main, "phband": wrapper.pmain,
-             "phdos": phdos.main, "ph": ph.main}
+             "phdos": phdos.main, "ph": ph.main, "ph3": ph3.main}
     if key == "seeker":
         from mcta.seeker import cli as seeker_cli
         entry["seeker"] = seeker_cli.main
@@ -292,7 +311,7 @@ def main(argv=None):
     key = _ALIAS.get(head)
     if key is None:
         print("ERROR: 未知命令 %r。" % head)
-        print("可用：mt / mt band / mt dos / mt phband / mt phdos / mt ph / mt seeker / mt skl / mt sqs / mt sh / mt mc / mt which / mt -v/-V")
+        print("可用：mt / mt band / mt dos / mt phband / mt phdos / mt ph / mt ph3 / mt seeker / mt skl / mt sqs / mt sh / mt mc / mt which / mt -v/-V")
         return 2
     result = _run(key, rest)
     return result if isinstance(result, int) else 0

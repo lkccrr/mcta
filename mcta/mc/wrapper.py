@@ -3,7 +3,7 @@ import numpy as np
 from mcta import version_string
 
 try:
-    import numba                       # numba 是可选依赖（pip install "mcta[mc]"）
+    import numba                       # numba 是可选依赖（pip install mcta[mc]）
 except ImportError:
     numba = None
 
@@ -30,77 +30,80 @@ single-ion anisotropy (meV) = 0.1
 temperatures = 35
 
 Example:
-mt.mc -x 100 -y 100 -e 2000 -w 5000 -N 8 -t 35 -r
-mt.mc -x 128 -y 128 -t 0 40 2 -C 6 -S 42 -r
+mt.mc -x 100 -y 100 -e 2000 -w 5000 -N 8 -t 35
+mt.mc -x 128 -y 128 -t 0 40 2 -C 6 -S 42
+mt.mc -x 64 -y 64 -t 20 40 2 -W 20 -S 42
+mt.mc -x 64 -y 64 -t 20 40 2 -R        # run only, no plots
+
 ''',
     formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('-h', '-H', "--help",     action="help",        help='show this help message and exit')
-    parser.add_argument('-v', '-V', "--version",  action="version",     version=version_string())
-    parser.add_argument('-x', "--length",         type=int,   default=64  )
-    parser.add_argument('-y', "--width",          type=int,   default=64  )
-    parser.add_argument('-z', "--height",         type=int,   default=64  )
-    parser.add_argument('-e', "--equilibrium",    type=int,   default=1000)
-    parser.add_argument('-w', "--works",          type=int,   default=1000)
-    parser.add_argument('-a', "--single",         type=float, default=None,  nargs='*')
-    parser.add_argument('-p', "--parameters",     type=float, default=[1.0], nargs='+')
-    parser.add_argument('-j', "--parameterX",     type=float, default=[],    nargs='+')
-    parser.add_argument('-k', "--parameterY",     type=float, default=[],    nargs='+')
-    parser.add_argument('-t', "--temperatur",     type=float, default=[35],  nargs='+')
-    parser.add_argument('-l', "--labl",           type=str,   default='',    help='图例')
-    parser.add_argument('-r', "--export",         action='store_true',       help="结束后绘图")
-    parser.add_argument('-o', "--plot",           type=str,                  help="日志文件绘图")
-    parser.add_argument('-f', "--format",         default="png",             type=str.lower, choices=['png', 'pdf', 'svg', 'jpg', 'tif'])
-    parser.add_argument('-i', "--init",           default="fm",              type=str.lower, choices=['fm', 'afm1', 'afm2','afm3', 'afm4', 'afm5', 'random'])
-    parser.add_argument('-c', "--config",         default="square",          type=str.lower, choices=['square', 'triangular', 'bilayer-aa', 'bilayer-ab', 'bilayer-ab-u-3', 'simple-cubic'])
-    parser.add_argument('-N', "--np",             type=int,   default=0   ,  help="numba 线程数；0=自动（略多于物理核数一半，不超过逻辑核数）")
-    parser.add_argument('-C', "--chains",         type=int,   default=0   ,  help="并行推进的独立链数（多核加速），0 表示与线程数相同")
-    parser.add_argument('-S', "--seed",           type=int,   default=None,  help="随机数种子，给定后结果可复现")
-    parser.add_argument('-W', "--swap",           type=int,   default=0   ,  help="每多少个 sweep 交换一次相邻温度的构型（0=关闭，链数=温度点数）")
+    parser.add_argument('-h', '-H', "--help",    action="help",        help='show this help message and exit')
+    parser.add_argument('-v', '-V', "--version", action="version",     version=version_string())
+    parser.add_argument('-x', "--sizex",         type=int,   default=64  )
+    parser.add_argument('-y', "--sizey",         type=int,   default=64  )
+    parser.add_argument('-z', "--sizez",         type=int,   default=64  )
+    parser.add_argument('-e', "--equil",         type=int,   default=1000)
+    parser.add_argument('-w', "--works",         type=int,   default=1000)
+    parser.add_argument('-a', "--aniso",         type=float, default=None,  nargs='*')
+    parser.add_argument('-p', "--param",         type=float, default=[1.0], nargs='+')
+    parser.add_argument('-j', "--parax",         type=float, default=[],    nargs='+')
+    parser.add_argument('-k', "--paray",         type=float, default=[],    nargs='+')
+    parser.add_argument('-t', "--temps",         type=float, default=[35],  nargs='+')
+    parser.add_argument('-i', "--inits",         default="fm",              type=str.lower, choices=['fm', 'afm1', 'afm2','afm3', 'afm4', 'afm5', 'random'])
+    parser.add_argument('-c', "--confg",         default="square",          type=str.lower, choices=['square', 'triangular', 'bilayer-aa', 'bilayer-ab', 'bilayer-ab-u-3', 'simple-cubic'])
+    parser.add_argument('-N', "--thrds",         type=int,   default=0   ,  help="numba 线程数；0=自动（物理核数的约 3/5，不超过物理核总数）")
+    parser.add_argument('-C', "--chain",         type=int,   default=0   ,  help="并行推进的独立链数（多核加速），0 表示与线程数相同；回火模式下链数=温度点数")
+    parser.add_argument('-S', "--seeds",         type=int,   default=None,  help="随机数种子，给定后结果可复现")
+    parser.add_argument('-W', "--swaps",         type=int,   default=0   ,  help="每多少个 sweep 交换一次相邻温度的构型（0=关闭，链数=温度点数）")
+    parser.add_argument('-R', "--dryrn",         action='store_true',       help="不自动绘图（只跑模拟并写日志）；默认结束后绘图")
+    parser.add_argument('-l', "--label",         type=str,   default='',    help='图例')
+    parser.add_argument('-o', "--plots",         type=str,                  help="日志文件绘图")
+    parser.add_argument('-f', "--imgfm",         default="png", type=str.lower, help="输出图片格式（任意 matplotlib 支持的格式，如 png/pdf/svg/jpg/tif）；无法保存时会提示并回退为 png")
     args = parser.parse_args()
 
     if numba is None:
         print('ERROR: mt.mc 需要 numba（可选依赖），请先安装：'
-              'pip install "mcta[mc]"')
+              'pip install mcta[mc]')
         return 1
 
-    seed = args.seed
-    swap = args.swap
+    seed = args.seeds
+    swap = args.swaps
 
-    arrays_temperatures = temperatures(args.temperatur)
+    arrays_temperatures = temperatures(args.temps)
 
     # 按本机核数决定并行策略：
     #   独立多链 -> 链数 = 线程数（统计量取平均，误差更小）
     #   并行回火 -> 链数 = 温度点数
     # 线程数默认取"略多于物理核数的一半"（见 mcta/mc/parallel.py 的说明）：
     # 把核心跑满实测反而更慢，超线程的边际收益也很小。
-    # 用户显式给了 -R / -n 就按用户说的来。
+    # 用户显式给了 -C / -N 就按用户说的来。
     mode = "tempering" if swap > 0 else "chains"
-    NP, chains = parallel.thread_plan(mode, args.chains, args.np,
+    NP, chains = parallel.thread_plan(mode, args.chain, args.thrds,
                                         n_temps=len(arrays_temperatures))
     numba.set_num_threads(NP)
 
-    X = check(args.length)
-    Y = check(args.width)
-    Z = check(args.height)
-    config = args.config
-    init = args.init
+    X = check(args.sizex)
+    Y = check(args.sizey)
+    Z = check(args.sizez)
+    config = args.confg
+    init = args.inits
     # 多链并行与 replica exchange 都是通用能力（内核只读表），
     # 所有构型都支持；这里只在初态可能不被某些构型支持时提示。
 
-    nequilibrium = args.equilibrium
+    nequilibrium = args.equil
     nworks       = args.works
-    J  = args.parameters
-    JX = args.parameterX
-    JY = args.parameterY
-    format = args.format
-    legend = args.labl
+    J  = args.param
+    JX = args.parax
+    JY = args.paray
+    format = args.imgfm
+    legend = args.label
 
-    if args.plot and os.path.exists(args.plot):
+    if args.plots and os.path.exists(args.plots):
         from mcta.mc import plots
-        plots.main(args.plot, format, legend)
+        plots.main(args.plots, format, legend)
     else:
-        if args.single is not None:
-            A = [0.1] if args.single == [] else args.single
+        if args.aniso is not None:
+            A = [0.1] if args.aniso == [] else args.aniso
             # 矢量自旋：同样表驱动，只是换成矢量内核族
             from mcta.mc import geometry
             from mcta.mc import engine
@@ -117,7 +120,7 @@ mt.mc -x 128 -y 128 -t 0 40 2 -C 6 -S 42 -r
             engine.run(lattice, file, init, J, arrays_temperatures,
                        nequilibrium, nworks, chains, seed, swap)
 
-        if args.export and os.path.exists(file):
+        if not args.dryrn and os.path.exists(file):
             from mcta.mc import plots
             plots.main(file, format, legend)
 

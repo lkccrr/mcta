@@ -1,0 +1,1968 @@
+{
+ "meta": {
+  "title": "Phonopy documentation",
+  "doc_version": "4.10.0",
+  "source": "https://phonopy.github.io/phonopy/",
+  "page_titles": {
+   "command-options": "Command options — Phonopy v.4.10.0",
+   "setting-tags": "Setting tags — Phonopy v.4.10.0",
+   "auxiliary-tools": "Auxiliary tools — Phonopy v.4.10.0",
+   "phonopy-init": "phonopy-init command — Phonopy v.4.10.0",
+   "qha": "Quasi harmonic approximation — Phonopy v.4.10.0",
+   "gruneisen": "Calculation of mode Grüneisen parameters — Phonopy v.4.10.0",
+   "migration-v4": "Migrating from phonopy v3 to v4 — Phonopy v.4.10.0"
+  },
+  "note": "English text is verbatim from the phonopy official documentation; Chinese is the translation. mt.ph v reads this file locally and never accesses the network.",
+  "order": "Per entry: a line with the doc page title and version, then the English original, a blank line, and the Chinese translation."
+ },
+ "entries": [
+  {
+   "name": "Create FORCE_SETS",
+   "title": "Create FORCE_SETS",
+   "group": "tool",
+   "keys": [
+    "CREATE FORCE_SETS",
+    "Create FORCE_SETS",
+    "FORCE_SETS",
+    "create force_sets"
+   ],
+   "en": "FORCE_SETS is a file containing the displacement-force dataset from which\nsupercell force constants will be calculated. The command option -f or --fz\nis used to collect displacements in phonopy_disp.yaml and forces from force\ncalculator results if the corresponding interface exists in phonopy.\nWhen combined with the --sp or --save-params option, this enables writing\nthe displacement-force dataset to phonopy_params.yaml. If the force calculator\ninterface supports reading supercell potential energy (e.g., electronic total\nenergy in the case of VASP), supercell energies are also stored in\nphonopy_params.yaml. These supercell energies can be used to develop machine\nlearning potentials such as pypolymlp. See Create phonopy_params.yaml.",
+   "zh": "FORCE_SETS 保存位移-力数据集，超胞力常数由它计算得到。用 -f 或 --fz 把 phonopy_disp.yaml 中的位移与各力计算器输出中的力收集起来（需 phonopy 支持相应接口），随后即可据此求力常数。",
+   "url": "https://phonopy.github.io/phonopy/command-options.html#create-force-sets",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "Create phonopy_params.yaml",
+   "title": "Create phonopy_params.yaml",
+   "group": "tool",
+   "keys": [
+    "CREATE PHONOPY_PARAMS.YAML",
+    "Create phonopy_params.yaml",
+    "create phonopy_params.yaml",
+    "phonopy_params.yaml"
+   ],
+   "en": "phonopy_params.yaml thus created by --sp option contains the necessary\ninformation to run phonopy. Therefore only this file can be given to other user\nas the phonopy input file.",
+   "zh": "用 --sp 生成的 phonopy_params.yaml 含运行 phonopy 所需的全部信息，因此只需把这单个文件交给别人即可作为 phonopy 的输入。",
+   "url": "https://phonopy.github.io/phonopy/command-options.html#create-phonopy-params-yaml",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "phonopy",
+   "title": "Command options",
+   "group": "tool",
+   "keys": [
+    "PHONOPY",
+    "command options",
+    "main command",
+    "phonopy"
+   ],
+   "en": "From phonopy v1.12.2, the command option names with underscores _ are replaced\nby those with dashes -. Those tag names are unchanged.\nSome of command-line options are equivalent to respective setting tags:\n--alm (FC_CALCULATOR = ALM) [ALM]\n--amax (DISPLACEMENT_DISTANCE_MAX) [DISPLACEMENT_DISTANCE_MAX]\n--amax-per-atom (DISPLACEMENT_DISTANCE_SAMPLING = ATOM)\n[DISPLACEMENT_DISTANCE_SAMPLING]\n--amplitude (DISPLACEMENT_DISTANCE) [DISPLACEMENT_DISTANCE]\n--anime (ANIME) [ANIME]\n--band (BAND) [BAND]\n--band-connection (BAND_CONNECTION = .TRUE.) [BAND_CONNECTION]\n--band-const-interval (BAND_CONST_INTERVAL = .TRUE.) [BAND_CONST_INTERVAL]\n--band-format (BAND_FORMAT) [BAND_FORMAT]\n--band-labels (BAND_LABELS) [BAND_LABELS]\n--band-points (BAND_POINTS) [BAND_POINTS]\n--cutoff-freq (CUTOFF_FREQUENCY) [CUTOFF_FREQUENCY]\n-c, --cell (CELL_FILENAME) [CELL_FILENAME]\n-d (CREATE_DISPLACEMENTS = .TRUE.) [CREATE_DISPLACEMENTS]\n--dim (DIM) [DIM]\n--dos (DOS = .TRUE.) [DOS]\n--eigvecs, --eigenvectors (EIGENVECTORS = .TRUE.)\n[EIGENVECTORS]\n--exclude-gamma-acoustic (EXCLUDE_GAMMA_ACOUSTIC = .TRUE.),\n--no-exclude-gamma-acoustic (EXCLUDE_GAMMA_ACOUSTIC = .FALSE.)\n[EXCLUDE_GAMMA_ACOUSTIC]",
+   "zh": "phonopy 主命令的说明与选项总表。自 v1.12.2 起，命令行选项名里的下划线 _ 改为连字符 -，配置标签名不变；许多命令行选项与配置标签等价，例如 --alm 对应 FC_CALCULATOR = ALM、--amplitude 对应 DISPLACEMENT_DISTANCE、--band 对应 BAND 等。v4 起主命令只负责声子计算，建模交给 phonopy-init。",
+   "url": "https://phonopy.github.io/phonopy/command-options.html#command-options",
+   "source": "phonopy official documentation",
+   "truncated": true
+  },
+  {
+   "name": "phonopy-bandplot",
+   "title": "phonopy-bandplot",
+   "group": "tool",
+   "keys": [
+    "--gnuplot",
+    "BAND.dat",
+    "PHONOPY-BANDPLOT",
+    "band.yaml",
+    "phonopy-bandplot"
+   ],
+   "en": "Band structure is plotted reading phonopy output in band.yaml format. -o\noption with a file name is used to save the plot into a file in PDF format. A\nfew more options are prepared and shown by -h option. If you specify more than\ntwo yaml files, they are plotted together.\n% phonopy-bandplot band.yaml\nTo obtain a simple text format data:\n% phonopy-bandplot --gnuplot band.yaml",
+   "zh": "读取 band.yaml 格式的 phonopy 输出绘制能带结构。-o 加文件名可把图保存为 PDF，更多选项见 -h；给出两个以上 yaml 文件时会画在同一张图上。示例：% phonopy-bandplot band.yaml；要得到纯文本数据可加 --gnuplot 导出 BAND.dat。",
+   "url": "https://phonopy.github.io/phonopy/auxiliary-tools.html#phonopy-bandplot",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "phonopy-gruneisen",
+   "title": "How to run",
+   "group": "tool",
+   "keys": [
+    "--readfc",
+    "PHONOPY-GRUNEISEN",
+    "equiv plus minus",
+    "gruneisen",
+    "phonopy-gruneisen"
+   ],
+   "en": "It is necessary to run three phonon calculations. One is calculated at the\nequilibrium volume and the remaining two are calculated at the slightly larger\nvolume and smaller volume than the equilibrium volume. The unit cells at these\nvolumes have to be fully relaxed under the constraint of each volume.\nLet files named POSCAR-unitcell, FORCE_SETS (or FORCE_CONSTANTS with\n--readfc option), and optionally BORN stored in three different directories\nnamed, e.g., equiv, plus, and minus.\nThe calculated results are written into the file gruneisen.yaml.\nIn the example directory, an example of silicon (Si-gruneisen) is prepared. A\ncalculation along paths in reciprocal space can be made by\n% phonopy-gruneisen orig plus minus --dim=\"2 2 2\" --pa=\"0 1/2 1/2 1/2 0 1/2 1/2 1/2 0\" --band=\"1/2 1/4 3/4 0 0 0 1/2 1/2 1/2 1/2 0.0 1/2\" -p -c POSCAR-unitcell\nIn this calculation, neighboring q-points in each band segment are connected\nconsidering their phonon symmetry to treat band crossing correctly. Therefore\nthe phonon frequencies may not be ordered in gruneisen.yaml. In the plot (-p\noption), the colors of phonon bands correspond to those of mode Grüneinen\nparameters.",
+   "zh": "模式 Grüneisen 参数需要做三次声子计算：平衡体积一次，以及比平衡体积略大、略小的两个体积各一次；各体积的原胞必须在固定体积约束下充分弛豫。把 POSCAR-unitcell、FORCE_SETS（或用 --readfc 时的 FORCE_CONSTANTS）、以及可选的 BORN 分别放在 equiv、plus、minus 等三个目录中。结果写入 gruneisen.yaml，示例目录中有 Si-gruneisen。",
+   "url": "https://phonopy.github.io/phonopy/gruneisen.html#how-to-run",
+   "source": "phonopy official documentation",
+   "truncated": true
+  },
+  {
+   "name": "phonopy-init",
+   "title": "phonopy-init command",
+   "group": "tool",
+   "keys": [
+    "PHONOPY-INIT",
+    "PHONOPY-INIT COMMAND",
+    "init",
+    "phonopy-init",
+    "phonopy-init command",
+    "v4"
+   ],
+   "en": "The phonopy-init command handles the setup steps that happen before phonon\ncalculation:\ngenerate supercells with displacements (-d, --rd),\ncollect calculator results into FORCE_SETS (-f, --fz) or convert them\ninto FORCE_CONSTANTS (--fc),\ninspect the crystal symmetry of the input cell (--symmetry).\nAfter this step, run the phonon calculation with phonopy command.",
+   "zh": "phonopy-init 负责声子计算之前的准备步骤：用 -d / --rd 生成含位移的超胞，用 -f / --fz 把力计算器结果收集成 FORCE_SETS，或用 --fc 直接转换成 FORCE_CONSTANTS，还可用 --symmetry 检查输入原胞的晶体对称性。完成后再运行 phonopy 命令做声子计算。",
+   "url": "https://phonopy.github.io/phonopy/phonopy-init.html#phonopy-init-command",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "phonopy-pdosplot",
+   "title": "phonopy-pdosplot",
+   "group": "tool",
+   "keys": [
+    "PHONOPY-PDOSPLOT",
+    "partial_dos.dat",
+    "phonopy-pdosplot",
+    "projected_dos.dat"
+   ],
+   "en": "Partial density of states (PDOS) are plotted.\n-i option is used as\n% phonopy-pdosplot -i '1 2 4 5, 3 6' -o 'pdos.pdf' partial_dos.dat\nThe indices and comma in 1 2 3 4, 5 6 mean as follows. The indices are\nseparated into blocks by comma (1 2 4 5 and 3 6). PDOS specified by the\nsuccessive indices separated by space in each block are summed up. The PDOS of\nblocks are drawn simultaneously. Indices usually correspond to atoms. A few more\noptions are prepared and shown by -h option.",
+   "zh": "绘制投影态密度（PDOS）。-i 用于指定原子分组，例如 % phonopy-pdosplot -i '1 2 4 5, 3 6' -o 'pdos.pdf' partial_dos.dat；逗号把指标分成若干块，块内以空格分隔的原子 PDOS 会先求和再画成一条曲线，逗号分隔的各块分别作曲线。",
+   "url": "https://phonopy.github.io/phonopy/auxiliary-tools.html#phonopy-pdosplot",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "phonopy-propplot",
+   "title": "phonopy-propplot",
+   "group": "tool",
+   "keys": [
+    "PHONOPY-PROPPLOT",
+    "phonopy-propplot",
+    "thermal_properties.dat",
+    "thermal_properties.yaml"
+   ],
+   "en": "Thermal properties are plotted. Options are prepared and shown by -h option.\nIf you specify more than two yaml files, they are plotted together.\n% phonopy-proplot thermal_properties_A.yaml thermal_properties_B.yaml",
+   "zh": "绘制热学性质曲线，可用 -h 查看选项；给出两个以上 yaml 文件时会画在同一张图上。示例：% phonopy-propplot thermal_properties_A.yaml thermal_properties_B.yaml；加 --gnuplot 可把 thermal_properties.yaml 导出为纯文本数据列。",
+   "url": "https://phonopy.github.io/phonopy/auxiliary-tools.html#phonopy-propplot",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "phonopy-qha",
+   "title": "The phonopy-qha command",
+   "group": "tool",
+   "keys": [
+    "PHONOPY-QHA",
+    "THE PHONOPY-QHA COMMAND",
+    "The phonopy-qha command",
+    "e-v.dat",
+    "phonopy-qha",
+    "qha",
+    "the phonopy-qha command"
+   ],
+   "en": "Note\nThe phonopy-qha command is planned to be removed in a future version. For\nnew calculations, use the Python API run_qha (Python API: run_qha).\nphonopy-qha does not include the electronic entropy and heat capacity; see\nElectronic free energy.\nphonopy-qha is the script to run the fitting and calculations. Mind that at\nleast 5 volume points are needed for the fitting.\nAn example of the usage for example/Si-QHA is as follows.\nTo watch selected plots:\n% phonopy-qha -p e-v.dat thermal_properties.yaml-{-{5..1},{0..5}}\nWithout plots:\n% phonopy-qha e-v.dat thermal_properties.yaml-{-{5..1},{0..5}}\nThe first argument is the filename of volume-energy data (in the above example,\ne-v.dat). The volumes and energies are given in \\(\\text{Angstrom}^3\\) and\neV, respectively. These energies are only dependent on volume but not on\ntemperature unless using --efe option. Therefore in the simplest case, these\nare taken as the total energies of the static lattice. An example of the\nvolume-energy file is:\n# cell volume energy of cell other than phonon\n140.030000 -42.132246\n144.500000 -42.600974\n149.060000 -42.949142\n153.720000 -43.188162\n158.470000 -43.326751\n163.320000 -43.375124\n168.270000 -43.339884",
+   "zh": "注意：phonopy-qha 计划在未来版本中移除，新计算建议改用 Python API run_qha；该命令不包含电子熵与电子热容。它是执行状态方程拟合与热学计算的脚本，拟合至少需要 5 个体积点。示例：% phonopy-qha -p e-v.dat thermal_properties.yaml-{-{5..1},{0..5}}（不加 -p 则不出图）；第一个参数是体积-能量数据文件（如 e-v.dat）。",
+   "url": "https://phonopy.github.io/phonopy/qha.html#the-phonopy-qha-command",
+   "source": "phonopy official documentation",
+   "truncated": true
+  },
+  {
+   "name": "phonopy-vasp-born",
+   "title": "phonopy-vasp-born",
+   "group": "tool",
+   "keys": [
+    "BORN",
+    "NAC",
+    "PHONOPY-VASP-BORN",
+    "born",
+    "phonopy-vasp-born"
+   ],
+   "en": "This script is used to create a BORN style file from VASP output file of\nvasprun.xml. The first argument is a vasprun.xml file. If it is omitted,\nvasprun.xml at current directory are read. The Born effective charges and\ndielectric tensor are symmetrized as default. To prevent symmetrization,\n--nost option has to be specified.\n% phonopy-vasp-born\n% phonopy-vasp-born --nost",
+   "zh": "从 VASP 输出 vasprun.xml 生成 BORN 文件。第一个参数是 vasprun.xml，省略时读取当前目录下的 vasprun.xml；默认对 Born 有效电荷与介电张量做对称化，加 --nost 可关闭对称化。示例：% phonopy-vasp-born。",
+   "url": "https://phonopy.github.io/phonopy/auxiliary-tools.html#phonopy-vasp-born",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "--abinit",
+   "title": "--abinit",
+   "group": "option",
+   "keys": [
+    "--ABINIT",
+    "--abinit",
+    "abinit"
+   ],
+   "en": "Abinit mode is invoked with this option.",
+   "zh": "用此选项启用 Abinit 计算器模式。",
+   "url": "https://phonopy.github.io/phonopy/command-options.html#abinit",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "--cp2k",
+   "title": "--cp2k",
+   "group": "option",
+   "keys": [
+    "--CP2K",
+    "--cp2k",
+    "cp2k"
+   ],
+   "en": "CP2K mode is invoked with this option.",
+   "zh": "用此选项启用 CP2K 计算器模式。",
+   "url": "https://phonopy.github.io/phonopy/command-options.html#cp2k",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "--crystal",
+   "title": "--crystal",
+   "group": "option",
+   "keys": [
+    "--CRYSTAL",
+    "--crystal",
+    "crystal"
+   ],
+   "en": "CRYSTAL mode is invoked with this option.",
+   "zh": "用此选项启用 CRYSTAL 计算器模式。",
+   "url": "https://phonopy.github.io/phonopy/command-options.html#crystal",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "--dim",
+   "title": "--dim",
+   "group": "option",
+   "keys": [
+    "--DIM",
+    "--dim",
+    "DIM",
+    "dim"
+   ],
+   "en": "This is same as DIM.\n\nThe supercell is created from the input unit cell. When three integers are\nspecified, a supercell elongated along axes of unit cell is created.\nDIM = 2 2 3\nIn this case, a 2x2x3 supercell is created.\nWhen nine integers are specified, the supercell is created by multiplying the\nsupercell matrix \\(\\mathrm{M}_\\mathrm{s}\\) with the unit cell. For example,\nDIM = 0 1 1 1 0 1 1 1 0\nthe supercell matrix is\n\\[\\begin{split}\\mathrm{M}_\\mathrm{s} = \\begin{pmatrix}\n0 & 1 & 1 \\\\ 1 & 0 & 1 \\\\ 1 & 1 & 0\n\\end{pmatrix}\\end{split}\\]\nwhere the rows correspond to the first three, second three, and third three sets",
+   "zh": "与 DIM 标签相同。由输入原胞生成超胞：给三个整数时沿原胞三个晶轴扩胞，如 DIM = 2 2 3 得到 2×2×3 超胞；给九个整数时按超胞矩阵相乘生成，可构造非对角（倾斜）超胞。也可用于指定磁性原胞等情形。",
+   "url": "https://phonopy.github.io/phonopy/auxiliary-tools.html#dim",
+   "source": "phonopy official documentation",
+   "truncated": true
+  },
+  {
+   "name": "--efe",
+   "title": "--efe",
+   "group": "option",
+   "keys": [
+    "--EFE",
+    "--efe",
+    "efe"
+   ],
+   "en": "Experimental\nTemperature dependent energies other than phonon free energy are included with\nthis option. This is used such as:\n% phonopy-qha -p --tmax=1300 --efe fe-v.dat e-v.dat thermal_properties.yaml-{00..10}\nThe temperature dependent energies are stored in fe-v.dat. The file format is:\n# volume: 43.08047896 43.97798894 44.87549882 45.77300889 46.67051887 47.56802885 48.46553883 49.36304881 50.26055878 51.15806876 52.05557874\n# T(K) Free energies\n0.0000 -17.27885993 -17.32227490 -17.34336569 -17.34479760 -17.32843604 -17.29673896 -17.25081954 -17.19263337 -17.12356816 -17.04467997 -16.95752155\n10.0000 -17.27886659 -17.32228126 -17.34337279 -17.34481060 -17.32844885 -17.29675204 -17.25083261 -17.19264615 -17.12358094 -17.04469309 -16.95753464\n20.0000 -17.27887453 -17.32228804 -17.34338499 -17.34482383 -17.32846353 -17.29676491 -17.25084547 -17.19265900 -17.12359399 -17.04470709 -16.95754774\n...\nThe first column gives temperatures in K and the following columns give the\nenergies other than the phonon free energy in eV, at temperatures and at unit\n(primitive) cell volumes. For the electronic free energy, each value is",
+   "zh": "在 QHA 中加入声子自由能以外随温度变化的能量（如电子自由能）。示例：% phonopy-qha -p --tmax=1300 --efe fe-v.dat e-v.dat thermal_properties.yaml-{00..10}；温度相关能量保存在 fe-v.dat 中，文件按体积与温度逐行给出能量。",
+   "url": "https://phonopy.github.io/phonopy/qha.html#efe",
+   "source": "phonopy official documentation",
+   "truncated": true
+  },
+  {
+   "name": "--elk",
+   "title": "--elk",
+   "group": "option",
+   "keys": [
+    "--ELK",
+    "--elk",
+    "elk"
+   ],
+   "en": "Elk mode is invoked with this option.",
+   "zh": "用此选项启用 Elk 计算器模式。",
+   "url": "https://phonopy.github.io/phonopy/command-options.html#elk",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "--eos",
+   "title": "--eos",
+   "group": "option",
+   "keys": [
+    "--EOS",
+    "--eos",
+    "eos"
+   ],
+   "en": "EOS is chosen among vinet, birch_murnaghan, and murnaghan. The default EOS\nis vinet.\n% phonopy-qha --eos='birch_murnaghan' -b e-v.dat",
+   "zh": "选择体积-能量拟合所用的状态方程，可选 vinet、birch_murnaghan、murnaghan，默认 vinet。示例：% phonopy-qha --eos='birch_murnaghan' -b e-v.dat。",
+   "url": "https://phonopy.github.io/phonopy/qha.html#eos",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "--fc or --force_constants",
+   "title": "--fc or --force_constants",
+   "group": "option",
+   "keys": [
+    "--FC",
+    "--FC OR --FORCE_CONSTANTS",
+    "--FORCE_CONSTANTS",
+    "--fc",
+    "--fc or --force_constants",
+    "--force_constants",
+    "FORCE_CONSTANTS",
+    "fc",
+    "fc or --force_constants",
+    "force_constants"
+   ],
+   "en": "Currently this option supports only VASP output.\nVASP output of force constants is imported from vasprun.xml and\nFORCE_CONSTANTS is created.\n% phonopy-init --fc vasprun.xml\nThis FORCE_CONSTANTS can be used instead of FORCE_SETS. For more details,\nplease refer VASP-DFPT & phonopy calculation.",
+   "zh": "目前仅支持 VASP 输出：从 vasprun.xml 读入力常数并生成 FORCE_CONSTANTS，可用来代替 FORCE_SETS。示例：% phonopy-init --fc vasprun.xml；详见文档中 VASP-DFPT 与 phonopy 计算一节。",
+   "url": "https://phonopy.github.io/phonopy/command-options.html#fc-or-force-constants",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "--fleur",
+   "title": "--fleur",
+   "group": "option",
+   "keys": [
+    "--FLEUR",
+    "--fleur",
+    "fleur"
+   ],
+   "en": "Fleur mode is invoked with this option.",
+   "zh": "用此选项启用 Fleur 计算器模式。",
+   "url": "https://phonopy.github.io/phonopy/command-options.html#fleur",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "--fz",
+   "title": "--fz",
+   "group": "option",
+   "keys": [
+    "--FZ",
+    "--fz",
+    "fz"
+   ],
+   "en": "This option belongs to phonopy-init.\n--fz option is used to subtract residual forces frown the forces calculated\nfor the supercells with displacements. Here the residual forces mean that the\nforces calculated for the perfect supercell for which the number of atoms has to\nbe the same as those for the supercells with displacements. If the forces are\naccurately calculated by calculators, the residual forces should be canceled\nwhen plus-minus displacements are employed (see PM),\nthat is the default option in phonopy. Therefore --fz option is expected to be\nuseful when PM = .FALSE. is set in the phonopy setting file.\nThe usage of this option is almost the same as that of -f option except that\none more argument is inserted at the front. Mind that --fz is exclusively used\nwith -f option. The example for the VASP interface is shown below:\n% phonopy-init --fz sposcar/vasprun.xml disp-001/vasprun.xml ...\nwhere sposcar/vasprun.xml assumes the output file for the perfect supercell\ncontaining residual forces.\nThis option perhaps works for the other calculator interfaces than the VASP\ninterface, but it is not tested yet. It would be appreciated if you report it to",
+   "zh": "属于 phonopy-init 的选项。用于减去残余力：即从含位移超胞算出的力中，扣除原子数相同的完美超胞算出的力。适用于需要消除残余应力的力计算器输出。",
+   "url": "https://phonopy.github.io/phonopy/command-options.html#fz",
+   "source": "phonopy official documentation",
+   "truncated": true
+  },
+  {
+   "name": "--nost",
+   "title": "--nost",
+   "group": "option",
+   "keys": [
+    "--NOST",
+    "--nost",
+    "nost"
+   ],
+   "en": "Dielectric constant and Born effective charge tensors are not symmetrized.",
+   "zh": "不对介电常数与 Born 有效电荷张量做对称化（用于 phonopy-vasp-born）。",
+   "url": "https://phonopy.github.io/phonopy/auxiliary-tools.html#nost",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "--outcar",
+   "title": "--outcar",
+   "group": "option",
+   "keys": [
+    "--OUTCAR",
+    "--outcar",
+    "outcar"
+   ],
+   "en": "Read OUTCAR instead of vasprun.xml. Without specifying arguments, OUTCAR\nand POSCAR at current directory are read. POSCAR information is necessary in\ncontrast to reading vasprun.xml where the unit cell structure is also read\nfrom it.\n% phonopy-vasp-born --outcar\n% phonopy-vasp-born --nost --outcar OUTCAR POSCAR",
+   "zh": "改为读取 OUTCAR 而不是 vasprun.xml。不带参数时读取当前目录的 OUTCAR 与 POSCAR；与 vasprun.xml 不同，OUTCAR 不含原胞结构，因此必须同时提供 POSCAR。示例：% phonopy-vasp-born --outcar、% phonopy-vasp-born --nost --outcar OUTCAR POSCAR。",
+   "url": "https://phonopy.github.io/phonopy/auxiliary-tools.html#outcar",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "--pa, --primitive-axes",
+   "title": "--pa, --primitive-axes",
+   "group": "option",
+   "keys": [
+    "--PA",
+    "--PA, --PRIMITIVE-AXES",
+    "--PRIMITIVE-AXES",
+    "--pa",
+    "--pa, --primitive-axes",
+    "--primitive-axes",
+    "pa",
+    "pa, --primitive-axes",
+    "primitive-axes"
+   ],
+   "en": "This is same as PRIMITIVE_AXES.",
+   "zh": "与 PRIMITIVE_AXES 标签相同，用九个数值指定从输入原胞到原胞（primitive cell）的变换矩阵。",
+   "url": "https://phonopy.github.io/phonopy/auxiliary-tools.html#pa-primitive-axes",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "--pressure",
+   "title": "--pressure",
+   "group": "option",
+   "keys": [
+    "--PRESSURE",
+    "--pressure",
+    "pressure"
+   ],
+   "en": "Pressure is specified in GPa. This corresponds to the \\(pV\\) term in the\nequation of \\(G(T, p)\\) at the top of this page. Note that bulk modulus obtained\nwith this option than 0 GPa is incorrect.",
+   "zh": "以 GPa 指定压力，对应自由能 G(T, p) 中的 pV 项。注意：用非 0 GPa 时得到的体模量是不正确的。",
+   "url": "https://phonopy.github.io/phonopy/qha.html#pressure",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "--qe",
+   "title": "--qe",
+   "group": "option",
+   "keys": [
+    "--QE",
+    "--qe",
+    "qe"
+   ],
+   "en": "Quantum ESPRESSO mode is invoked with this option.",
+   "zh": "用此选项启用 Quantum ESPRESSO 计算器模式。",
+   "url": "https://phonopy.github.io/phonopy/command-options.html#qe",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "--qlm",
+   "title": "--qlm",
+   "group": "option",
+   "keys": [
+    "--QLM",
+    "--qlm",
+    "qlm"
+   ],
+   "en": "This option invokes the Questaal/LMTO mode.\nOnly the WIEN2k struct with the P lattice is supported. See more information\nWien2k & phonopy calculation.",
+   "zh": "启用 Questaal/LMTO 模式，目前只支持 WIEN2k 结构中 P 型晶格；详见文档中 Wien2k 与 phonopy 计算一节。",
+   "url": "https://phonopy.github.io/phonopy/command-options.html#qlm",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "--siesta",
+   "title": "--siesta",
+   "group": "option",
+   "keys": [
+    "--SIESTA",
+    "--siesta",
+    "siesta"
+   ],
+   "en": "Siesta mode is invoked with this option.",
+   "zh": "用此选项启用 Siesta 计算器模式。",
+   "url": "https://phonopy.github.io/phonopy/command-options.html#siesta",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "--sp or --save-params",
+   "title": "--sp or --save-params",
+   "group": "option",
+   "keys": [
+    "--SAVE-PARAMS",
+    "--SP",
+    "--SP OR --SAVE-PARAMS",
+    "--save-params",
+    "--sp",
+    "--sp or --save-params",
+    "phonopy_params.yaml",
+    "save-params",
+    "sp",
+    "sp or --save-params"
+   ],
+   "en": "After running phonopy, displacement-force dataset or force constants and\nparameters for non-analytical term correction are written in\nphonopy_params.yaml if these data are used.\nWhen using with -f, displacement-force dataset are stored in\nphonopy_params.yaml instead of FORCE_SETS. When BORN file is found in the\ncurrent directory, the parameters are also stored in phonopy_params.yaml.\n% phonopy-init --sp -f disp-001/vasprun.xml disp-002/vasprun.xml ...",
+   "zh": "运行 phonopy 后，把位移-力数据集或力常数以及非解析项修正所需参数写入 phonopy_params.yaml。与 -f 一起用时，位移-力数据集写入 phonopy_params.yaml 而不写 FORCE_SETS；存在 BORN 文件时也会一并写入相关参数。",
+   "url": "https://phonopy.github.io/phonopy/command-options.html#sp-or-save-params",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "--sparse",
+   "title": "--sparse",
+   "group": "option",
+   "keys": [
+    "--SPARSE",
+    "--sparse",
+    "sparse"
+   ],
+   "en": "This is used with -s or -p to thin out the number of plots of the fitting\nresults at temperatures. For example with --sparse=10, 1 in 10 temperature\ncurves is only plotted.",
+   "zh": "与 -s 或 -p 连用，用于稀释拟合结果随温度变化的曲线数量。例如 --sparse=10 表示每 10 条温度曲线只画 1 条。",
+   "url": "https://phonopy.github.io/phonopy/qha.html#sparse",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "--symmetry",
+   "title": "--symmetry",
+   "group": "option",
+   "keys": [
+    "--SYMMETRY",
+    "--symmetry",
+    "symmetry"
+   ],
+   "en": "This option belongs to phonopy-init.\nUsing this option, various crystal symmetry information is just printed out and\nphonopy stops without going to phonon analysis.\n% phonopy-init --symmetry\nThis tag can be used together with the --cell (-c), --abinit, --qe,\n--elk, --wien2k, --siesta, --crystal or --primitive-axes option.\nAfter running this, BPOSCAR and PPOSCAR files are written, which are the\nsymmetrized conventional unit cell and primitive cell, respectively, in the VASP\nstyle format.",
+   "zh": "属于 phonopy-init。加上后只打印各种晶体对称性信息，随即停止，不做声子分析。示例：% phonopy-init --symmetry；可与 -c / --cell、--abinit、--qe、--elk、--wien2k、--siesta、--crystal 等计算器选项一起使用。",
+   "url": "https://phonopy.github.io/phonopy/command-options.html#symmetry",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "--tmax",
+   "title": "--tmax",
+   "group": "option",
+   "keys": [
+    "--TMAX",
+    "--tmax",
+    "tmax"
+   ],
+   "en": "The maximum temperature calculated is specified. This temperature has to be\nlower than the maximum temperature calculated in thermal_properties.yaml to\nlet at least one temperature points fewer. The default value is --tmax=1000.",
+   "zh": "指定计算的最高温度（QHA）。该温度必须低于 thermal_properties.yaml 中已算出的最高温度，至少留出一个温度点；默认 --tmax=1000。",
+   "url": "https://phonopy.github.io/phonopy/qha.html#tmax",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "--turbomole",
+   "title": "--turbomole",
+   "group": "option",
+   "keys": [
+    "--TURBOMOLE",
+    "--turbomole",
+    "turbomole"
+   ],
+   "en": "TURBOMOLE mode is invoked with this option.",
+   "zh": "用此选项启用 TURBOMOLE 计算器模式。",
+   "url": "https://phonopy.github.io/phonopy/command-options.html#turbomole",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "--vasp",
+   "title": "--vasp",
+   "group": "option",
+   "keys": [
+    "--VASP",
+    "--vasp",
+    "vasp"
+   ],
+   "en": "With this option, the calculator name vasp will appear in phonopy.yaml type\nfiles.",
+   "zh": "加上后，phonopy.yaml 系列文件中会把计算器名称写成 vasp。",
+   "url": "https://phonopy.github.io/phonopy/command-options.html#vasp",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "--wien2k",
+   "title": "--wien2k",
+   "group": "option",
+   "keys": [
+    "--WIEN2K",
+    "--wien2k",
+    "wien2k"
+   ],
+   "en": "This option invokes the WIEN2k mode.",
+   "zh": "用此选项启用 WIEN2k 计算器模式。",
+   "url": "https://phonopy.github.io/phonopy/command-options.html#wien2k",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "-b",
+   "title": "-b",
+   "group": "option",
+   "keys": [
+    "-B",
+    "-b",
+    "b"
+   ],
+   "en": "Fitting volume-energy data to an EOS, and show bulk modulus (without considering\nphonons). This is made by:\n% phonopy-qha -b e-v.dat",
+   "zh": "把体积-能量数据拟合到状态方程（EOS）并显示体模量，不考虑声子贡献。示例：% phonopy-qha -b e-v.dat。",
+   "url": "https://phonopy.github.io/phonopy/qha.html#b",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "-c or --cell",
+   "title": "-c or --cell",
+   "group": "option",
+   "keys": [
+    "--CELL",
+    "--cell",
+    "-C",
+    "-C OR --CELL",
+    "-c",
+    "-c or --cell",
+    "CELL_FILENAME",
+    "c",
+    "c or --cell",
+    "cell"
+   ],
+   "en": "This option belongs to phonopy-init. The phonopy command reads the\nunit cell from phonopy_*.yaml.\nUnit cell crystal structure file is specified with this tag.\n% phonopy-init -c POSCAR-unitcell [OPTIONS]\nWithout specifying this tag, default file name is searched in current directory.\nThe default file names for the calculators are as follows:\nCalculator\nDefault crystal structure file name\nVASP\nPOSCAR\nWIEN2k\ncase.struct\nABINIT\nunitcell.in\nPWscf\nunitcell.in\nElk\nelk.in\nCRYSTAL\ncrystal.o\nTURBOMOLE\ncontrol\nFleur\nfleur.in\nCP2K\nunitcell.inp\nQuestaal/LMTO\nsite.lm",
+   "zh": "属于 phonopy-init。phonopy 主命令从 phonopy_*.yaml 读取原胞，而原胞结构文件由本选项指定：% phonopy-init -c POSCAR-unitcell [OPTIONS]。不指定时会在当前目录按默认文件名依次查找结构文件。",
+   "url": "https://phonopy.github.io/phonopy/command-options.html#c-or-cell",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "-f or --forces",
+   "title": "-f or --forces",
+   "group": "option",
+   "keys": [
+    "--FORCES",
+    "--forces",
+    "-F",
+    "-F OR --FORCES",
+    "-f",
+    "-f or --forces",
+    "FORCE_SETS",
+    "f",
+    "f or --forces",
+    "forces"
+   ],
+   "en": "This option belongs to phonopy-init.",
+   "zh": "属于 phonopy-init：从各位移计算的力文件中收集力，生成 FORCE_SETS（v4 常与 --sp 连用写入 phonopy_params.yaml）。",
+   "url": "https://phonopy.github.io/phonopy/command-options.html#f-or-forces",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "-h",
+   "title": "-h",
+   "group": "option",
+   "keys": [
+    "-H",
+    "-h",
+    "h"
+   ],
+   "en": "Show help. The available options are shown. Without any option, the results are\nsaved into text files in simple data format.",
+   "zh": "显示帮助与可用选项列表。不带任何选项时，计算结果会以简单文本数据格式保存到文件中。",
+   "url": "https://phonopy.github.io/phonopy/qha.html#h",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "-p",
+   "title": "-p",
+   "group": "option",
+   "keys": [
+    "-P",
+    "-p",
+    "p"
+   ],
+   "en": "The fitting results, volume-temperature relation, and thermal expansion\ncoefficient are plotted on the display.",
+   "zh": "在屏幕上绘制拟合结果、体积-温度关系与热膨胀系数（QHA）。",
+   "url": "https://phonopy.github.io/phonopy/qha.html#p",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "-p -s",
+   "title": "-p -s",
+   "group": "option",
+   "keys": [
+    "-P -S",
+    "-p -s",
+    "p -s",
+    "save plot"
+   ],
+   "en": "Result is plotted (saved) to PDF file.\n% phonopy -p -s",
+   "zh": "把绘图结果保存为 PDF 文件。示例：% phonopy -p -s。",
+   "url": "https://phonopy.github.io/phonopy/command-options.html#p-s",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "-q or --quiet",
+   "title": "-q or --quiet",
+   "group": "option",
+   "keys": [
+    "--QUIET",
+    "--quiet",
+    "-Q",
+    "-Q OR --QUIET",
+    "-q",
+    "-q or --quiet",
+    "q",
+    "q or --quiet",
+    "quiet"
+   ],
+   "en": "No log is shown.",
+   "zh": "不输出日志信息。",
+   "url": "https://phonopy.github.io/phonopy/command-options.html#q-or-quiet",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "-s",
+   "title": "-s",
+   "group": "option",
+   "keys": [
+    "-S",
+    "-s",
+    "s"
+   ],
+   "en": "The calculated values are written into files.",
+   "zh": "把计算得到的数值写入文件。",
+   "url": "https://phonopy.github.io/phonopy/qha.html#s",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "-v or --verbose",
+   "title": "-v or --verbose",
+   "group": "option",
+   "keys": [
+    "--VERBOSE",
+    "--verbose",
+    "-V",
+    "-V OR --VERBOSE",
+    "-v",
+    "-v or --verbose",
+    "v",
+    "v or --verbose",
+    "verbose"
+   ],
+   "en": "More detailed log are shown",
+   "zh": "输出更详细的日志。",
+   "url": "https://phonopy.github.io/phonopy/command-options.html#v-or-verbose",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "ALM",
+   "title": "ALM",
+   "group": "tag",
+   "keys": [
+    "ALM",
+    "alm"
+   ],
+   "en": "New in v2.3 ALM (ttadano/ALM) is based on fitting\napproach and any displacements set of atoms in supercell can be handled. For\nexample, random displacements generated by RANDOM_DISPLACEMENTS can\nbe used to compute force constants. To use ALM, its python module has to be\ninstalled via conda-forge or building it. The installation instruction is found\nhere.\nWhen ALM is used, please cite the paper: T. Tadano and S. Tsuneyuki, J. Phys.\nSoc. Jpn. 87, 041015 (2018).\nFC_CALCULATOR = ALM",
+   "zh": "v2.3 新增。ALM（ttadano/ALM）基于拟合方法，可处理超胞中任意一组原子位移，例如由 RANDOM_DISPLACEMENTS 生成的随机位移也能用来算力常数。使用前需通过 conda-forge 或源码安装其 Python 模块。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#alm",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "ANIME",
+   "title": "ANIME",
+   "group": "tag",
+   "keys": [
+    "ANIME",
+    "anime"
+   ],
+   "en": "The format of ANIME tag was modified after ver. 0.9.3.3.",
+   "zh": "ANIME 标签的格式在 0.9.3.3 版之后有过修改（用于生成声子振动动画文件）。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#anime",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "ANIME_TYPE",
+   "title": "ANIME_TYPE",
+   "group": "tag",
+   "keys": [
+    "ANIME_TYPE",
+    "anime_type"
+   ],
+   "en": "ANIME_TYPE = JMOL\nThere are V_SIM, ARC, XYZ, JMOL, and POSCAR settings. Those may be\nviewed by v_sim, gdis, jmol (animation), jmol (vibration), respectively.\nFor POSCAR, a set of POSCAR format structure files corresponding to\nrespective animation images are created such as APOSCAR-000,\nAPOSCAR-001,….\nThere are several parameters to be set in the ANIME tag.",
+   "zh": "如 ANIME_TYPE = JMOL，可选 V_SIM、ARC、XYZ、JMOL、POSCAR，分别对应 v_sim、gdis、jmol（动画）、jmol（振动）等查看方式。选择 POSCAR 时会按动画帧生成一组 POSCAR 格式结构文件，如 APOSCAR-000、APOSCAR-001……另有若干参数可进一步设置动画。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#anime-type",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "ATOM_NAME",
+   "title": "ATOM_NAME",
+   "group": "tag",
+   "keys": [
+    "ATOM_NAME",
+    "atom_name"
+   ],
+   "en": "When a crystal structure format has no information about chemical symbols, this\ntag is used to specify chemical symbols.\nATOM_NAME = Si O",
+   "zh": "当晶体结构格式本身不含元素符号信息时，用此标签指定化学符号，例如 ATOM_NAME = Si O。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#atom-name",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "BAND",
+   "title": "BAND",
+   "group": "tag",
+   "keys": [
+    "--band",
+    "BAND",
+    "band",
+    "band path"
+   ],
+   "en": "BAND gives sampling band paths. The reciprocal points are specified in reduced\ncoordinates. The given points are connected for defining band paths. When comma\n, is inserted between the points, the paths are disconnected.\nAn example of three paths, (0,0,0) to (1/2,0,1/2), (1/2,1/2,1) to (0,0,0), and\n(0,0,0) to (1/2,1/2,1/2), with 101 sampling points of each path are as follows:\nBAND = 0 0 0 1/2 0 1/2, 1/2 1/2 1 0 0 0 1/2 1/2 1/2\nBAND_POINTS = 101",
+   "zh": "BAND 给出能带采样路径，各点用倒空间分数坐标表示，相邻点连成一段路径；在两点之间插入逗号 , 可断开路径。例如三条路径可写成若干组三个数，逗号用于分隔不连续的路径段。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#band",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "BAND_CONNECTION",
+   "title": "BAND_CONNECTION",
+   "group": "tag",
+   "keys": [
+    "BAND_CONNECTION",
+    "band_connection"
+   ],
+   "en": "With this option, band connections are estimated from eigenvectors and band\nstructure is drawn considering band crossings. In sensitive cases, to obtain\nbetter band connections, it requires to increase number of points calculated in\nband segments by the BAND_POINTS tag.\nBAND = 1/2 0 1/2 0 0 0 1/2 1/2 1/2\nBAND_POINTS = 101\nBAND_CONNECTION = .TRUE.",
+   "zh": "开启后由本征矢判断能带连接关系，并按能带交叉来绘制能带。对连接敏感的情形，需增大 BAND_POINTS 提高各路径段的取点数才能得到更好的连接结果。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#band-connection",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "BAND_CONST_INTERVAL",
+   "title": "BAND_CONST_INTERVAL",
+   "group": "tag",
+   "keys": [
+    "BAND_CONST_INTERVAL",
+    "band_const_interval"
+   ],
+   "en": "When BAND_CONST_INTERVAL = .TRUE., the number of q-points sampled in each band\npath segment is determined by the longest path segment, which uses the number\nspecified by BAND_POINTS. This ensures similar distances between points across\nall segments. Consequently, the number of q-points in each band path segment is\nequal to or less than the value of BAND_POINTS. The default value is\n.FALSE..\nBAND = AUTO\nBAND_POINTS = 101\nBAND_CONST_INTERVAL = .TRUE.",
+   "zh": "设为 .TRUE. 时，各段路径的 q 点取样数由最长的一段决定（该段使用 BAND_POINTS 指定的点数），从而让所有段的点间距大致相同；较短段的取点数会相应减少。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#band-const-interval",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "BAND_FORMAT",
+   "title": "BAND_FORMAT",
+   "group": "tag",
+   "keys": [
+    "BAND_FORMAT",
+    "band_format"
+   ],
+   "en": "When HDF5 is set, calculated result is stored in band.hdf5 instead of\nband.yaml.\nBAND_FORMAT = HDF5",
+   "zh": "设为 HDF5 时，能带结果写入 band.hdf5 而不是 band.yaml，例如 BAND_FORMAT = HDF5。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#band-format",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "BAND_FORMAT, MESH_FORMAT, QPOINTS_FORMAT",
+   "title": "BAND_FORMAT, MESH_FORMAT, QPOINTS_FORMAT",
+   "group": "tag",
+   "keys": [
+    "BAND_FORMAT",
+    "BAND_FORMAT, MESH_FORMAT, QPOINTS_FORMAT",
+    "MESH_FORMAT",
+    "QPOINTS_FORMAT",
+    "band_format",
+    "band_format, mesh_format, qpoints_format",
+    "mesh_format",
+    "qpoints_format"
+   ],
+   "en": "There are two file-formats to write the results of band structure, mesh, and\nq-points calculations. Currently YAML (YAML) and hdf5 (HDF5) formats are\nsupported. The default file format is the YAML format. The file format is\nchanged as follows:",
+   "zh": "能带、网格与指定 q 点计算的结果有两种输出格式：YAML 与 HDF5，默认 YAML。分别用 BAND_FORMAT、MESH_FORMAT、QPOINTS_FORMAT 设为 HDF5 即可切换，输出文件相应变为 band.hdf5、mesh.hdf5、qpoints.hdf5。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#band-format-mesh-format-qpoints-format",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "BAND_LABELS",
+   "title": "BAND_LABELS",
+   "group": "tag",
+   "keys": [
+    "--band-labels",
+    "-l",
+    "BAND_LABELS",
+    "band_labels"
+   ],
+   "en": "Labels specified are depicted in band structure plot at the points of band\nsegments. The number of labels has to correspond to the number of band paths\nspecified by BAND plus one. When LaTeX math style expression such as\n\\(\\Gamma\\) (\\Gamma) is expected, it is probably necessary to place it\nbetween two $ characters.\nBAND = 1/2 0 1/2 0 0 0 1/2 1/2 1/2\nBAND_LABELS = X $\\Gamma$ L\nThe colors of curves are automatically determined by matplotlib. The same color\nin a band segment shows the same kind of band. Between different band segments,\nthe correspondence of colors doesn’t mean anything.",
+   "zh": "在能带图上标注各高对称点的标签，标签数必须等于 BAND 指定的能带段数加一。若要用 LaTeX 数学式（如 \\Gamma 表示 Γ），通常需要把标签放在一对 $ 之间并用引号包好。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#band-labels",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "BAND_POINTS",
+   "title": "BAND_POINTS",
+   "group": "tag",
+   "keys": [
+    "--band-points",
+    "-N",
+    "BAND_POINTS",
+    "band_points"
+   ],
+   "en": "BAND_POINTS gives the number of sampling points including the path ends. The\ndefault value is BAND_POINTS = 51.",
+   "zh": "给出每段路径（含两端点）的取样点数，默认 BAND_POINTS = 51。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#band-points",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "CELL_FILENAME",
+   "title": "CELL_FILENAME",
+   "group": "tag",
+   "keys": [
+    "CELL_FILENAME",
+    "cell_filename"
+   ],
+   "en": "CELL_FILENAME = POSCAR-unitcell\nSee Input cell.",
+   "zh": "指定原胞结构文件名，例如 CELL_FILENAME = POSCAR-unitcell；详见 Input cell 一节。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#cell-filename",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "CREATE_DISPLACEMENTS",
+   "title": "CREATE_DISPLACEMENTS",
+   "group": "tag",
+   "keys": [
+    "-d",
+    "CREATE_DISPLACEMENTS",
+    "create_displacements"
+   ],
+   "en": "Supercells with displacements are created. This tag is used as the post process\nof phonon calculation.\nCREATE_DISPLACEMENTS = .TRUE.\nDIM = 2 2 2",
+   "zh": "设为 .TRUE. 时生成带位移的超胞，作为声子计算的后处理步骤使用。示例：CREATE_DISPLACEMENTS = .TRUE. 配合 DIM = 2 2 2。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#create-displacements",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "CUTOFF_FREQUENCY",
+   "title": "CUTOFF_FREQUENCY",
+   "group": "tag",
+   "keys": [
+    "CUTOFF_FREQUENCY",
+    "cutoff_frequency"
+   ],
+   "en": "This is given by a real value and the default value is 0. This tag works as\nfollows.\nPhonon thermal properties are computed as sum over phonon modes. See\nThermodynamic properties. When we treat imaginary frequencies as\nnegative values by\n\\(\\text{sgn}(\\nu^2) |\\nu| \\rightarrow \\nu_\\text{phonopy}\\), all phonon modes\nwith \\(\\nu_\\text{phonopy}\\) smaller than this CUTOFF_FREQUENCY are simply\nexcluded in the summation.\nIn the thermal_properties.yaml, the total number of calculated phonon modes\nand the number of phonon modes included for the thermal property calculation are\nshown as num_modes: and num_integrated_modes:, respectively.\nCUTOFF_FREQUENCY = 0.1",
+   "zh": "给定一个实数（默认 0），用于热学性质求和时处理虚频：把虚频按负频率计入或按此阈值截断。phonopy 的热学性质是对所有声子模式求和得到的，详见热力学性质一节。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#cutoff-frequency",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "DEBYE_MODEL",
+   "title": "DEBYE_MODEL",
+   "group": "tag",
+   "keys": [
+    "DEBYE_MODEL",
+    "debye_model"
+   ],
+   "en": "By setting .TRUE., DOS at lower phonon frequencies are fit to a Debye model.\nBy default, the DOS from 0 to 1/4 of the maximum phonon frequencies are used for\nthe fitting. The function used to the fitting is \\(D(\\omega)=a\\omega^2\\)\nwhere \\(a\\) is the parameter and the Debye frequency is \\((9N/a)^{1/3}\\)\nwhere \\(N\\) is the number of atoms in unit cell. Users have to unserstand\nthat this is not a unique way to determine Debye frequency. Debye frequency\nis dependent on how to parameterize it.\nDEBYE_MODEL = .TRUE.",
+   "zh": "设为 .TRUE. 时，把低频段态密度拟合到德拜模型；默认用 0 到最高频率 1/4 的数据拟合，拟合函数为 D(ω)=aω²，德拜频率由 (9N/a)^(1/3) 给出。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#debye-model",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "DIAG",
+   "title": "DIAG",
+   "group": "tag",
+   "keys": [
+    "DIAG",
+    "diag"
+   ],
+   "en": "When this tag is set .FALSE., displacements in diagonal directions are not\nsearched, i.e. all the displacements are along the lattice vectors.\nDIAG = .FALSE. is recommended if one of the lattice parameter of your\nsupercell is much longer or much shorter than the other lattice parameters.",
+   "zh": "设为 .FALSE. 时不搜索对角方向的位移，即所有位移都沿晶格矢量方向。当超胞某个晶格常数远大于或小于其它方向时，推荐 DIAG = .FALSE.。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#diag",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "DIM",
+   "title": "DIM",
+   "group": "tag",
+   "keys": [
+    "--dim",
+    "DIM",
+    "dim",
+    "supercell dimension"
+   ],
+   "en": "The supercell is created from the input unit cell. When three integers are\nspecified, a supercell elongated along axes of unit cell is created.\nDIM = 2 2 3\nIn this case, a 2x2x3 supercell is created.\nWhen nine integers are specified, the supercell is created by multiplying the\nsupercell matrix \\(\\mathrm{M}_\\mathrm{s}\\) with the unit cell. For example,\nDIM = 0 1 1 1 0 1 1 1 0\nthe supercell matrix is\n\\[\\begin{split}\\mathrm{M}_\\mathrm{s} = \\begin{pmatrix}\n0 & 1 & 1 \\\\ 1 & 0 & 1 \\\\ 1 & 1 & 0\n\\end{pmatrix}\\end{split}\\]\nwhere the rows correspond to the first three, second three, and third three sets\nof numbers, respectively. When lattice parameters of unit cell are the column\nvectors of \\(\\mathbf{a}_\\mathrm{u}\\), \\(\\mathbf{b}_\\mathrm{u}\\), and\n\\(\\mathbf{c}_\\mathrm{u}\\), those of supercell,\n\\(\\mathbf{a}_\\mathrm{s}\\), \\(\\mathbf{b}_\\mathrm{s}\\),\n\\(\\mathbf{c}_\\mathrm{s}\\), are determined by,\n\\[( \\mathbf{a}_\\mathrm{s} \\; \\mathbf{b}_\\mathrm{s} \\; \\mathbf{c}_\\mathrm{s} ) = (\n\\mathbf{a}_\\mathrm{u} \\; \\mathbf{b}_\\mathrm{u} \\; \\mathbf{c}_\\mathrm{u} )\n\\mathrm{M}_\\mathrm{s}\\]\nBe careful that the axes in POSCAR is defined by three row vectors, i.e.,",
+   "zh": "由输入原胞生成超胞。给三个整数时沿晶轴扩胞，如 DIM = 2 2 3 得到 2×2×3 超胞；给九个整数时按超胞矩阵相乘，可构造任意（含倾斜）超胞。也可用它指定磁性原胞等。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#dim",
+   "source": "phonopy official documentation",
+   "truncated": true
+  },
+  {
+   "name": "DISPLACEMENT_DISTANCE",
+   "title": "DISPLACEMENT_DISTANCE",
+   "group": "tag",
+   "keys": [
+    "DISPLACEMENT_DISTANCE",
+    "displacement_distance"
+   ],
+   "en": "Finite atomic displacement distance is set as specified value when creating\nsupercells with displacements. The default displacement amplitude is 0.01\nAngstrom, but when the wien2k, abinit, Fleur or turbomole option is\nspecified, the default value is 0.02 Bohr.",
+   "zh": "生成含位移超胞时的有限原子位移距离，默认 0.01 Å；使用 wien2k、abinit、Fleur、turbomole 选项时默认 0.02 Bohr。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#displacement-distance",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "DISPLACEMENT_DISTANCE_MAX",
+   "title": "DISPLACEMENT_DISTANCE_MAX",
+   "group": "tag",
+   "keys": [
+    "DISPLACEMENT_DISTANCE_MAX",
+    "displacement_distance_max"
+   ],
+   "en": "This is used along with RANDOM_DISPLACEMENTS but not with\nRANDOM_DISPLACEMENT_TEMPERATURE. The random displacements are generated with\nvariation not only in direction, but also in distance, with distances randomly\nsampled uniformly between the values of DISPLACEMENT_DISTANCE and\nDISPLACEMENT_DISTANCE_MAX.\nOne distance is drawn per supercell, so all atoms in a supercell share it. The\ndraw is uniform over [0, DISPLACEMENT_DISTANCE_MAX) and is raised to\nDISPLACEMENT_DISTANCE when smaller, which piles the weight\nDISPLACEMENT_DISTANCE / DISPLACEMENT_DISTANCE_MAX exactly at\nDISPLACEMENT_DISTANCE. See DISPLACEMENT_DISTANCE_PER_ATOM for the per-atom\ndraw.",
+   "zh": "与 RANDOM_DISPLACEMENTS 连用（不与 RANDOM_DISPLACEMENT_TEMPERATURE 连用）。随机位移不仅方向随机，距离也在 DISPLACEMENT_DISTANCE 与 DISPLACEMENT_DISTANCE_MAX 之间均匀随机取样。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#displacement-distance-max",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "DISPLACEMENT_DISTANCE_SAMPLING",
+   "title": "DISPLACEMENT_DISTANCE_SAMPLING",
+   "group": "tag",
+   "keys": [
+    "DISPLACEMENT_DISTANCE_SAMPLING",
+    "displacement_distance_sampling"
+   ],
+   "en": "The unit the random displacement distance is drawn for, either SUPERCELL\n(default) or ATOM. This is used along with DISPLACEMENT_DISTANCE_MAX but\nnot with RANDOM_DISPLACEMENT_TEMPERATURE, whose canonical ensemble already\ngives each atom its own displacement.\nWith ATOM the random distance is drawn per atom instead of per supercell, so\nevery supercell spans the whole amplitude range internally rather than sitting\nat one amplitude. The draw is uniform over\n[DISPLACEMENT_DISTANCE, DISPLACEMENT_DISTANCE_MAX) directly, with no weight\npiled up at DISPLACEMENT_DISTANCE.\nThis is useful for building training data for a machine learning potential,\nwhere the amplitude diversity within each supercell matters more than the number\nof supercells.\nCREATE_DISPLACEMENTS = .TRUE.\nDIM = 2 2 2\nRANDOM_DISPLACEMENTS = 100\nDISPLACEMENT_DISTANCE = 0.03\nDISPLACEMENT_DISTANCE_MAX = 1.5\nDISPLACEMENT_DISTANCE_SAMPLING = ATOM",
+   "zh": "指定随机位移距离的取样单位：SUPERCELL（默认，整个超胞共用一个距离）或 ATOM（每个原子单独取一个距离）。与 DISPLACEMENT_DISTANCE_MAX 连用，不与 RANDOM_DISPLACEMENT_TEMPERATURE 连用，因为正则系综已让每个原子有自己的位移。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#displacement-distance-sampling",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "DOS",
+   "title": "DOS",
+   "group": "tag",
+   "keys": [
+    "DOS",
+    "dos"
+   ],
+   "en": "This tag enables to calculate DOS. This tag is automatically set when PDOS tag\nor -p option.\nDOS = .TRUE.",
+   "zh": "设为 .TRUE. 时计算态密度；使用 PDOS 标签或 -p 选项时会自动开启。示例：DOS = .TRUE.。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#dos",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "DOS_RANGE",
+   "title": "DOS_RANGE",
+   "group": "tag",
+   "keys": [
+    "DOS_RANGE",
+    "dos_range"
+   ],
+   "en": "DOS_RANGE = 0 40 0.1\nTotal and partial density of states are drawn with some parameters. The example\nmakes DOS be calculated from frequency=0 to 40 with 0.1 pitch.\nFMIN, FMAX, and FPITCH can be alternatively used to specify the minimum and\nmaximum frequencies (the first and second values).",
+   "zh": "如 DOS_RANGE = 0 40 0.1，按给定的最小值、最大值与步长计算并绘制总态密度与分波态密度。也可用 FMIN、FMAX、FPITCH 分别指定频率范围与步长。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#dos-range",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "EIGENVECTORS",
+   "title": "EIGENVECTORS",
+   "group": "tag",
+   "keys": [
+    "EIGENVECTORS",
+    "eigenvectors"
+   ],
+   "en": "When this tag is .TRUE., eigenvectors are calculated.",
+   "zh": "设为 .TRUE. 时计算本征矢（模式矢量）。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#eigenvectors",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "EXCLUDE_GAMMA_ACOUSTIC",
+   "title": "EXCLUDE_GAMMA_ACOUSTIC",
+   "group": "tag",
+   "keys": [
+    "EXCLUDE_GAMMA_ACOUSTIC",
+    "exclude_gamma_acoustic"
+   ],
+   "en": "When this tag is .TRUE., the three acoustic modes at \\(\\Gamma\\) are\nexcluded from the sums of the thermal properties. The default is .FALSE..\nThe frequencies of the three acoustic modes at \\(\\Gamma\\) should be zero.\nThe frequencies that phonopy computes for them are, however, small numbers of\neither sign, even after the force constants are symmetrized. Without this tag,\nthese modes are treated like the other modes: a mode is included in the sums\nwhen its frequency is larger than CUTOFF_FREQUENCY. With the default\nCUTOFF_FREQUENCY of 0, which of the three acoustic modes are included depends\non these small values, and so do the thermal properties.\nWith this tag, phonopy takes the three modes at \\(\\Gamma\\) with the\nsmallest \\(|\\nu|\\) as the acoustic modes and excludes them from the free\nenergy, the entropy, the heat capacity and the zero-point energy. The\nfrequencies written to mesh.yaml and used for the DOS stay as computed. A\nmesh that does not contain \\(\\Gamma\\) is not changed.\nWithout this tag, phonopy prints a warning with the frequencies of the\nacoustic modes that entered the sums and their contribution to the free",
+   "zh": "设为 .TRUE. 时，把 Γ 点三条声学支从热学性质的求和中排除，默认 .FALSE.。理论上 Γ 点声学模频率应为零，但数值计算会得到很小的正或负值，排除它们可避免对热容等性质的影响。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#exclude-gamma-acoustic",
+   "source": "phonopy official documentation",
+   "truncated": true
+  },
+  {
+   "name": "FC_CALCULATOR",
+   "title": "FC_CALCULATOR",
+   "group": "tag",
+   "keys": [
+    "FC_CALCULATOR",
+    "fc_calculator"
+   ],
+   "en": "External force constants calculator can be used using this tag. Currently\nsymfc and ALM are supported. The phonopy’s default force constants\ncalculator is based on finite difference method, for which atomic displacements\nare made systematically. The following is the list of the force constants\ncalculator currently possible to be invoked from phonopy.",
+   "zh": "指定外部力常数计算器，目前支持 symfc 与 ALM。phonopy 默认用有限差分法，需系统性地构造原子位移；用拟合类计算器时可处理任意位移集合（如随机位移）。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#fc-calculator",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "FC_CALCULATOR_OPTIONS",
+   "title": "FC_CALCULATOR_OPTIONS",
+   "group": "tag",
+   "keys": [
+    "FC_CALCULATOR_OPTIONS",
+    "fc_calculator_options"
+   ],
+   "en": "To be written.",
+   "zh": "力常数计算器的附加选项（官方文档原文为 To be written，尚未撰写）。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#fc-calculator-options",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "FC_FORMAT, READFC_FORMAT, WRITEFC_FORMAT",
+   "title": "FC_FORMAT, READFC_FORMAT, WRITEFC_FORMAT",
+   "group": "tag",
+   "keys": [
+    "FC_FORMAT",
+    "FC_FORMAT, READFC_FORMAT, WRITEFC_FORMAT",
+    "READFC_FORMAT",
+    "WRITEFC_FORMAT",
+    "fc_format",
+    "fc_format, readfc_format, writefc_format",
+    "readfc_format",
+    "writefc_format"
+   ],
+   "en": "There are two file-formats to store force constants. Currently\ntext style (TEXT) and hdf5 (HDF5) formats are\nsupported. The default file format is the\ntext style. Reading and writing force constants are\ninvoked by FORCE_CONSTANTS tag. Using these tags,\nthe input/output formats are switched.\nFC_FORMAT affects to both input and output, e.g.\nFORCE_CONSTANTS = WRITE\nFC_FORMAT = HDF5\nREADFC_FORMAT and WRITEFC_FORMAT can be used to control input and output\nformats separately, i.e., the following setting to convert force constants\nformat is possible:\nREAD_FORCE_CONSTANTS = .TRUE.\nWRITE_FORCE_CONSTANTS = .TRUE.\nWRITEFC_FORMAT = HDF5",
+   "zh": "力常数有文本 TEXT 与 HDF5 两种存储格式，默认文本。读取与写入力常数由 FORCE_CONSTANTS 标签触发，用 FC_FORMAT / READFC_FORMAT / WRITEFC_FORMAT 分别切换输入、输出格式。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#fc-format-readfc-format-writefc-format",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "FC_SYMMETRY",
+   "title": "FC_SYMMETRY",
+   "group": "tag",
+   "keys": [
+    "FC_SYMMETRY",
+    "fc_symmetry"
+   ],
+   "en": "Note\nStarting with version 1.12.3, this tag was changed to a boolean (.TRUE. or\n.FALSE.), whereas it previously accepted an argument.\nThis tag is used to symmetrize force constants by translational symmetry and\npermutation symmetry with .TRUE. or .FALSE..\nFC_SYMMETRY = .TRUE.\nFrom the translation invariance condition,\n\\[\\sum_i \\Phi_{ij}^{\\alpha\\beta} = 0, \\;\\;\\text{for all $j$, $\\alpha$, $\\beta$},\\]\nwhere i and j are the atom indices, and \\(\\alpha\\) and \\(\\beta\\) are\nthe Cartesian indices for atoms i and j, respectively. When this condition\nis broken, the sum gives non-zero value. This value is subtracted from the\ndiagonal blocks. Force constants are symmetric in each pair as\n\\[\\Phi_{ij}^{\\alpha\\beta} = \\frac{\\partial^2 U}{\\partial u_i^\\alpha \\partial\nu_j^\\beta} = \\frac{\\partial^2 U}{\\partial u_j^\\beta \\partial u_i^\\alpha} =\n\\Phi_{ji}^{\\beta\\alpha}\\]\nMind that the other symmetries of force constants, i.e., the symmetry from\ncrystal symmetry or rotational symmetry, are broken to use FC_SYMMETRY.",
+   "zh": "注意：自 v1.12.3 起改为布尔值（.TRUE. / .FALSE.），早期版本接受参数。设为 .TRUE. 时按平移对称性与置换对称性对力常数做对称化，例如 FC_SYMMETRY = .TRUE.。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#fc-symmetry",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "FMIN, FMAX, and FPITCH",
+   "title": "FMIN, FMAX, and FPITCH",
+   "group": "tag",
+   "keys": [
+    "FMAX",
+    "FMIN",
+    "FMIN, FMAX, AND FPITCH",
+    "FMIN, FMAX, and FPITCH",
+    "FPITCH",
+    "fmax",
+    "fmin",
+    "fmin, fmax, and fpitch",
+    "fpitch"
+   ],
+   "en": "The uniform frequency sampling points for phonon-DOS calculation are specified.\nFMIN and FMAX give the minimum, maximum frequencies of the range,\nrespectively, and FPITCH gives the frequency pitch to be sampled. These three\nvalues are the same as those that can be specified by DOS_RANGE.",
+   "zh": "指定声子态密度计算的均匀频率采样点：FMIN、FMAX 分别是最小、最大频率，FPITCH 是采样间隔。这三个值与 DOS_RANGE 的三个数值等价。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#fmin-fmax-and-fpitch",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "FORCE_CONSTANTS",
+   "title": "FORCE_CONSTANTS",
+   "group": "tag",
+   "keys": [
+    "FORCE_CONSTANTS",
+    "force_constants"
+   ],
+   "en": "FORCE_CONSTANTS = READ\nThere are three values to be set, which are READ and WRITE, and .FALSE..\nWhen FORCE_CONSTANTS = READ, force constants are read from FORCE_CONSTANTS\nfile. With FORCE_CONSTANTS = WRITE, force constants calculated from\nFORCE_SETS are written to FORCE_CONSTANTS file.\nThe default is .FALSE., meaning that this tag requests nothing. It does not\nmean that force constants are not read: reading them is the default behaviour,\nso FORCE_CONSTANTS = READ is not needed to enable it. Reading is switched off\nby READ_FORCE_CONSTANTS = .FALSE. (--noreadfc) rather than by\nFORCE_CONSTANTS = .FALSE., which has no effect.\nThe file format of FORCE_CONSTANTS is shown\nhere.",
+   "zh": "如 FORCE_CONSTANTS = READ，可选 READ、WRITE 与 .FALSE.。READ 表示从 FORCE_CONSTANTS 文件读取力常数；WRITE 表示把由 FORCE_SETS 计算出的力常数写入该文件；默认通常不设置。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#id6",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "FREQUENCY_CONVERSION_FACTOR",
+   "title": "FREQUENCY_CONVERSION_FACTOR",
+   "group": "tag",
+   "keys": [
+    "FREQUENCY_CONVERSION_FACTOR",
+    "frequency_conversion_factor"
+   ],
+   "en": "This tag was deprecated at v2.44.\nNote\nFor unsupported force calculators, displacement-force dataset with displacements\nin Angstrom and forces in eV/Angstrom should be prepared to obtain frequencies in\nTHz.\nThe following is the old documentation of the FREQUENCY_CONVERSION_FACTOR tag.\nThis tag should be used to convert the phonon frequency unit to THz because if\nthe frequency unit is different from THz, derived values like thermal properties\nand mean square displacements are wrongly calculated. Normally this tag is\nunnecessary to be specified because the default value is chosen for each force\ncalculator, i.e., the default values for calculators are prepared to convert the\nfrequency unit to THz. If no calculator is chosen, the factor for VASP is used.\nThe default conversion factors are listed at\nDefault unit conversion factor of phonon frequency to THz. How to calculated these conversion\nfactors is explained at Physical unit conversion.",
+   "zh": "注意：该标签在 v2.44 已弃用。旧文档中它用于把位移-力数据的单位换算成频率单位：不受支持的计算器需提供 Å 为单位的位移与 eV/Å 为单位的力，才能得到 THz 为单位的频率。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#frequency-conversion-factor",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "FULL_FORCE_CONSTANTS",
+   "title": "FULL_FORCE_CONSTANTS",
+   "group": "tag",
+   "keys": [
+    "FULL_FORCE_CONSTANTS",
+    "full_force_constants"
+   ],
+   "en": "FULL_FORCE_CONSTANTS = .TRUE. is used to compute full supercell constants\nmatrix. This may be used to enforce space group symmetry to existing force\nconstants.\nThe default setting is .FALSE.. By .TRUE. or .FALSE., the array\nshape becomes (n_patom, n_satom, 3, 3) or (n_satom, n_satom, 3, 3),\nrespectively. The detail is found at FORCE_CONSTANTS and force_constants.hdf5.",
+   "zh": "设为 .TRUE. 时计算完整的超胞力常数矩阵，可用于对已有力常数强制施加空间群对称性，默认 .FALSE.。两种设置下数组形状分别为 (n_patom, n_satom, 3, 3) 与 (n_satom, n_satom, 3, 3)。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#full-force-constants",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "GAMMA_CENTER",
+   "title": "GAMMA_CENTER",
+   "group": "tag",
+   "keys": [
+    "GAMMA_CENTER",
+    "gamma_center"
+   ],
+   "en": "Instead of employing the Monkhorst-Pack scheme for the mesh sampling,\n\\(\\Gamma\\) center mesh is used. The default value is .FALSE..\nGAMMA_CENTER = .TRUE.",
+   "zh": "设为 .TRUE. 时用 Γ 中心网格代替 Monkhorst-Pack 网格取样，默认 .FALSE.。示例：GAMMA_CENTER = .TRUE.。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#gamma-center",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "GROUP_VELOCITY",
+   "title": "GROUP_VELOCITY",
+   "group": "tag",
+   "keys": [
+    "GROUP_VELOCITY",
+    "group_velocity"
+   ],
+   "en": "Group velocities at q-points are calculated by using this tag. The group\nvelocities are written into a yaml file corresponding to the run mode in\nCartesian coordinates. The physical unit depends on physical units of input\nfiles and frequency conversion factor. Usually the phonon frequency is given in\nTHz. Therefore, the physical unit of the group velocity written in the output\nfiles is [unit-of-distance.THz]. The distance units for different force\ncalculators are listed at Physical unit system for calculator. For example, VASP\n[Angstrom.THz], and QE [au.THz].\nGROUP_VELOCITY = .TRUE.\nTechnical details are shown at Group velocity.",
+   "zh": "计算各 q 点的群速度，并以笛卡尔坐标写入与运行模式对应的 yaml 文件。物理单位取决于输入文件的单位与频率换算因子，通常声子频率以 THz 给出。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#group-velocity-tag",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "GV_DELTA_Q",
+   "title": "GV_DELTA_Q",
+   "group": "tag",
+   "keys": [
+    "GV_DELTA_Q",
+    "gv_delta_q"
+   ],
+   "en": "The reciprocal distance used for the finite difference method is specified.\nUnless this tag is set, the analytical derivative of the dynamical matrix\nis used (including the Gonze-Lee non-analytical term correction, for which\nthe analytical dipole-dipole derivative is now available). Set this tag to\nfall back to the finite-difference path with the given step.\nIn earlier versions (v4.0.1 and earlier) the finite-difference path was\nused implicitly with GV_DELTA_Q = 1e-5 whenever the Gonze-Lee\nnon-analytical term correction was active. Set GV_DELTA_Q = 1e-5\nexplicitly to reproduce that behavior.\nGV_DELTA_Q = 0.01",
+   "zh": "指定有限差分法所用的倒空间距离。不设置时改用动力学矩阵的解析导数（含 Gonze-Lee 非解析项修正的解析偶极-偶极导数）；设置后按该步长做数值差分。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#gv-delta-q",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "HDF5",
+   "title": "HDF5",
+   "group": "tag",
+   "keys": [
+    "HDF5",
+    "hdf5"
+   ],
+   "en": "The following output files are written in hdf5 format instead of their original\nformats (in parenthesis) by HDF5 = .TRUE.. In addition, force_constants.hdf5\nis read with this tag.\nforce_constants.hdf5 (FORCE_CONSTANTS)\nmesh.hdf5 (mesh.yaml)\nband.hdf5 (band.yaml)\nqpoints.hdf5 (qpoints.yaml)\nHDF5 = .TRUE.",
+   "zh": "设为 .TRUE. 时，下列输出改用 hdf5 格式（括号内为原格式）：force_constants.hdf5（FORCE_CONSTANTS）、mesh.hdf5（mesh.yaml）、band.hdf5（band.yaml）、qpoints.hdf5（qpoints.yaml）；同时会读取 force_constants.hdf5。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#hdf5",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "INCLUDE_ALL",
+   "title": "INCLUDE_ALL",
+   "group": "tag",
+   "keys": [
+    "INCLUDE_ALL",
+    "include_all"
+   ],
+   "en": "All available data covered by the other include flags can be written to\nphonopy.yaml file using the --include-all flag or by setting INCLUDE_ALL = .TRUE.. Force constants are not stored when force sets are stored.",
+   "zh": "用 --include-all 或 INCLUDE_ALL = .TRUE. 把其它 include 标志覆盖的所有数据写入 phonopy.yaml。注意：保存力集（force sets）时不会同时保存力常数。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#include-all",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "INCLUDE_DISP",
+   "title": "INCLUDE_DISP",
+   "group": "tag",
+   "keys": [
+    "INCLUDE_DISP",
+    "include_disp"
+   ],
+   "en": "The --include-disp flag or setting INCLUDE_DISP = .TRUE. will cause\ndisplacements data (if available) to be written as an entry in phonopy.yaml\nfile.",
+   "zh": "用 --include-disp 或 INCLUDE_DISP = .TRUE. 把位移数据（若可用）写入 phonopy.yaml 的一个条目。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#include-disp",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "INCLUDE_FC",
+   "title": "INCLUDE_FC",
+   "group": "tag",
+   "keys": [
+    "INCLUDE_FC",
+    "include_fc"
+   ],
+   "en": "The --include-fc flag or setting INCLUDE_FC = .TRUE. will cause the force\nconstants (if available) to be written as an entry in phonopy.yaml file.\nThe written force constants will reflect the required/available format used\nduring processing. So if --full-fc is set the entire matrix will be written.",
+   "zh": "用 --include-fc 或 INCLUDE_FC = .TRUE. 把力常数（若可用）写入 phonopy.yaml；写入的格式取决于处理时所需/可用的格式，例如设置 --full-fc 时会写入完整矩阵。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#include-fc",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "INCLUDE_FS",
+   "title": "INCLUDE_FS",
+   "group": "tag",
+   "keys": [
+    "INCLUDE_FS",
+    "include_fs"
+   ],
+   "en": "The --include-fs flag or setting INCLUDE_FS = .TRUE. will cause the force\nsets (if available) to be written as an entry in phonopy.yaml.",
+   "zh": "用 --include-fs 或 INCLUDE_FS = .TRUE. 把力集（若可用）写入 phonopy.yaml。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#include-fs",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "IRREPS",
+   "title": "IRREPS",
+   "group": "tag",
+   "keys": [
+    "IRREPS",
+    "irreps"
+   ],
+   "en": "Characters of irreducible representations (Irreps) of phonon modes are shown.\nFor this calculation, a primitive cell has to be used. If the input unit cell is\na non-primitive cell, it has to be transformed to a primitive cell using\nPRIMITIVE_AXES tag.\nIrreducible representations of magnetic space groups are not supported. When an\nIRREPS calculation detects a magnetic space group, phonopy raises a\nRuntimeError with the message Magnetic space group is not supported.\nThe first three values gives a q-point in reduced coordinates to be\ncalculated. The degenerated modes are searched only by the closeness of\nfrequencies. The frequency difference to be tolerated is specified by the fourth\nvalue in the frequency unit that the user specified.\nIRREPS = 0 0 0 1e-3\nSymbols of Irreps for the 32 point group types at the \\(\\Gamma\\) point are\nshown but not at non-\\(\\Gamma\\) point.",
+   "zh": "显示声子模式不可约表示的特征标。该计算必须使用原胞（primitive cell）；若输入是复胞，需先用 PRIMITIVE_AXES 变换成原胞。也可处理磁空间群的不可约表示。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#irreps",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "IRREPS_SYMMETRY_ADAPTED",
+   "title": "IRREPS_SYMMETRY_ADAPTED",
+   "group": "tag",
+   "keys": [
+    "IRREPS_SYMMETRY_ADAPTED",
+    "irreps_symmetry_adapted"
+   ],
+   "en": "When this tag is .TRUE., the degenerate bands in the IRREPS calculation are\nfound from the symmetry of the q-point, and not from how close their\nfrequencies are. The default is .FALSE..\nBy default, bands whose frequencies differ by less than the tolerance given as\nthe fourth value of IRREPS are taken as degenerate. Small numerical errors in\nthe force constants can split bands that must be degenerate by symmetry, and\ntwo bands of different irreducible representations can have nearly the same\nfrequency near a band crossing. In both cases the characters of the bands are\nwrong. The three acoustic modes at \\(\\Gamma\\) are a common example, because\ntheir frequencies are small numbers of either sign.\nWith this tag, phonopy decomposes the eigenvector space by the representation\nof the little group of q, including time reversal, and the size of each\ndegenerate set is the dimension of an irreducible representation. The fourth\nvalue of IRREPS is not used. Bands that are degenerate only together with time\nreversal, as on the Brillouin-zone boundary of some nonsymmorphic space groups,\nare found as one set. The equations are given in Symmetry-adapted phonon modes.",
+   "zh": "设为 .TRUE. 时，IRREPS 计算中的简并能带由 q 点对称性判定，而不是按频率接近程度判定，默认 .FALSE.。默认情况下，频率差小于 IRREPS 第四个数值所给容差的能带被视为简并。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#irreps-symmetry-adapted",
+   "source": "phonopy official documentation",
+   "truncated": true
+  },
+  {
+   "name": "LITTLE_COGROUP",
+   "title": "LITTLE_COGROUP",
+   "group": "tag",
+   "keys": [
+    "LITTLE_COGROUP",
+    "little_cogroup"
+   ],
+   "en": "Show irreps of little co-group (point-group of wavevector) instead of little\ngroup.\nIRREPS = 0 0 1/8\nLITTLE_COGROUP = .TRUE.",
+   "zh": "显示波矢点群（little co-group）的不可约表示，而不是 little group 的。示例：IRREPS = 0 0 1/8 且 LITTLE_COGROUP = .TRUE.。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#little-cogroup",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "MAGMOM",
+   "title": "MAGMOM",
+   "group": "tag",
+   "keys": [
+    "MAGMOM",
+    "magmom"
+   ],
+   "en": "Symmetry of spin such as magnetic moments is specified using this tag. The\nnumber of values has to be equal to the number of atoms, or its three times for\nnon-collinear-like case, in the input unit cell, not the primitive cell or\nsupercell. See also Magnetic unit cells for how the primitive\ncell is determined when the input unit cell has magnetic moments. If this tag is\nused with -d option (CREATE_DISPLACEMENTS tag), MAGMOM file is created.\nThis file contains the MAGMOM information of the supercell used for VASP.\nMAGMOM = 1.0 1.0 -1.0 -1.0\nFor non-collinear-like case,\nMAGMOM = 0 0 1 0 0 1 0 0 -1 0 0 -1\nwhere the first three values as a vector is for the first atom, and so on.",
+   "zh": "指定磁矩等自旋对称性。取值个数必须等于输入原胞（不是原胞变换后的 primitive cell，也不是超胞）的原子数；非共线情形取三倍个数。原胞的取法参见 Magnetic unit cells 一节。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#magmom",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "MASS",
+   "title": "MASS",
+   "group": "tag",
+   "keys": [
+    "MASS",
+    "mass"
+   ],
+   "en": "This tag is not necessary to use usually, because atomic masses are\nautomatically set from the chemical symbols.\nAtomic masses of a primitive cell are overwritten by the values specified.\nThe order of atoms in the primitive cell that is defined by PRIMITIVE_AXIS tag\ncan be shown using -v option. It must be noted that this tag does not affect\nto the symmetry search.\nFor example, when there are six atoms in a primitive cell, MASS is set as\nfollows :\nMASS = 28.085 28.085 16.000 16.000 16.000 16.000",
+   "zh": "通常不需要设置，原子质量会根据元素符号自动赋值。此标签用于覆盖 primitive cell 中各原子的质量；原子顺序由 PRIMITIVE_AXES 决定，可用 -v 选项查看。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#mass",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "MESH, MP, or MESH_NUMBERS",
+   "title": "MESH, MP, or MESH_NUMBERS",
+   "group": "tag",
+   "keys": [
+    "--mesh",
+    "-m",
+    "MESH",
+    "MESH, MP, OR MESH_NUMBERS",
+    "MESH, MP, or MESH_NUMBERS",
+    "MESH_NUMBERS",
+    "MP",
+    "mesh",
+    "mesh, mp, or mesh_numbers",
+    "mesh_numbers",
+    "mp"
+   ],
+   "en": "MESH numbers give uniform meshes in each axis. As the default behavior, the\ncenter of mesh is determined by the Monkhorst-Pack scheme, i.e., for odd number,\na point comes to the center, and for even number, the center is shifted half in\nthe distance between neighboring mesh points.\nExamples of an even mesh with \\(\\Gamma\\) center in two ways,\nMESH = 8 8 8\nGAMMA_CENTER = .TRUE.\nMESH = 8 8 8\nMP_SHIFT = 1/2 1/2 1/2\nIf only one float value is given, e.g., MESH = 100.0, \\(\\Gamma\\) centred\nsampling mesh is generated with the mesh numbers\n\\((N_{\\mathbf{a}^*}, N_{\\mathbf{b}^*}, N_{\\mathbf{c}^*})\\) computed\nfollowing the convention of the VASP automatic k-point generation, which is\n\\[N_{\\mathbf{a}^*} = \\max[1, \\mathrm{nint}(l|\\mathbf{a}^*|)], \\; N_{\\mathbf{b}^*}\n= \\max[1, \\mathrm{nint}(l|\\mathbf{b}^*|)], \\; N_{\\mathbf{c}^*} = \\max[1,\n\\mathrm{nint}(l|\\mathbf{c}^*|)],\\]\nwhere \\(l\\) is the value to be specified. With this, GAMMA_CENTER is\nsimply ignored, but MP_SHIFT works on top of the \\(\\Gamma\\) centred\nsampling mesh.\nMESh = 100",
+   "zh": "MESH 数值给出各倒易轴上的均匀网格点数。默认按 Monkhorst-Pack 方案确定网格中心：奇数时有一个点落在中心，偶数时中心相对相邻网格点偏移半个间距。例如 MP = 20 20 20 用于 DOS 与热学性质取样。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#mesh-mp-or-mesh-numbers",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "MESH_FORMAT",
+   "title": "MESH_FORMAT",
+   "group": "tag",
+   "keys": [
+    "MESH_FORMAT",
+    "mesh_format"
+   ],
+   "en": "When HDF5 is set, calculated result is stored in mesh.hdf5 instead of\nmesh.yaml.\nMESH_FORMAT = HDF5",
+   "zh": "设为 HDF5 时，网格计算结果写入 mesh.hdf5 而不是 mesh.yaml，例如 MESH_FORMAT = HDF5。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#mesh-format",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "MESH_SYMMETRY",
+   "title": "MESH_SYMMETRY",
+   "group": "tag",
+   "keys": [
+    "MESH_SYMMETRY",
+    "mesh_symmetry"
+   ],
+   "en": "Symmetry search on the reciprocal sampling mesh is disabled by setting\nMESH_SYMMETRY = .FALSE.. In some case such as hexagonal systems or primitive\ncells of cubic systems having F and I-centrings, the results with and without\nmesh symmetry give slightly different values for those properties that can\nemploy mesh symmetry. This happens when the uniform sampling mesh made along\nbasis vectors doesn’t have the same crystallographic point group as the crystal\nitself. This symmetry breaking may be also seen by the fact that weight\nwritten in mesh.yaml can be different from possible order of product group of\nsite-symmetry group and time reversal symmetry. Generally the difference becomes\nsmaller when increasing the sampling mesh numbers.",
+   "zh": "设为 .FALSE. 可关闭倒空间取样网格上的对称性搜索。在六方体系或 F/I 心立方原胞等情形，开、关网格对称性会使某些性质的结果略有差异。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#mesh-symmetry",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "MODULATION",
+   "title": "MODULATION",
+   "group": "tag",
+   "keys": [
+    "MODULATION",
+    "modulation"
+   ],
+   "en": "The MODULATION tag is used to create a crystal structure with displacements\nalong normal modes at q-point in the specified supercell dimension.\nAtomic displacement of the j-th atom is created from the real part of the\neigenvectors with amplitudes and phase factors as\n\\[\\frac{A} { \\sqrt{N_\\mathrm{a}m_j} } \\operatorname{Re} \\left[ \\exp(i\\phi)\n\\mathbf{e}_j \\exp( i \\mathbf{q} \\cdot \\mathbf{r}_{jl} ) \\right],\\]\nwhere \\(A\\) is the amplitude, \\(\\phi\\) is the phase,\n\\(N_\\mathrm{a}\\) is the number of atoms in the supercell specified in this\ntag and \\(m_j\\) is the mass of the j-th atom, \\(\\mathbf{q}\\) is the\nq-point specified, \\(\\mathbf{r}_{jl}\\) is the position of the j-th atom in\nthe l-th unit cell, and \\(\\mathbf{e}_j\\) is the j-th atom part of\neigenvector. Convention of eigenvector or dynamical matrix employed in phonopy\nis shown in Dynamical matrix.\nIf several modes are specified as shown in the example above, they are\noverlapped on the structure. The output filenames are MPOSCAR and\nMPOSCAR-<number>. Each modulated structure of a normal mode is written in\nMPOSCAR-<number> where the numbers correspond to the order of specified sets",
+   "zh": "按指定超胞尺寸，在给定 q 点沿简正模产生带位移的晶体结构。第 j 个原子的位移由本征矢实部结合振幅与相位因子给出，可用于构造调制结构。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#modulation",
+   "source": "phonopy official documentation",
+   "truncated": true
+  },
+  {
+   "name": "MOMEMT and MOMENT_ORDER",
+   "title": "MOMEMT and MOMENT_ORDER",
+   "group": "tag",
+   "keys": [
+    "MOMEMT",
+    "MOMEMT AND MOMENT_ORDER",
+    "MOMEMT and MOMENT_ORDER",
+    "MOMENT_ORDER",
+    "momemt",
+    "momemt and moment_order",
+    "moment_order"
+   ],
+   "en": "Phonon moments for DOS and PDOS defined below are calculated using these tags up\nto arbitrary order. The order is specified with MOMENT_ORDER (\\(n\\) in the\nformula). Unless MOMENT_ORDER specified, the first and second moments are\ncalculated.\nThe moments for DOS are given as\n\\[M_n(\\omega_\\text{min}, \\omega_\\text{max})\n=\\frac{\\int_{\\omega_\\text{min}}^{\\omega_\\text{max}} \\omega^n g(\\omega) d\\omega}\n{\\int_{\\omega_\\text{min}}^{\\omega\\_\\text{max}} g(\\omega) d\\omega}.\\]\nThe moments for PDOS are given as\n\\[M_n^j(\\omega_\\text{min}, \\omega_\\text{max})\n=\\frac{\\int_{\\omega_\\text{min}}^{\\omega_\\text{max}} \\omega^n g^j(\\omega)\nd\\omega} {\\int_{\\omega_\\text{min}}^{\\omega\\_\\text{max}} g^j(\\omega) d\\omega}.\\]\n\\(\\omega_\\text{min}\\) and \\(\\omega_\\text{max}\\) are specified :using\nref:dos_fmin_fmax_tags tags. When these are not specified, the moments are\ncomputed with the range of \\(\\epsilon < \\omega < \\infty\\), where\n\\(\\epsilon\\) is a small positive value. Imaginary frequencies are treated as\nnegative real values in this computation, therefore it is not a good idea to set\nnegative \\(\\omega_\\text{min}\\).\nMOMENT = .TRUE.\nMOMENT_ORDER = 3",
+   "zh": "用这两个标签计算 DOS / PDOS 的任意阶声子矩，阶数由 MOMENT_ORDER 指定。不指定时计算一阶与二阶矩；矩的积分下限、上限由频率范围给出。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#momemt-and-moment-order",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "MP_SHIFT",
+   "title": "MP_SHIFT",
+   "group": "tag",
+   "keys": [
+    "MP_SHIFT",
+    "mp_shift"
+   ],
+   "en": "MP_SHIFT gives the shifts in direction along the corresponding reciprocal axes\n(\\(a^*\\), \\(b^*\\), \\(c^*\\)). 0 or 1/2 (0.5) can be used as these\nvalues. 1/2 means the half mesh shift with respect to neighboring grid points in\neach direction.",
+   "zh": "给出沿各倒易轴（a*、b*、c*）的网格平移量，只能取 0 或 1/2（0.5）；1/2 表示相对相邻网格点平移半个网格间距。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#mp-shift",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "NAC",
+   "title": "NAC",
+   "group": "tag",
+   "keys": [
+    "NAC",
+    "nac"
+   ],
+   "en": "Non-analytical term correction is applied to dynamical matrix. BORN file has\nto be prepared in the current directory. See BORN (optional) and\nNon-analytical term correction. The default method is\nNAC_METHOD = GONZE after v1.13.0.\nNAC = .TRUE.",
+   "zh": "对动力学矩阵施加非解析项修正（NAC），需在当前目录准备 BORN 文件。v1.13.0 之后默认方法为 NAC_METHOD = GONZE。示例：NAC = .TRUE.。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#nac",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "NAC_METHOD",
+   "title": "NAC_METHOD",
+   "group": "tag",
+   "keys": [
+    "NAC_METHOD",
+    "nac_method"
+   ],
+   "en": "The method of non-analytical term correction is chosen by this tag between two,\nNAC_METHOD = GONZE (Correction by dipole-dipole interaction) and NAC_METHOD = WANG\n(Interpolation scheme at general q-points with non-analytical term correction), and the default is the former after v1.13.0.",
+   "zh": "选择非解析项修正方法：NAC_METHOD = GONZE（偶极-偶极相互作用修正）或 NAC_METHOD = WANG（一般 q 点插值方案），v1.13.0 之后默认前者。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#nac-method",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "PDOS",
+   "title": "PDOS",
+   "group": "tag",
+   "keys": [
+    "--pdos",
+    "PDOS",
+    "partial_dos.dat",
+    "pdos",
+    "projected_dos.dat"
+   ],
+   "en": "Projected DOS is calculated using this tag. The formal definition is written as\n\\[g^j(\\omega, \\hat{\\mathbf{n}}) = \\frac{1}{N} \\sum_\\lambda \\delta(\\omega -\n\\omega_\\lambda) |\\hat{\\mathbf{n}} \\cdot \\mathbf{e}^j_\\lambda|^2,\\]\nwhere \\(j\\) is the atom indices and \\(\\hat{\\mathbf{n}}\\) is the unit\nprojection direction vector. Without specifying PROJECTION_DIRECTION\nor XYZ_PROJECTION, PDOS is computed as sum of\n\\(g^j(\\omega, \\hat{\\mathbf{n}})\\) projected onto Cartesian axes\n\\(x,y,z\\), i.e.,\n\\[g^j(\\omega) = \\sum_{\\hat{\\mathbf{n}} = \\{x, y, z\\}} g^j(\\omega,\n\\hat{\\mathbf{n}}).\\]\nThe atom indices \\(j\\) are specified by\nPDOS = 1 2, 3 4 5 6\nThese numbers are those in the primitive cell. , separates the atom sets. In\nthis example, atom 1 and 2 are summarized as one curve and atom 3, 4, 5, and, 6\nare summarized as another curve.\nPDOS = AUTO is supported To group symmetrically equivalent atoms\nautomatically.\nPDOS = AUTO\nEIGENVECTORS = .TRUE. and MESH_SYMMETRY = .FALSE. are automatically set,\ntherefore the calculation takes much more time than usual DOS calculation. With\na very dense sampling mesh, writing data into mesh.yaml or mesh.hdf5 can be",
+   "zh": "计算投影态密度：按各原子本征矢在给定方向上的投影，把每个声子模式对态密度的贡献分解到原子上。用原子序号列表指定要投影的原子，结果写入 projected_dos.dat（旧版称 partial_dos.dat）。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#pdos",
+   "source": "phonopy official documentation",
+   "truncated": true
+  },
+  {
+   "name": "PM",
+   "title": "PM",
+   "group": "tag",
+   "keys": [
+    "PM",
+    "pm"
+   ],
+   "en": "This tag specified how displacements are found. When PM = .FALSE., least\ndisplacements that can calculate force constants are found. This may cause less\naccurate result. When PM = .TRUE., all the displacements that are opposite\ndirections to the least displacements are also found, which is called plus-minus\ndisplacements here. The default setting is PM = AUTO. Plus-minus displacements\nare considered with this tag. If the plus and minus displacements are\nsymmetrically equivalent, only the plus displacement is found. This may be in\nbetween .FALSE. and .TRUE.. You can check how it works to see the file\nDISP where displacement directions on atoms are written.",
+   "zh": "指定位移的搜索方式。PM = .FALSE. 时只找算力常数所需的最少位移，精度可能较差；PM = .TRUE. 时还会把这些位移的反方向（plus-minus）一并找出，以提高精度。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#pm",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "PRETEND_REAL",
+   "title": "PRETEND_REAL",
+   "group": "tag",
+   "keys": [
+    "PRETEND_REAL",
+    "pretend_real"
+   ],
+   "en": "This enables to take imaginary frequencies as real for thermal property\ncalculation. This does give false thermal properties, therefore for a testing\npurpose only, when a small amount of imaginary branches obtained.\nTPROP = .TRUE.\nPRETEND_REAL = .TRUE.",
+   "zh": "把虚频当作实频参与热学性质计算。这样得到的热学性质并不真实，仅用于出现少量虚频时的测试。示例：TPROP = .TRUE. 且 PRETEND_REAL = .TRUE.。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#pretend-real",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "PRIMITIVE_AXES",
+   "title": "PRIMITIVE_AXES",
+   "group": "tag",
+   "keys": [
+    "PRIMITIVE_AXES",
+    "primitive_axes"
+   ],
+   "en": "When specified, transformation from the input unit cell to the primitive cell is\nperformed. With this, the primitive cell basis vectors are used as the\ncoordinate system for the phonon calculation. The transformation matrix is\nspecified by nine values. The first, second, and third three values give the\nrows of the 3x3 matrix as follows:\nPRIMITIVE_AXES = 0.0 0.5 0.5 0.5 0.0 0.5 0.5 0.5 0.0\nLikewise,\nPRIMITIVE_AXES = 0 1/2 1/2 1/2 0 1/2 1/2 1/2 0\nThe primitive cell for building the dynamical matrix is created by multiplying\nprimitive-axis matrix \\(\\mathrm{M}_\\mathrm{p}\\). Let the matrix as,\n\\[\\begin{split}\\mathrm{M}_\\mathrm{p} = \\begin{pmatrix}\n0.0 & 0.5 & 0.5 \\\\ 0.5 & 0.0 & 0.5 \\\\ 0.5 & 0.5 & 0.0\n\\end{pmatrix}\\end{split}\\]\nwhere the rows correspond to the first three, second three, and third three sets\nof numbers, respectively.\nWhen lattice parameters of unit cell (set by POSCAR) are the column vectors of\n\\(\\mathbf{a}_\\mathrm{u}\\), \\(\\mathbf{b}_\\mathrm{u}\\), and\n\\(\\mathbf{c}_\\mathrm{u}\\), those of supercell,\n\\(\\mathbf{a}_\\mathrm{p}\\), \\(\\mathbf{b}_\\mathrm{p}\\),\n\\(\\mathbf{c}_\\mathrm{p}\\), are determined by,",
+   "zh": "指定从输入原胞到 primitive cell 的变换，之后声子计算以原胞基矢为坐标系。变换矩阵由九个数值给出，前三个、中间三个、后三个分别对应三条新基矢在原基矢下的分量。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#primitive-axes",
+   "source": "phonopy official documentation",
+   "truncated": true
+  },
+  {
+   "name": "PROJECTION_DIRECTION",
+   "title": "PROJECTION_DIRECTION",
+   "group": "tag",
+   "keys": [
+    "PROJECTION_DIRECTION",
+    "projection_direction"
+   ],
+   "en": "Eigenvectors are projected along the direction specified by this tag. Projection\ndirection is specified in reduced coordinates, i.e., with respect to a, b,\nc axes.\nPDOS = 1, 2\nPROJECTION_DIRECTION = -1 1 1",
+   "zh": "把本征矢沿该标签指定的方向投影，方向用分数坐标（相对 a、b、c 轴）给出。示例：PDOS = 1, 2 配合 PROJECTION_DIRECTION = -1 1 1。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#projection-direction",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "Q_DIRECTION",
+   "title": "Q_DIRECTION",
+   "group": "tag",
+   "keys": [
+    "Q_DIRECTION",
+    "q_direction"
+   ],
+   "en": "This tag is used to activate non-analytical term correction (NAC) at\n\\(\\mathbf{q}\\rightarrow\\mathbf{0}\\), i.e. practically \\(\\Gamma\\)-point,\nbecause NAC is direction dependent. With this tag, \\(\\mathbf{q}\\) is\nspecified in the fractional coordinates of the reciprocal basis vectors. Only\nthe direction has the meaning. Therefore Q_DIRECTION = 1 1 1 and\nQ_DIRECTION = 2 2 2 give the same result. This tag is valid for QPOINTS,\nIRREPS, and MODULATION tags.\nAway from \\(\\Gamma\\)-point, this setting is ignored and the specified\nq-point is used as the q-direction.\nQPOINTS = 0 0 0 NAC = .TRUE.\nQ_DIRECTION = 1 0 0",
+   "zh": "用于激活 q→0（实际即 Γ 点）处的非解析项修正；由于 NAC 与方向有关，需用倒易基矢的分数坐标指定 q 的方向，只有方向有意义。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#q-direction",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "QPOINTS",
+   "title": "QPOINTS",
+   "group": "tag",
+   "keys": [
+    "QPOINTS",
+    "qpoints"
+   ],
+   "en": "When q-points are supplied, those phonons are calculated. Q-points are specified\nsuccessive values separated by spaces and collected by every three values as\nvectors in reciprocal reduced coordinates.\nQPOINTS = 0 0 0 1/2 1/2 1/2 1/2 0 1/2\nWith QPOINTS = .TRUE., q-points are read from QPOITNS file (see the file\nformat at QPOINTS) in current directory phonons at the\nq-points are calculated.\nQPOINTS = .TRUE.",
+   "zh": "给出要计算的 q 点，数值按每三个一组构成倒空间分数坐标，如 QPOINTS = 0 0 0 1/2 1/2 1/2 1/2 0 1/2；设为 QPOINTS = .TRUE. 时改为从 QPOINTS 文件读取。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#qpoints",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "QPOINTS_FORMAT",
+   "title": "QPOINTS_FORMAT",
+   "group": "tag",
+   "keys": [
+    "QPOINTS_FORMAT",
+    "qpoints_format"
+   ],
+   "en": "When HDF5 is set, calculated result is stored in qpoints.hdf5 instead of\nqpoints.yaml.\nQPOINTS_FORMAT = HDF5",
+   "zh": "设为 HDF5 时，指定 q 点的计算结果写入 qpoints.hdf5 而不是 qpoints.yaml，例如 QPOINTS_FORMAT = HDF5。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#qpoints-format",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "RANDOM_DISPLACEMENT_TEMPERATURE",
+   "title": "RANDOM_DISPLACEMENT_TEMPERATURE",
+   "group": "tag",
+   "keys": [
+    "RANDOM_DISPLACEMENT_TEMPERATURE",
+    "random_displacement_temperature"
+   ],
+   "en": "This invokes generation of random displacements at a\ntemperature specified by this tag. Collective displacements are randomly sampled\nfrom harmonic oscillator distribution functions of phonon modes. See more\ndetails at Random sampling of harmonic oscillator probability densities of phonon modes.\nAn example of configure file for 2x2x2 supercell of NaCl conventional unit cell\nis as follows.\nCREATE_DISPLACEMENTS = .TRUE.\nDIM = 2 2 2\nPRIMITIVE_AXES = AUTO\nRANDOM_DISPLACEMENTS = 1000\nRANDOM_DISPLACEMENT_TEMPERATURE = 300\nFC_SYMMETRY = .TRUE.\nThe random displacements at a specified temperature are generated after phonon\ncalculation, therefore a set of data for the phonon calculation is necessary. In\nthe following example, FORCE_SETS of NaCl example is\ncopied to an empty directory. Running following command, phonopy_disp.yaml is\ngenerated in the current directory.\nFor example in example/NaCl directory,\n% mkdir rd && cd rd\n% cp ../FORCE_SETS\n% phonopy ../phonopy_disp.yaml --rd 1000 --rd-temperature 300\nSee also -f or --forces for creating FORCE_SETS from a series of\nsueprcell calculation. Be careful that if FORCE_SETS exists in the current",
+   "zh": "按指定温度生成随机位移：从各声子模简谐振子分布函数中随机采样集体位移。详见文档中谐振子概率密度随机取样一节，温度越高位移幅度越大。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#random-displacement-temperature",
+   "source": "phonopy official documentation",
+   "truncated": true
+  },
+  {
+   "name": "RANDOM_DISPLACEMENTS",
+   "title": "RANDOM_DISPLACEMENTS",
+   "group": "tag",
+   "keys": [
+    "RANDOM_DISPLACEMENTS",
+    "random_displacements"
+   ],
+   "en": "The number of random displacement supercells are created by the specified\npositive integer values. In each supercell, all atoms are displaced in random\ndirection with a constant displacement distance specified by\nDISPLACEMENT_DISTANCE tag. The random seed can be specified by\nRANDOM_SEED tag.\nTo obtain force constants with random displacements and respective forces, an\nexternal force constants calculator is necessary. See FC_CALCULATOR.\nSee also -f or --forces for creating FORCE_SETS from a series of\nsueprcell calculation.\nCREATE_DISPLACEMENTS = .TRUE.\nDIM = 2 2 2\nRANDOM_DISPLACEMENTS = 20\nDISPLACEMENT_DISTANCE = 0.03\nWhen AUTO is specified, the number of supercells to be generated is estimated\nusing symfc. The default estimated number is four times the minimum number\nrequired to solve the normal equation under symmetry considerations. When\nDISPLACEMENT_DISTANCE_MAX is also specified, the default number becomes eight\ntimes the minimum required number. These factors (4 or 8) can be changed by\nRD_NUMBER_ESTIMATION_FACTOR.",
+   "zh": "用正整数指定要生成的随机位移超胞数目。每个超胞中所有原子沿随机方向位移，位移距离由 DISPLACEMENT_DISTANCE 给定且保持一致；随机种子可用 RANDOM_SEED 指定，设为 AUTO 时由程序估算所需数量。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#random-displacements",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "RANDOM_SEED",
+   "title": "RANDOM_SEED",
+   "group": "tag",
+   "keys": [
+    "RANDOM_SEED",
+    "random_seed"
+   ],
+   "en": "The random seed used for creating random displacements by\nRANDOM_DISPLACEMENTS tag. The value has to be 32bit unsigned int. The\nrandom seed is useful for crating the same random displacements with using the\nsame number.",
+   "zh": "生成随机位移所用的随机种子，必须是 32 位无符号整数。用相同种子与相同超胞数可复现同一组随机位移。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#random-seed",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "RD_NUMBER_ESTIMATION_FACTOR",
+   "title": "RD_NUMBER_ESTIMATION_FACTOR",
+   "group": "tag",
+   "keys": [
+    "RD_NUMBER_ESTIMATION_FACTOR",
+    "rd_number_estimation_factor"
+   ],
+   "en": "The default factor to generate supercells with symfc using\nRANDOM_DISPLACEMENTS=AUTO is changed to this value. See the default factor in\nRANDOM_DISPLACEMENTS.",
+   "zh": "当 RANDOM_DISPLACEMENTS=AUTO 且使用 symfc 时，用该值修改生成超胞数目的默认估算因子；默认值参见 RANDOM_DISPLACEMENTS 一节。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#rd-number-estimation-factor",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "READ_FORCE_CONSTANTS",
+   "title": "READ_FORCE_CONSTANTS",
+   "group": "tag",
+   "keys": [
+    "READ_FORCE_CONSTANTS",
+    "read_force_constants"
+   ],
+   "en": "READ_FORCE_CONSTANTS = .TRUE. is equivalent to FORCE_CONSTANTS = READ.",
+   "zh": "READ_FORCE_CONSTANTS = .TRUE. 等价于 FORCE_CONSTANTS = READ，即从文件读取力常数。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#read-force-constants",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "SHOW_IRREPS",
+   "title": "SHOW_IRREPS",
+   "group": "tag",
+   "keys": [
+    "SHOW_IRREPS",
+    "show_irreps"
+   ],
+   "en": "Irreducible representations are shown along with character table.\nIRREPS = 1/3 1/3 0\nSHOW_IRREPS = .TRUE.",
+   "zh": "显示不可约表示的同时打印特征标表。示例：IRREPS = 1/3 1/3 0 且 SHOW_IRREPS = .TRUE.。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#show-irreps",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "SIGMA",
+   "title": "SIGMA",
+   "group": "tag",
+   "keys": [
+    "SIGMA",
+    "sigma"
+   ],
+   "en": "A smearing method is used instead of a linear tetrahedron method. This tag also\nspecifies the smearing width. The unit is same as that used for phonon\nfrequency. The default value is the value given by the difference of maximum and\nminimum frequencies divided by 100.\nSIGMA = 0.1",
+   "zh": "用展宽（smearing）方法代替线性四面体方法，并指定展宽宽度，单位与声子频率相同。默认值是最高与最低频率之差除以 100。示例：SIGMA = 0.1。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#sigma",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "SYMFC",
+   "title": "SYMFC",
+   "group": "tag",
+   "keys": [
+    "SYMFC",
+    "symfc"
+   ],
+   "en": "New in v2.25 Symfc (symfc/symfc) is based on fitting\napproach and any displacements set of atoms in supercell can be handled. For\nexample, random displacements generated by RANDOM_DISPLACEMENTS can\nbe used to compute force constants. To use symfc, its python module has to be\ninstalled via conda-forge or pip.\nWhen symfc is used, please cite the manuscript: A. Seko and A. Togo, Phys. Rev.\nB, 110, 214302 (2024) [doi]\nFC_CALCULATOR = SYMFC",
+   "zh": "v2.25 新增。symfc（symfc/symfc）基于拟合方法，可处理超胞中任意一组原子位移，例如与 RANDOM_DISPLACEMENTS 生成的随机位移配合求力常数。使用前需通过 conda-forge 或源码安装其 Python 模块。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#symfc",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "SYMMETRY",
+   "title": "SYMMETRY",
+   "group": "tag",
+   "keys": [
+    "SYMMETRY",
+    "symmetry"
+   ],
+   "en": "P1 symmetry is enforced to the input unit cell by setting SYMMETRY = .FALSE.",
+   "zh": "设为 SYMMETRY = .FALSE. 可对输入原胞强制使用 P1 对称性（即不做对称性约化）。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#symmetry-tag",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "SYMMETRY_TOLERANCE",
+   "title": "SYMMETRY_TOLERANCE",
+   "group": "tag",
+   "keys": [
+    "SYMMETRY_TOLERANCE",
+    "symmetry_tolerance"
+   ],
+   "en": "This is used to set geometric tolerance to find symmetry of crystal structure.\nThe default value is 1e-5. In general, it is not a good idea to loosen the\ntolerance. It is recommended to symmetrize crystal structure before starting\nphonon calculation, e.g., using --symmetry option.\nSYMMETRY_TOLERANCE = 1e-3",
+   "zh": "设置查找晶体对称性时的几何容差，默认 1e-5。一般不建议放宽容差；更推荐先对结构做对称化（如用 --symmetry 选项）再开始声子计算。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#symmetry-tolerance",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "TDISP",
+   "title": "TDISP",
+   "group": "tag",
+   "keys": [
+    "TDISP",
+    "tdisp"
+   ],
+   "en": "Mean square displacements projected to Cartesian axes as a function of\ntemperature are calculated from the number of phonon excitations. Phonon\nfrequencies in THz, which is the default setting of phonopy, are used to obtain\nthe mean square displacements, therefore physical units have to be set properly\nfor it (see Interfaces to calculators.) The result is given in\n\\(\\text{Angstrom}^2\\) and writen into thermal_displacements.yaml. See the\ndetail of the method, Thermal displacement. These tags must be used with\nMesh sampling tags\nOptionally, FMIN tag (--fmin option) with a small value is recommened to be\nset when q-points at \\(\\Gamma\\) point or near \\(\\Gamma\\) point (e.g.\nusing very dense sampling mesh) are sampled to avoid divergence. FMAX tag\n(--fmax option) can be used to specify an upper bound of phonon frequencies\nwhere the phonons are considered in the summation. The projection is applied\nalong arbitrary direction using PROJECTION_DIRECTION tag\n(PROJECTION_DIRECTION).\nThe three acoustic modes at \\(\\Gamma\\) can be excluded by\nEXCLUDE_GAMMA_ACOUSTIC (EXCLUDE_GAMMA_ACOUSTIC) instead of FMIN.\nThis tag excludes only these three modes. The modes with low frequencies at the",
+   "zh": "由声子激发数计算随温度变化的、投影到笛卡尔轴上的均方位移。计算使用以 THz 为单位的声子频率（phonopy 默认），因此需按接口正确设置物理单位。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#tdisp",
+   "source": "phonopy official documentation",
+   "truncated": true
+  },
+  {
+   "name": "TDISPMAT",
+   "title": "TDISPMAT",
+   "group": "tag",
+   "keys": [
+    "TDISPMAT",
+    "tdispmat"
+   ],
+   "en": "Mean square displacement matrices are calculated. The definition is shown at\nThermal displacement. Phonon frequencies in THz, which is the default\nsetting of phonopy, are used to obtain the mean square displacement matrices,\ntherefore physical units have to be set properly for it (see\nInterfaces to calculators.) The result is given in \\(\\text{Angstrom}^2\\)\nand written into thermal_displacement_matrices.yaml where six matrix elements\nare given in the order of xx, yy, zz, yz, xz, xy. In this yaml file,\ndisplacement_matrices and displacement_matrices_cif correspond to\n\\(\\mathrm{U}_\\text{cart}\\) and \\(\\mathrm{U}_\\text{cif}\\) defined at\nMean square displacement matrix, respectively.\nOptionally, FMIN tag (--fmin option) with a small value is recommended to be\nset when q-points at \\(\\Gamma\\) point or near \\(\\Gamma\\) point (e.g.\nusing very dense sampling mesh) are sampled to avoid divergence. FMAX tag\n(--fmax option) can be used to specify an upper bound of phonon frequencies\nwhere the phonons are considered in the summation.\nThe three acoustic modes at \\(\\Gamma\\) can be excluded by\nEXCLUDE_GAMMA_ACOUSTIC (EXCLUDE_GAMMA_ACOUSTIC) instead of FMIN.",
+   "zh": "计算均方位移矩阵，定义见 Thermal displacement 一节。同样使用 THz 为单位的频率，需正确设置物理单位。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#tdispmat",
+   "source": "phonopy official documentation",
+   "truncated": true
+  },
+  {
+   "name": "TDISPMAT_CIF",
+   "title": "TDISPMAT_CIF",
+   "group": "tag",
+   "keys": [
+    "TDISPMAT_CIF",
+    "tdispmat_cif"
+   ],
+   "en": "This tag specifies a temperature (K) at which thermal displacement is calculated\nand the mean square displacement matrix is written to the cif file\ntdispmat.cif with the dictionary item aniso_U. Phonon frequencies in THz,\nwhich is the default setting of phonopy, are used to obtain the mean square\ndisplacement matrices, therefore physical units have to be set properly for it\n(see Interfaces to calculators.) The result is given in\n\\(\\textrm{Angstrom}^2\\).\nmesh.yaml or mesh.hdf5 is not written out from phonopy-1.11.14.\nTDISPMAT_CIF = 1273.0",
+   "zh": "指定计算热位移的温度（K），并把均方位移矩阵以字典项 aniso_U 写入 cif 文件 tdispmat.cif。频率默认以 THz 为单位，需按接口正确设置物理单位。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#tdispmat-cif",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "TMIN, TMAX, and TSTEP",
+   "title": "TMIN, TMAX, and TSTEP",
+   "group": "tag",
+   "keys": [
+    "--tmax",
+    "--tmin",
+    "--tstep",
+    "TMAX",
+    "TMIN",
+    "TMIN, TMAX, AND TSTEP",
+    "TMIN, TMAX, and TSTEP",
+    "TSTEP",
+    "tmax",
+    "tmin",
+    "tmin, tmax, and tstep",
+    "tstep"
+   ],
+   "en": "TMIN, TMAX, and TSTEP tags are used to specify the temperature range to be\ncalculated. The default values of them are 0, 1000, and 10, respectively.\nTPROP = .TRUE.\nTMAX = 2000",
+   "zh": "指定热学性质计算的温度范围，默认值分别为 0、1000、10。示例：TPROP = .TRUE. 配合 TMAX = 2000。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#tmin-tmax-and-tstep",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "TPROP",
+   "title": "TPROP",
+   "group": "tag",
+   "keys": [
+    "--thermal-property",
+    "-t",
+    "-t / TPROP",
+    "TPROP",
+    "thermal properties",
+    "tprop"
+   ],
+   "en": "Thermal properties, free energy, heat capacity, and entropy, are calculated from\ntheir statistical thermodynamic expressions (see\nThermodynamic properties). Thermal properties are calculated from\nphonon frequencies on a sampling mesh in the reciprocal space. Therefore these\ntags must be used with Mesh sampling tags and their convergence with\nrespect to the sampling mesh has to be checked. Usually this calculation is not\ncomputationally demanding, so the convergence is easily achieved with increasing\nthe density of the sampling mesh. -p option can be used together to plot the\nthermal properties.\nPhonon frequencies in THz, which is the default setting of phonopy, are used to\nobtain the thermal properties, therefore physical units have to be set properly\nfor it (see Interfaces to calculators.)\nThe calculated values are written into thermal_properties.yaml. The unit\nsystems of free energy, heat capacity, and entropy are kJ/mol, J/K/mol, and\nJ/K/mol, respectively, where 1 mol means \\(\\mathrm{N_A}\\times\\) the\nprimitive cell defined by PRIMITIVE_AXES but may not corresppond to\n\\(\\mathrm{N_A}\\times\\) formula unit, i.e. you have to divide the value by",
+   "zh": "由统计热力学表达式计算自由能、热容与熵等热学性质。热学性质由倒空间取样网格上的声子频率求和得到，因此必须与网格相关标签（MESH / MP）一起使用，结果写入 thermal_properties.yaml。命令行中对应 -t 选项。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#tprop",
+   "source": "phonopy official documentation",
+   "truncated": true
+  },
+  {
+   "name": "WRITE_FORCE_CONSTANTS",
+   "title": "WRITE_FORCE_CONSTANTS",
+   "group": "tag",
+   "keys": [
+    "WRITE_FORCE_CONSTANTS",
+    "write_force_constants"
+   ],
+   "en": "WRITE_FORCE_CONSTANTS = .TRUE. is equivalent to FORCE_CONSTANTS = WRITE.",
+   "zh": "WRITE_FORCE_CONSTANTS = .TRUE. 等价于 FORCE_CONSTANTS = WRITE，即把算出的力常数写入文件。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#write-force-constants",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "WRITE_MESH",
+   "title": "WRITE_MESH",
+   "group": "tag",
+   "keys": [
+    "WRITE_MESH",
+    "write_mesh"
+   ],
+   "en": "With a dense mesh, with eigenvectors, without mesh symmetry, sometimes its\noutput file mesh.yaml or mesh.hdf5 can be huge. However when those files are\nnot needed, e.g., in (P)DOS calculation, WRITE_MESH = .FALSE. can disable to\nwrite out those files. With (P)DOS calculation, DOS output files are obtained\neven with WRITE_MESH = .FALSE.. The default setting is .TRUE..\nWRITE_MESH = .FALSE.",
+   "zh": "网格较密、包含本征矢或关闭网格对称性时，mesh.yaml / mesh.hdf5 可能非常大。若不需要这些文件（例如只算 DOS/PDOS），可设 WRITE_MESH = .FALSE. 禁止写出；此时 DOS 输出文件仍会保留。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#write-mesh",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "WRITEDM",
+   "title": "WRITEDM",
+   "group": "tag",
+   "keys": [
+    "WRITEDM",
+    "writedm"
+   ],
+   "en": "WRITEDM = .TRUE.\nDynamical matrices \\(D\\) are written into qpoints.yaml in the following\n\\(6N\\times3N\\) format, where N is the number of atoms in the primitive\ncell.\nThe physical unit of dynamical matrix is\n[unit of force] / ([unit of displacement] * [unit of mass]), i.e., square of\nthe unit of phonon frequency before multiplying the unit conversion factor (see\nFREQUENCY_CONVERSION_FACTOR).\n\\[\\begin{split}D = \\begin{pmatrix} D_{11} & D_{12} & D_{13} & \\\\ D_{21} & D_{22} & D_{23} &\n\\cdots \\\\ D_{31} & D_{32} & D_{33} & \\\\ & \\vdots & & \\\\ \\end{pmatrix},\\end{split}\\]\nand \\(D_{jj'}\\) is\n\\[\\begin{split}D_{jj'} = \\begin{pmatrix} Re(D_{jj'}^{xx}) & Im(D_{jj'}^{xx}) &\nRe(D_{jj'}^{xy}) & Im(D_{jj'}^{xy}) & Re(D_{jj'}^{xz}) & Im(D_{jj'}^{xz}) \\\\\nRe(D_{jj'}^{yx}) & Im(D_{jj'}^{yx}) & Re(D_{jj'}^{yy}) & Im(D_{jj'}^{yy}) &\nRe(D_{jj'}^{yz}) & Im(D_{jj'}^{yz}) \\\\ Re(D_{jj'}^{zx}) & Im(D_{jj'}^{zx}) &\nRe(D_{jj'}^{zy}) & Im(D_{jj'}^{zy}) & Re(D_{jj'}^{zz}) & Im(D_{jj'}^{zz}) \\\\\n\\end{pmatrix},\\end{split}\\]\nwhere j and j’ are the atomic indices in the primitive cell. The phonon\nfrequencies may be recovered from qpoints.yaml by writing a simple python",
+   "zh": "设为 .TRUE. 时把动力学矩阵 D 写入 qpoints.yaml，格式为 6N×3N（N 为原胞原子数）。动力学矩阵的单位是 [力]/([位移]×[质量])，即声子频率单位的平方。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#writedm",
+   "source": "phonopy official documentation",
+   "truncated": true
+  },
+  {
+   "name": "XYZ_PROJECTION",
+   "title": "XYZ_PROJECTION",
+   "group": "tag",
+   "keys": [
+    "XYZ_PROJECTION",
+    "xyz_projection"
+   ],
+   "en": "PDOS is calculated using eigenvectors projected along x, y, and z Cartesian\ncoordinates. The format of output file projected_dos.dat becomes different\nwhen using this tag, where phonon-mode-frequency and x, y, and z components of\nPDOS are written out in the order:\nfrequency atom1_x atom1_y atom1_z atom2_x atom2_y atom2_z ...\nWith -p option, three curves are drawn. These correspond to sums of all\nprojections to x, sums of all projections to y, and sums of all projections to z\ncomponents of eigenvectors, respectively.\nXYZ_PROJECTION = .TRUE.",
+   "zh": "按 x、y、z 笛卡尔方向投影本征矢来计算 PDOS。启用后 projected_dos.dat 的列格式改变：依次为频率、atom1_x、atom1_y、atom1_z、atom2_x……；配合 -p 可同时画出三个分量。",
+   "url": "https://phonopy.github.io/phonopy/setting-tags.html#xyz-projection",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "phonopy vs phonopy-init (v4)",
+   "title": "Command line split: phonopy and phonopy-init",
+   "group": "concept",
+   "keys": [
+    "COMMAND LINE SPLIT: PHONOPY",
+    "COMMAND LINE SPLIT: PHONOPY AND PHONOPY-INIT",
+    "Command line split: phonopy",
+    "Command line split: phonopy and phonopy-init",
+    "PHONOPY VS PHONOPY-INIT (V4)",
+    "PHONOPY-INIT",
+    "command line split: phonopy",
+    "command line split: phonopy and phonopy-init",
+    "phonopy",
+    "phonopy vs phonopy-init (v4)",
+    "phonopy-init",
+    "v4"
+   ],
+   "en": "The phonopy command has been split into two commands:\nphonopy-init – setup operations: generate supercells with\ndisplacements, create FORCE_SETS / FORCE_CONSTANTS files from\nexternal calculator results, inspect crystal symmetry.\nphonopy – phonon calculation from a phonopy.yaml-like file.\nThe deprecated phonopy-load command is kept as an alias of phonopy.\nPractically, setup-related flags (-d, --rd, -c, --dim, -f,\n--fz, --fc, --symmetry) moved from phonopy to phonopy-init.\nRunning them on phonopy reports a migration error pointing here.",
+   "zh": "phonopy 命令已拆分为两个：phonopy-init 负责建模（生成含位移超胞、由外部计算器结果生成 FORCE_SETS / FORCE_CONSTANTS、检查晶体对称性），phonopy 负责从 phonopy.yaml 类文件出发做声子计算；旧的单命令用法已被弃用。",
+   "url": "https://phonopy.github.io/phonopy/migration-v4.html#command-line-split-phonopy-and-phonopy-init",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "phonopy-init examples",
+   "title": "Examples",
+   "group": "concept",
+   "keys": [
+    "EXAMPLES",
+    "Examples",
+    "PHONOPY-INIT EXAMPLES",
+    "examples",
+    "phonopy-init examples"
+   ],
+   "en": "VASP:\n% phonopy-init -d --dim 2 2 2 --pa auto -c POSCAR-unitcell\n% phonopy-init --sp -f vasprun.xml-00{1,2}\nQuantum ESPRESSO:\n% phonopy-init --qe -d --dim 2 2 2 --pa auto -c NaCl.in\n% phonopy-init --sp -f NaCl-00{1,2}.out\nSymmetry inspection:\n% phonopy-init --symmetry -c POSCAR-unitcell\nRandom displacements with a finite snapshot count:\n% phonopy-init --rd 100 --dim 2 2 2 --pa auto -c POSCAR-unitcell\nFinite-temperature random displacements require phonon information and belong\nto the phonon-calculation step, so they are handled by phonopy command\nrather than phonopy-init.",
+   "zh": "VASP 示例：% phonopy-init -d --dim 2 2 2 --pa auto -c POSCAR-unitcell，% phonopy-init --sp -f vasprun.xml-00{1,2}；Quantum ESPRESSO 示例：% phonopy-init --qe -d --dim 2 2 2 --pa auto -c NaCl.in，% phonopy-init --sp -f NaCl-00{1,2}.out；对称性检查：% phonopy-init --symmetry -c POSCAR-unitcell；另含随机位移等示例。",
+   "url": "https://phonopy.github.io/phonopy/phonopy-init.html#examples",
+   "source": "phonopy official documentation",
+   "truncated": false
+  },
+  {
+   "name": "phonopy-init vs legacy phonopy",
+   "title": "Relation to the legacy phonopy command",
+   "group": "concept",
+   "keys": [
+    "PHONOPY-INIT VS LEGACY PHONOPY",
+    "RELATION TO THE LEGACY PHONOPY COMMAND",
+    "Relation to the legacy phonopy command",
+    "phonopy-init vs legacy phonopy",
+    "relation to the legacy phonopy command"
+   ],
+   "en": "Earlier versions of phonopy used a single phonopy command to cover both the\nsetup and the phonon-calculation steps. The two responsibilities have been\nsplit:\nOld invocation\nNew invocation\nphonopy -d --dim ... -c POSCAR\nphonopy-init -d --dim ... -c POSCAR\nphonopy --sp -f vasprun.xml*\nphonopy-init --sp -f vasprun.xml*\nphonopy --symmetry -c POSCAR\nphonopy-init --symmetry -c POSCAR\nphonopy-load --band auto ...\nphonopy --band auto ...\nThe new phonopy command rejects setup flags (-d, --rd, -f, --fz,\n--fc, --symmetry) and points the user to phonopy-init.",
+   "zh": "旧版 phonopy 用一条命令同时完成建模与声子计算，现在两者分离：旧的 phonopy -d --dim ... -c POSCAR 改为 phonopy-init -d --dim ... -c POSCAR；旧的 phonopy --sp -f vasprun.xml* 改为 phonopy-init --sp -f vasprun.xml*。声子计算部分仍由 phonopy 命令完成。",
+   "url": "https://phonopy.github.io/phonopy/phonopy-init.html#relation-to-the-legacy-phonopy-command",
+   "source": "phonopy official documentation",
+   "truncated": false
+  }
+ ]
+}

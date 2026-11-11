@@ -52,9 +52,23 @@ def available():
     if not BUILTIN_DIR.is_dir():
         return found
     for p in sorted(BUILTIN_DIR.iterdir()):
-        if p.is_file() and (p.suffix in SUFFIXES or p.name.endswith(".zhe")):
+        if p.is_file() and p.suffix in SUFFIXES:
             found[p.name] = (p, _description(p))
     return found
+
+
+def _script_names():
+    """列出内置脚本的可调用名（去掉 .sh 后缀）。"""
+    names = []
+    for filename in available():
+        name = filename
+        for suffix in SUFFIXES:
+            if name.endswith(suffix):
+                name = name[: -len(suffix)]
+                break
+        if name:
+            names.append(name)
+    return sorted(set(names))
 
 
 def _list_scripts():
@@ -75,7 +89,7 @@ def main(argv=None):
         from mcta import version_string
         print(version_string())
         return 0
-    if not args or args[0] in ("-h", "-H", "--help", "help", "-l", "--list", "list"):
+    if not args or args[0] in ("-h", "-H", "--help", "help"):
         print(__doc__.strip())
         print()
         return _list_scripts()
@@ -85,7 +99,12 @@ def main(argv=None):
     if path is None:
         print(f"ERROR: 找不到内置脚本 {name!r}（尝试了 " +
               "/".join(_variants(name)) + "）", file=sys.stderr)
-        print("可用脚本：mt.sh", file=sys.stderr)
+        names = _script_names()
+        if names:
+            print("可用脚本：" + " ".join(names), file=sys.stderr)
+        else:
+            print("可用脚本：（内置 scripts/ 目录为空）", file=sys.stderr)
+        print("运行 mt.sh 查看各脚本说明。", file=sys.stderr)
         return 2
 
     bash = shutil.which("bash")

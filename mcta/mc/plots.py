@@ -1,5 +1,8 @@
+import os
+
 import numpy as np
 import matplotlib.pyplot as plt
+
 
 def _read_rows(lines):
     """从日志里挑出数据行。
@@ -47,7 +50,46 @@ def main(file, format, legend):
     else:
         print('No data!')
 
+
+def _normalize_format(fmt):
+    """把 -f 收到的任意字符串归一化成格式名；空值回退 png。
+
+    是否真能保存由 matplotlib 在 savefig 时决定（见 _save_figure），
+    这里不做白名单，也不预先拦截。
+    """
+    raw = str(fmt or '').strip().lstrip('.').lower()
+    if not raw:
+        print("警告：未指定图片格式，已改用 png。")
+        return 'png'
+    return raw
+
+
+def _save_figure(name, fmt):
+    """保存一张图；真正无法保存时提示并回退 png，返回实际使用的格式。
+
+    get_supported_filetypes() 只反映后端声明的能力，像 pgf（缺 LaTeX）、
+    avif（缺 Pillow 插件）这类格式仍会在真实 savefig 时抛异常，所以以
+    实际保存结果为准。第一张图失败后，后续两张沿用回退后的格式。
+    """
+    path = "%s.%s" % (name, fmt)
+    try:
+        plt.savefig(path, dpi=750, transparent=True, bbox_inches='tight')
+        return fmt
+    except Exception as e:
+        if fmt == 'png':
+            raise
+        reason = str(e).splitlines()[0] if str(e) else type(e).__name__
+        print("警告：无法保存 %r 格式的图片（%s），已改用 png。" % (fmt, reason))
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+        plt.savefig("%s.png" % name, dpi=750, transparent=True, bbox_inches='tight')
+        return 'png'
+
+
 def plot(arr, format, legend):
+    format = _normalize_format(format)
     plt.rcParams['xtick.direction'] = 'in'
     plt.rcParams['ytick.direction'] = 'in'
     plt.rcParams['font.family'] = 'STIXGeneral'
@@ -64,7 +106,7 @@ def plot(arr, format, legend):
     plt.minorticks_on()
     plt.tick_params(axis='both', which='minor', color='gray')
     plt.legend(loc='upper right', frameon=False, prop={'style':'italic','size':'medium'}, alignment='left', title=legend, title_fontproperties={'size':'medium'})
-    plt.savefig("magnetism.%s"%format, dpi=750, transparent=True, bbox_inches='tight')
+    format = _save_figure('magnetism', format)
 
     plt.clf()
     plt.xlabel('Temperature (K)')
@@ -77,7 +119,7 @@ def plot(arr, format, legend):
 
     plt.tick_params(axis='both', which='minor', color='gray')
     plt.legend(loc='upper left', frameon=False, prop={'style':'italic','size':'medium'}, alignment='left', title=legend, title_fontproperties={'size':'medium'})
-    plt.savefig("susceptibility.%s"%format, dpi=750, transparent=True, bbox_inches='tight')
+    format = _save_figure('susceptibility', format)
 
     plt.clf()
     plt.xlabel('Temperature (K)')
@@ -88,4 +130,4 @@ def plot(arr, format, legend):
     plt.plot(arr[:,0],arr[:,-1],linewidth=1,linestyle=':',label=r'$specific\ heat$',marker='o',markersize=3)
     plt.tick_params(axis='both', which='minor', color='gray')
     plt.legend(loc='upper left', frameon=False, prop={'style':'italic','size':'medium'}, alignment='left', title=legend, title_fontproperties={'size':'medium'})
-    plt.savefig("specific_heat.%s"%format, dpi=750, transparent=True, bbox_inches='tight')
+    format = _save_figure('specific_heat', format)

@@ -6,6 +6,7 @@ from mcta import version_string
 plt.rcParams['xtick.direction'] = 'in'
 plt.rcParams['ytick.direction'] = 'in'
 plt.rcParams['ytick.minor.visible'] = True
+plt.rcParams['font.family'] = 'STIXGeneral'
 plt.rcParams["mathtext.fontset"] = 'cm'
 
 class cla_fig:
@@ -127,39 +128,38 @@ mt.band -i BAND.dat -d PDOS*.dat             # 处理vaspkit输出的.dat文件
     formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('-h', '-H', "--help",       action="help",        help='show this help message and exit')
     parser.add_argument('-v', '-V', "--version",    action="version",     version=version_string())
-    parser.add_argument('-S', "--size",       type=float, nargs=2,  help='figure size: width, height', metavar=('width','height'))
-    parser.add_argument('-D', "--divided",    action='store_true',  help="plot the up and down spin in divided subplot")
-    parser.add_argument('-y', "--vertical",   type=float, nargs=2,  help="energy (eV) range, default: [-5.0, 5.0]", metavar=('start','end'))
-    parser.add_argument('-G', "--legend",     type=str,             nargs='+', help="legend labels", default=[])
-    parser.add_argument('-A', "--location",   type=str.lower,       nargs='+', help="arrange the legend location, default: best", default=[], metavar="str")
+    parser.add_argument('-S', "--figsz",       type=float, nargs=2,  help='figure size: width, height', metavar=('width','height'))
+    parser.add_argument('-D', "--divid",    action='store_true',  help="plot the up and down spin in divided subplot")
+    parser.add_argument('-y', "--vrang",   type=float, nargs=2,  help="energy (eV) range, default: [-5.0, 5.0]", metavar=('start','end'))
+    parser.add_argument('-G', "--legnd",     type=str,             nargs='+', help="legend labels", default=[])
+    parser.add_argument('-A', "--locat",   type=str.lower,       nargs='+', help="arrange the legend location, default: best", default=[], metavar="str")
     parser.add_argument('-C', "--color",      type=str,             nargs='+', help="line color: b, blue; g, green; r, red; c, cyan; m, magenta; y, yellow;"+
-                                                                                    "k, black; w, white", default=[], metavar="color")
-    parser.add_argument('-k', "--linestyle",  type=str,             nargs='+', help="linestyle: solid, dashed, dashdot, dotted or tuple; default: solid",
+                                                                                    "k, black; w, white", default=[], metavar="clrs")
+    parser.add_argument('-k', "--style",  type=str,             nargs='+', help="linestyle: solid, dashed, dashdot, dotted or tuple; default: solid",
                                                                                     default=[], metavar="str")
-    parser.add_argument('-w', "--linewidth",  type=str,             nargs='+', help="linewidth, default: 0.8", default=[], metavar="0.8")
-    parser.add_argument('-m', "--mass",       type=float,           nargs='?', help='calculate the effective masses, default: 0.15', default=None, const=0.15,
+    parser.add_argument('-w', "--width",  type=str,             nargs='+', help="linewidth, default: 0.8", default=[], metavar="0.8")
+    parser.add_argument('-m', "--emass",       type=float,           nargs='?', help='calculate the effective masses, default: 0.15', default=None, const=0.15,
                                                                                     metavar="scale")
-    parser.add_argument('-r', "--projected",  action='store_true',  help='plot the projected band structure')
+    parser.add_argument('-r', "--projs",  action='store_true',  help='plot the projected band structure')
     parser.add_argument('-i', "--input",      type=str,             nargs='*', default=None, metavar="PATH", help="directory with VASP output (EIGENVAL/DOSCAR/PROCAR/vasprun.xml) or vaspkit *.dat files; " "auto-detected, default: current directory. Give 2 or 3 directories to compare")
-    parser.add_argument('-o', "--output",     type=str,             help="plot figure filename, default: BAND.png", default="BAND.png")
-    parser.add_argument('-q', "--dpi",        type=int,             help="dpi of the figure, default: 500", default=500)
+    parser.add_argument('-o', "--outpt",     type=str,             help="plot figure filename, default: BAND.png", default="BAND.png")
+    parser.add_argument('-q', "--resol",        type=int,             help="dpi of the figure, default: 500", default=500)
     parser.add_argument('--klabels',          type=str,             help="filename of KLABELS, default: KLABELS", default="KLABELS")
-    parser.add_argument('-l', "--labels",     type=str.upper,       nargs='+', default=[], help='labels for high-symmetry points, such as X S Y K M')
-    parser.add_argument('-d', "--dos",        type=str,             nargs='*', default=None, help="also plot DOS (from DOSCAR or PDOS*.dat/TDOS.dat); no value means auto-detect")
+    parser.add_argument('-l', "--label",     type=str.upper,       nargs='+', default=[], help='labels for high-symmetry points, such as X S Y K M')
+    parser.add_argument('-d', "--dospl",        type=str,             nargs='*', default=None, help="also plot DOS (from DOSCAR or PDOS*.dat/TDOS.dat); no value means auto-detect")
     parser.add_argument('--vasp',             type=str,             nargs='+', metavar='DIR',
                     help='(legacy) same as -i DIR; kept for backward compatibility')
     parser.add_argument('--no-shift',         action='store_true',  help='keep raw energies (do not shift by E-fermi)')
     parser.add_argument('--keep-weights',      action='store_true',  help='keep the k points with a non-zero weight (e.g. the SCF mesh of an HSE run) instead of only the band path')
     parser.add_argument('--export-dat',       type=str,             nargs='?', const='', default=None, metavar='DIR',
                     help='also write vaspkit-style BAND.dat/KLABELS/PDOS files into DIR (default: the VASP directory)')
-    parser.add_argument('-x', "--horizontal", type=float, nargs=2,  help="Density of states, electrons/eV range", metavar=('start','end'))
-    parser.add_argument('-n', "--exchange",   action='store_true',  help="exchange the x and y axes of DOS")
-    parser.add_argument('-p', "--partial",    type=str,             nargs='+', default=[], help='the partial DOS to plot, s p d, or symbol-s,p,d')
-    parser.add_argument('-e', "--elements",   type=str,             nargs='+', default=[], help="PDOS labels")
-    parser.add_argument('-W', "--wratios",    type=float,           help='width ratio for DOS subplot')
-    parser.add_argument('-z', "--fill",       type=float,           nargs='?', help='fill a shaded region between PDOS and axis, default: 0.2', default=None, const=0.2, metavar="alpha")
+    parser.add_argument('-x', "--horiz", type=float, nargs=2,  help="Density of states, electrons/eV range", metavar=('start','end'))
+    parser.add_argument('-n', "--exchg",   action='store_true',  help="exchange the x and y axes of DOS")
+    parser.add_argument('-p', "--parts",    type=str,             nargs='+', default=[], help='the partial DOS to plot, s p d, or symbol-s,p,d')
+    parser.add_argument('-e', "--elems",   type=str,             nargs='+', default=[], help="PDOS labels")
+    parser.add_argument('-W', "--ratio",    type=float,           help='width ratio for DOS subplot')
+    parser.add_argument('-z', "--alpha",       type=float,           nargs='?', help='fill a shaded region between PDOS and axis, default: 0.2', default=None, const=0.2, metavar="alpha")
     parser.add_argument('--no-mirror',        action='store_true',  help='keep the spin-down DOS positive (default: spin-up > 0, spin-down < 0)')
-    parser.add_argument('-f', "--font",       type=str,             help="font to use", default='STIXGeneral')
 
     args = parser.parse_args()
 
@@ -167,7 +167,7 @@ mt.band -i BAND.dat -d PDOS*.dat             # 处理vaspkit输出的.dat文件
         args.input = (list(args.input) if args.input else []) + list(args.vasp)
 
     want_bands = args.input is not None
-    want_dos = args.dos is not None
+    want_dos = args.dospl is not None
     if not want_bands and not want_dos:
         want_bands = True               # 不带参数：只画能带
 
@@ -178,12 +178,12 @@ mt.band -i BAND.dat -d PDOS*.dat             # 处理vaspkit输出的.dat文件
     dosfiles = None
     if want_dos:
         if mode == "vasp":
-            if args.dos:
+            if args.dospl:
                 print("提示：VASP 目录直接用 DOSCAR，忽略 -d 后面的文件。")
-        elif args.dos:
-            dosfiles = _expand_dos(args.dos)
+        elif args.dospl:
+            dosfiles = _expand_dos(args.dospl)
             if not dosfiles:
-                _error("ERROR: -d 没找到 DOS 文件：%s" % " ".join(args.dos))
+                _error("ERROR: -d 没找到 DOS 文件：%s" % " ".join(args.dospl))
                 return 1 if _ERROR else 0
         else:
             dosfiles = autodos or _dat_dos_files(".")
@@ -193,8 +193,8 @@ mt.band -i BAND.dat -d PDOS*.dat             # 处理vaspkit输出的.dat文件
     if not want_bands:
         bandfiles = []
 
-    labels = [re.sub("'|‘|’", '′', re.sub('"|“|”', '″', re.sub('^GA[A-Z]+$|^G$', 'Γ', i))) for i in args.labels]
-    elements = [re.sub("'|‘|’", '′', re.sub('"|“|”', '″', i)) for i in args.elements]
+    labels = [re.sub("'|‘|’", '′', re.sub('"|“|”', '″', re.sub('^GA[A-Z]+$|^G$', 'Γ', i))) for i in args.label]
+    elements = [re.sub("'|‘|’", '′', re.sub('"|“|”', '″', i)) for i in args.elems]
     if dosfiles:
         dosfiles.sort()
 
@@ -207,7 +207,7 @@ mt.band -i BAND.dat -d PDOS*.dat             # 处理vaspkit输出的.dat文件
             color += [ast.literal_eval(i)] if '(' in i and ')' in i else [i]
 
     linestyle = []
-    for i in args.linestyle:
+    for i in args.style:
         j = i.split('*')
         if len(j) == 2:
             linestyle += [ast.literal_eval(j[0])] * int(j[1]) if '(' in j[0] and ')' in j[0] else [j[0]] * int(j[1])
@@ -215,11 +215,9 @@ mt.band -i BAND.dat -d PDOS*.dat             # 处理vaspkit输出的.dat文件
             linestyle += [ast.literal_eval(i)] if '(' in i and ')' in i else [i]
 
     linewidth = []
-    for i in args.linewidth:
+    for i in args.width:
         j = i.split('*')
         linewidth += [float(j[0])] * int(j[1]) if len(j) == 2 else [float(i)]
-
-    plt.rcParams['font.family'] = '%s'%args.font
 
     # 数据所在的目录（-i 给了目录就用它，否则用第一个 .dat 的目录，再否则当前目录）
     if dirs:
@@ -246,7 +244,7 @@ mt.band -i BAND.dat -d PDOS*.dat             # 处理vaspkit输出的.dat文件
             else:
                 formula = formula + symbol[i]
 
-    legend = args.legend or ([formula] if formula else [pltname])
+    legend = args.legnd or ([formula] if formula else [pltname])
 
     ticks   = []
     klabels = []
@@ -259,33 +257,33 @@ mt.band -i BAND.dat -d PDOS*.dat             # 处理vaspkit输出的.dat文件
         ticks, klabels = readdata.klabels(klabels_file)
 
     if len(labels) == 0:
-        labels=[re.sub('GAMMA|Gamma|G', 'Γ', re.sub('Undefined|Un|[0-9]', '', i)) for i in klabels]
+        labs=[re.sub('GAMMA|Gamma|G', 'Γ', re.sub('Undefined|Un|[0-9]', '', i)) for i in klabels]
 
     if len(ticks) > len(labels):
         labels += [''] * (len(ticks) - len(labels))
     elif len(ticks) < len(labels):
         labels = labels[:len(ticks)]
 
-    width_ratios = args.wratios or (0.3 if args.divided else 0.5)
-    location = [int(i) if i.isdigit() else i for i in args.location]
+    width_ratios = args.ratio or (0.3 if args.divid else 0.5)
+    location = [int(i) if i.isdigit() else i for i in args.locat]
 
-    fig_p = cla_fig(output=args.output, size=args.size, vertical=args.vertical, horizontal=args.horizontal,
-                    color=color, linestyle=linestyle, linewidth=linewidth, location=location, dpi=args.dpi,
-                    width_ratios=width_ratios, exchange=args.exchange, fill=args.fill,
+    fig_p = cla_fig(output=args.outpt, size=args.figsz, vertical=args.vrang, horizontal=args.horiz,
+                    color=color, linestyle=linestyle, linewidth=linewidth, location=location, dpi=args.resol,
+                    width_ratios=width_ratios, exchange=args.exchg, fill=args.alpha,
                     mirror=not args.no_mirror)
-    if args.projected and args.dos is not None:
+    if args.projs and args.dospl is not None:
         print("提示：投影能带暂不支持与 DOS 同图，已忽略 -d。")
 # VASP 输出为默认通路；只有目录里没有 VASP 文件时才走 .dat
     if mode == "vasp":
         vasp_plot(dirs, args, labels, elements, fig_p, want_bands=want_bands)
         return 1 if _ERROR else 0
 # calculate the effective masses
-    if args.mass is not None:
+    if args.emass is not None:
         if not fig_p.vertical:
             fig_p.vertical = [-5.0, 5.0]
         _dat_mass(workdir, args, ticks, labels, legend, fig_p)
 # plot Projected Band Structure
-    elif args.projected:
+    elif args.projs:
         if not fig_p.vertical:
             fig_p.vertical = [-5.0, 5.0]
         bandfile = [f for f in bandfiles if os.path.basename(f).startswith('PBAND')]
@@ -301,7 +299,7 @@ mt.band -i BAND.dat -d PDOS*.dat             # 处理vaspkit输出的.dat文件
             except ValueError as e:
                 _error("ERROR: %s" % e)
                 return 1 if _ERROR else 0
-            index_f, labels_elements = projected.select(s_elements, args.partial)
+            index_f, labels_elements = projected.select(s_elements, args.parts)
             if len(index_f) > 0:
                 ispin = [0 if s_elements[i][0].endswith('_DW') else 1 for i, j in index_f]
                 if not elements:
@@ -313,7 +311,7 @@ mt.band -i BAND.dat -d PDOS*.dat             # 处理vaspkit输出的.dat文件
             else:
                 _error("ERROR: -p %s 没有匹配到任何投影；"
                       "可用 -p Mo-d（元素-轨道）、-p d（按轨道）、-p all。"
-                      % " ".join(args.partial))
+                      % " ".join(args.parts))
 # plot Band Structure
     else:
         bandfile = list(bandfiles)
@@ -325,20 +323,20 @@ mt.band -i BAND.dat -d PDOS*.dat             # 处理vaspkit输出的.dat文件
             if not dosfiles:
                 if ispin == "Noneispin":
                     plots.Noneispin(arr, bands, ticks, labels, legend, fig_p)
-                elif ispin == "Ispin" and not args.divided:
+                elif ispin == "Ispin" and not args.divid:
                     plots.Ispin(arr, bands, ticks, labels, legend, fig_p)
-                elif ispin == "Ispin" and args.divided:
+                elif ispin == "Ispin" and args.divid:
                     plots.Dispin(arr, bands, ticks, labels, legend, fig_p)
             else:
                 darr, dele, s_elements = readdata.dos(dosfiles)
-                index_f, labels_elements = readdata.select(s_elements, args.partial)
+                index_f, labels_elements = readdata.select(s_elements, args.parts)
                 if not elements:
                     elements = labels_elements
                 if ispin == "Noneispin":
                     plots.NoneispinWd(arr, bands, ticks, labels, darr, dele, index_f, elements, legend, fig_p)
-                elif ispin == "Ispin" and not args.divided:
+                elif ispin == "Ispin" and not args.divid:
                     plots.IspinWd(arr, bands, ticks, labels, darr, dele, index_f, elements, legend, fig_p)
-                elif ispin == "Ispin" and args.divided:
+                elif ispin == "Ispin" and args.divid:
                     plots.DispinWd(arr, bands, ticks, labels, darr, dele, index_f, elements, legend, fig_p)
             print("已保存：" + fig_p.output)
 # plot DOS
@@ -347,7 +345,7 @@ mt.band -i BAND.dat -d PDOS*.dat             # 处理vaspkit输出的.dat文件
                 if fig_p.output == "BAND.png":
                     fig_p.output = "DOS.png"
                 darr, dele, s_elements = readdata.dos(dosfiles)
-                index_f, labels_elements = readdata.select(s_elements, args.partial)
+                index_f, labels_elements = readdata.select(s_elements, args.parts)
                 if not elements:
                     elements = labels_elements
                 plots.pdosfiles(darr, dele, index_f, elements, legend, fig_p)
@@ -441,7 +439,7 @@ def _dat_mass(workdir, args, ticks, labels, legend, fig_p):
     if not os.path.exists(band_gap):
         _error("ERROR: BAND_GAP file does not exist in %s." % workdir)
         return
-    scale = 0.15 if args.mass > 0.75 or args.mass < 0.05 else args.mass
+    scale = 0.15 if args.emass > 0.75 or args.emass < 0.05 else args.emass
     caller = os.getcwd()
     if not os.path.isabs(fig_p.output):
         fig_p.output = os.path.join(caller, fig_p.output)
@@ -473,7 +471,7 @@ def _vasp_mass(vd, args, ticks, labels, legend, fig_p):
     from mcta.bandplot import mass
     if not fig_p.vertical:
         fig_p.vertical = [-5.0, 5.0]
-    scale = 0.15 if args.mass > 0.75 or args.mass < 0.05 else args.mass
+    scale = 0.15 if args.emass > 0.75 or args.emass < 0.05 else args.emass
     if vd.distances.size < 12:
         _error("ERROR: k 点只有 %d 个，太稀疏，无法做带边抛物线拟合。" % vd.distances.size)
         return
@@ -508,12 +506,12 @@ def _vasp_projected(vd, args, ticks, labels, legend, fig_p):
     if not fig_p.vertical:
         fig_p.vertical = [-5.0, 5.0]
     darr, dbands, composition, s_elements = vd.projected()
-    index_f, labels_elements = projected.select(s_elements, args.partial)
+    index_f, labels_elements = projected.select(s_elements, args.parts)
     if not index_f:
         _error("ERROR: 投影筛选无匹配，可用 -p Mo-d、-p d 或 -p all。")
         return
     ispin = [0 if s_elements[i][0].endswith('_DW') else 1 for i, j in index_f]
-    elements = args.elements or [re.sub(r'-\$tot\$$', '', i).replace('(dw)', '(down)')
+    elements = args.elems or [re.sub(r'-\$tot\$$', '', i).replace('(dw)', '(down)')
                                      for i in labels_elements]
     if all(x == ispin[0] for x in ispin):
         projected.pplot(darr, dbands, composition, ticks, labels, index_f, elements, legend, fig_p)
@@ -539,7 +537,7 @@ def _vasp_dos(vd, args, elements, ticks, labels, legend, fig_p, bands=True):
         _error("ERROR: 目录中没有 DOSCAR；请设置 LORBIT = 11 并保留 DOSCAR。")
         return
     darr, dele, s_elements = vd.dos()
-    index_f, labels_elements = readdata.select(s_elements, args.partial)
+    index_f, labels_elements = readdata.select(s_elements, args.parts)
     if not index_f:
         _error("ERROR: 没有匹配的 DOS 列，可用 -p s,p,d 或 -p Mo-d。")
         return
@@ -555,7 +553,7 @@ def _vasp_dos(vd, args, elements, ticks, labels, legend, fig_p, bands=True):
     arr, ban, ispin = vd.bands()
     if ispin == "Noneispin":
         plots.NoneispinWd(arr, ban, ticks, labels, darr, dele, index_f, elements, legend, fig_p)
-    elif not args.divided:
+    elif not args.divid:
         plots.IspinWd(arr, ban, ticks, labels, darr, dele, index_f, elements, legend, fig_p)
     else:
         plots.DispinWd(arr, ban, ticks, labels, darr, dele, index_f, elements, legend, fig_p)
@@ -584,8 +582,8 @@ def vasp_plot(dirs, args, labels, elements, fig_p, want_bands=True):
 
     formulas = [_vasp_formula(vd.structure) or os.path.basename(os.path.abspath(vd.dir))
                 for vd in datas]
-    if args.legend:
-        legend = list(args.legend)
+    if args.legnd:
+        legend = list(args.legnd)
     elif len(datas) == 1:
         legend = [formulas[0]]
     else:
@@ -594,7 +592,7 @@ def vasp_plot(dirs, args, labels, elements, fig_p, want_bands=True):
     if len(datas) == 1:
         vd = datas[0]
         if want_bands and not vd.has("eigenval"):
-            if args.dos is not None:
+            if args.dospl is not None:
                 print("提示：%s 中没有 EIGENVAL/vasprun.xml，改为只画 DOS。" % vd.dir)
                 want_bands = False
             else:
@@ -606,14 +604,14 @@ def vasp_plot(dirs, args, labels, elements, fig_p, want_bands=True):
             ticks, names = _vasp_ticks(vd, labels, arr)
         else:
             ticks, names = [0.0, 1.0], ['', '']
-        if args.mass is not None:
+        if args.emass is not None:
             if not has_bands:
                 _error("ERROR: 有效质量需要 EIGENVAL 或 vasprun.xml。")
                 return
             _vasp_mass(vd, args, ticks, names, legend, fig_p)
-        elif args.projected:
+        elif args.projs:
             _vasp_projected(vd, args, ticks, names, legend, fig_p)
-        elif args.dos is not None:
+        elif args.dospl is not None:
             _vasp_dos(vd, args, elements, ticks, names, legend, fig_p, bands=has_bands)
         else:
             arr, ban, ispin = vd.bands()
@@ -621,7 +619,7 @@ def vasp_plot(dirs, args, labels, elements, fig_p, want_bands=True):
                 fig_p.vertical = [-5.0, 5.0]
             if ispin == "Noneispin":
                 plots.Noneispin(arr, ban, ticks, names, legend, fig_p)
-            elif not args.divided:
+            elif not args.divid:
                 plots.Ispin(arr, ban, ticks, names, legend, fig_p)
             else:
                 plots.Dispin(arr, ban, ticks, names, legend, fig_p)
@@ -670,37 +668,36 @@ mt.phband -B 23 100 -l g m k g -y -2 110      # broken axis for the optical bran
     formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('-h', '-H', "--help",       action="help",        help='show this help message and exit')
     parser.add_argument('-v', '-V', "--version",    action="version",     version=version_string())
-    parser.add_argument('-S', "--size",       type=float, nargs=2,  help='figure size: width, height', metavar=('width','height'))
-    parser.add_argument('-B', "--broken",     type=float, nargs=2,  help='broken axis: start, end')
+    parser.add_argument('-S', "--figsz",       type=float, nargs=2,  help='figure size: width, height', metavar=('width','height'))
+    parser.add_argument('-B', "--brkax",     type=float, nargs=2,  help='broken axis: start, end')
     parser.add_argument('--hratios',    type=float,           help='height ratio for broken axis, default: 0.2', default=0.2)
-    parser.add_argument('-y', "--vertical",   type=float, nargs=2,  help="frequency (THz) range", metavar=('start','end'))
-    parser.add_argument('-G', "--legend",     type=str,             nargs='+', help="legend labels", default=[])
-    parser.add_argument('-A', "--location",   type=str.lower,       nargs='+', help="arrange the legend location, default: best", default=[], metavar="str")
+    parser.add_argument('-y', "--vrang",   type=float, nargs=2,  help="frequency (THz) range", metavar=('start','end'))
+    parser.add_argument('-G', "--legnd",     type=str,             nargs='+', help="legend labels", default=[])
+    parser.add_argument('-A', "--locat",   type=str.lower,       nargs='+', help="arrange the legend location, default: best", default=[], metavar="str")
     parser.add_argument('-C', "--color",      type=str,             nargs='+', help="line color: b, blue; g, green; r, red; c, cyan; m, magenta; y, yellow;"+
-                                                                                    "k, black; w, white", default=[], metavar="color")
-    parser.add_argument('-k', "--linestyle",  type=str,             nargs='+', help="linestyle: solid, dashed, dashdot, dotted or tuple; default: solid",
+                                                                                    "k, black; w, white", default=[], metavar="clrs")
+    parser.add_argument('-k', "--style",  type=str,             nargs='+', help="linestyle: solid, dashed, dashdot, dotted or tuple; default: solid",
                                                                                     default=[], metavar="str")
-    parser.add_argument('-w', "--linewidth",  type=str,             nargs='+', help="linewidth, default: 0.8", default=[], metavar="0.8")
+    parser.add_argument('-w', "--width",  type=str,             nargs='+', help="linewidth, default: 0.8", default=[], metavar="0.8")
     parser.add_argument('-i', "--input",      type=str,             nargs='+', help="plot figure from .dat file, default: BAND.dat", default=["BAND.dat"])
-    parser.add_argument('-o', "--output",     type=str,             help="plot figure filename, default: BAND.png", default="BAND.png")
-    parser.add_argument('-q', "--dpi",        type=int,             help="dpi of the figure, default: 500", default=500)
-    parser.add_argument('-j', "--bandconf",   type=str,             help="filename of band setting file, default: band.conf", default="band.conf")
-    parser.add_argument('-l', "--labels",     type=str.upper,       nargs='+', default=[], help='labels for high-symmetry points, such as X S Y K M')
-    parser.add_argument('-d', "--dos",        type=str,             nargs='?', default='', help="also plot Phonon DOS from .dat file; for a standalone DOS figure use mt.phdos")
-    parser.add_argument('-x', "--horizontal", type=float, nargs=2,  help="Phonon density of states range", metavar=('start','end'))
-    parser.add_argument('-n', "--exchange",   action='store_true',  help="exchange the x and y axes of Phonon DOS")
-    parser.add_argument('-e', "--elements",   type=str,             nargs='+', default=[], help="PDOS labels")
-    parser.add_argument('-W', "--wratios",    type=float,           help='width ratio for DOS subplot, default 0.5', default=0.5)
-    parser.add_argument('-z', "--fill",       type=float,           nargs='?', help='fill a shaded region between PDOS and axis, default: 0.2', default=None,
+    parser.add_argument('-o', "--outpt",     type=str,             help="plot figure filename, default: BAND.png", default="BAND.png")
+    parser.add_argument('-q', "--resol",        type=int,             help="dpi of the figure, default: 500", default=500)
+    parser.add_argument('-j', "--bconf",   type=str,             help="filename of band setting file, default: band.conf", default="band.conf")
+    parser.add_argument('-l', "--label",     type=str.upper,       nargs='+', default=[], help='labels for high-symmetry points, such as X S Y K M')
+    parser.add_argument('-d', "--dospl",        type=str,             nargs='?', default='', help="also plot Phonon DOS from .dat file; for a standalone DOS figure use mt.phdos")
+    parser.add_argument('-x', "--horiz", type=float, nargs=2,  help="Phonon density of states range", metavar=('start','end'))
+    parser.add_argument('-n', "--exchg",   action='store_true',  help="exchange the x and y axes of Phonon DOS")
+    parser.add_argument('-e', "--elems",   type=str,             nargs='+', default=[], help="PDOS labels")
+    parser.add_argument('-W', "--ratio",    type=float,           help='width ratio for DOS subplot, default 0.5', default=0.5)
+    parser.add_argument('-z', "--alpha",       type=float,           nargs='?', help='fill a shaded region between PDOS and axis, default: 0.2', default=None,
                                                                                     const=0.2, metavar="alpha")
-    parser.add_argument('-f', "--font",       type=str,             help="font to use", default='STIXGeneral')
 
     args = parser.parse_args()
 
-    labels = [re.sub("'|‘|’", '′', re.sub('"|“|”', '″', re.sub('^GA[A-Z]+$|^G$', 'Γ', i))) for i in args.labels]
-    elements = [re.sub("'|‘|’", '′', re.sub('"|“|”', '″', i)) for i in args.elements]
-    if args.dos != '':
-        dosfile = args.dos or ('projected_dos.dat' if os.path.exists('projected_dos.dat') else '') or ('total_dos.dat' if os.path.exists('total_dos.dat') else '')
+    labels = [re.sub("'|‘|’", '′', re.sub('"|“|”', '″', re.sub('^GA[A-Z]+$|^G$', 'Γ', i))) for i in args.label]
+    elements = [re.sub("'|‘|’", '′', re.sub('"|“|”', '″', i)) for i in args.elems]
+    if args.dospl != '':
+        dosfile = args.dospl or ('projected_dos.dat' if os.path.exists('projected_dos.dat') else '') or ('total_dos.dat' if os.path.exists('total_dos.dat') else '')
         dosfile = dosfile if os.path.exists(dosfile) else None
     else:
         dosfile = None
@@ -714,7 +711,7 @@ mt.phband -B 23 100 -l g m k g -y -2 110      # broken axis for the optical bran
             color += [ast.literal_eval(i)] if '(' in i and ')' in i else [i]
 
     linestyle = []
-    for i in args.linestyle:
+    for i in args.style:
         j = i.split('*')
         if len(j) == 2:
             linestyle += [ast.literal_eval(j[0])] * int(j[1]) if '(' in j[0] and ')' in j[0] else [j[0]] * int(j[1])
@@ -722,11 +719,10 @@ mt.phband -B 23 100 -l g m k g -y -2 110      # broken axis for the optical bran
             linestyle += [ast.literal_eval(i)] if '(' in i and ')' in i else [i]
 
     linewidth = []
-    for i in args.linewidth:
+    for i in args.width:
         j = i.split('*')
         linewidth += [float(j[0])] * int(j[1]) if len(j) == 2 else [float(i)]
 
-    plt.rcParams['font.family'] = '%s'%args.font
     pltname = os.path.split(os.getcwd())[-1]
     s_ele = []
     formula = ''
@@ -745,22 +741,22 @@ mt.phband -B 23 100 -l g m k g -y -2 110      # broken axis for the optical bran
     if not elements and s_ele:
         elements = s_ele
 
-    legend = args.legend or ([formula] if formula else [pltname])
+    legend = args.legnd or ([formula] if formula else [pltname])
 
     klabels = []
-    if os.path.exists(args.bandconf):
-        klabels = readdata.bandset(args.bandconf)
+    if os.path.exists(args.bconf):
+        klabels = readdata.bandset(args.bconf)
     if len(labels) == 0:
-        labels=[re.sub('^GA[A-Z]+$|^G$', 'Γ', i) for i in klabels]
+        labs=[re.sub('^GA[A-Z]+$|^G$', 'Γ', i) for i in klabels]
 
-    broken = args.broken
+    broken = args.brkax
     height_ratio = args.hratios if 0 < args.hratios < 1 else 0.2
-    width_ratios = args.wratios if 0 < args.wratios < 1 else 0.5
-    location = [int(i) if i.isdigit() else i for i in args.location]
+    width_ratios = args.ratio if 0 < args.ratio < 1 else 0.5
+    location = [int(i) if i.isdigit() else i for i in args.locat]
 
-    fig_p = cla_fig(output=args.output, size=args.size, vertical=args.vertical, horizontal=args.horizontal,
-                    color=color, linestyle=linestyle, linewidth=linewidth, location=location, dpi=args.dpi,
-                    height_ratio=height_ratio, width_ratios=width_ratios, exchange=args.exchange, fill=args.fill)
+    fig_p = cla_fig(output=args.outpt, size=args.figsz, vertical=args.vrang, horizontal=args.horiz,
+                    color=color, linestyle=linestyle, linewidth=linewidth, location=location, dpi=args.resol,
+                    height_ratio=height_ratio, width_ratios=width_ratios, exchange=args.exchg, fill=args.alpha)
 # plot Phonon Band Structure
     try:
         bandfile = [f for i in args.input for f in glob.glob(i)]
@@ -773,12 +769,12 @@ mt.phband -B 23 100 -l g m k g -y -2 110      # broken axis for the optical bran
                 labels = labels[:len(ticks)]
             if dosfile:
                 darr, dele = readdata.pdos(dosfile)
-                if args.broken is None:
+                if args.brkax is None:
                     pplots.NobrokenWd(arr, fre, ticks, labels, darr, dele, elements, legend, fig_p)
                 else:
                     pplots.BrokenWd(arr, fre, ticks, labels, broken, darr, dele, elements, legend, fig_p)
             else:
-                if args.broken is None:
+                if args.brkax is None:
                     pplots.Nobroken(arr, fre, ticks, labels, legend, fig_p)
                 else:
                     pplots.Broken(arr, fre, ticks, labels, broken, legend, fig_p)
@@ -806,7 +802,7 @@ mt.phband -B 23 100 -l g m k g -y -2 110      # broken axis for the optical bran
             if len(legend) < 3:
                 legend += [''] * (3 - len(legend))
 
-            if args.broken is None:
+            if args.brkax is None:
                 pplots.Nobroken2(arr, fre, ticks[0], labels, legend, fig_p)
             else:
                 pplots.Broken2(arr, fre, ticks[0], labels, broken, legend, fig_p)
@@ -825,7 +821,7 @@ mt.phband -B 23 100 -l g m k g -y -2 110      # broken axis for the optical bran
             if len(legend) < 4:
                 legend += [''] * (4 - len(legend))
 
-            if args.broken is None:
+            if args.brkax is None:
                 pplots.Nobroken3(arr, fre, ticks[0], labels, legend, fig_p)
             else:
                 pplots.Broken3(arr, fre, ticks[0], labels, broken, legend, fig_p)

@@ -15,7 +15,7 @@ def _epilog() -> str:
         ("mt.sqs -c cell.vasp -a \"Cu:0.5,Au:0.5\"", "自定义晶胞 → SQS 扩胞（默认 3³，10 万次迭代）"),
         ("mt.sqs -c cell.vasp -a Cu,Au -x 4,4,4 --iterations 500000", "4×4×4 超胞 + 50 万次迭代"),
         ("mt.sqs -c LaAlO3.cif --host La -a \"La:0.5,Sr:0.5\"", "A 位随机化，Al/O 保持不变"),
-        ("mt.sqs -c cell.vasp -a Cu:0.5,Au:0.5 -y", "-y 预览：只搜索、不写盘"),
+        ("mt.sqs -c cell.vasp -a Cu:0.5,Au:0.5 -R", "-R 预览：只搜索、不写盘"),
         ("mt.sqs -c cell.vasp -a Cu,Au --iterations 1000 --number 5", "多解导出 + 低迭代（快速干跑）"),
         ("mt.sqs -c cell.vasp -a Cu:0.5,Au:0.5 -s 42", "固定随机种子，结果可复现（自动单线程）"),
     ]
@@ -26,7 +26,7 @@ def _epilog() -> str:
         ["常用示例："] + lines
         + ["", "短选项：-c 晶胞  --host 位点  -a 成分  -x 扩胞  "
            "--iterations 迭代  --number 解数  -s 种子  -n 包名  "
-           "-F 格式  --job-template 模板  -y 预览  -v/-V 版本",
+           "-F 格式  --job-template 模板  -R 预览  -v/-V 版本",
            "环境变量：MT_SEEKER_HOME（工作根目录）、MT_SEEKER_CONFIG（配置文件），"
            "用法与 mt.seeker 相同。"]
     )
@@ -49,7 +49,7 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument('-h', '-H', "--help", action="help",
                     help='show this help message and exit')
     ap.add_argument('-v', '-V', "--version", action="version", version=_version())
-    ap.add_argument('-c', "--cell", type=str, metavar="FILE", required=True,
+    ap.add_argument('-c', "--cells", type=str, metavar="FILE", required=True,
                     help="自定义晶胞文件（POSCAR / CONTCAR / CIF / JSON 等 pymatgen 能读的格式）")
     ap.add_argument("--host", type=str, metavar="SYM",
                     help="要参与随机化的元素位点。晶胞只有一种元素时可省略（自动选）；"
@@ -60,7 +60,7 @@ def build_parser() -> argparse.ArgumentParser:
                          "  Cu,Au            直接等分（自动按目标原子个数折算）\n"
                          "  Cu:27,Au:27      直接按个数写（自动按比例缩放到超胞内实际位点数）\n"
                          "至少两种元素。")
-    ap.add_argument('-x', "--supercell", type=str, default="3,3,3", metavar="DIMS",
+    ap.add_argument('-x', "--supcl", type=str, default="3,3,3", metavar="DIMS",
                     help="扩胞倍数，如 3,3,3 或 3 或 2x2x1（默认 3,3,3）")
     ap.add_argument("--iterations", type=int, default=sqs.DEFAULT_ITERATIONS,
                     metavar="N",
@@ -68,17 +68,17 @@ def build_parser() -> argparse.ArgumentParser:
                          f"下限 {sqs.MIN_ITERATIONS}，上限 {sqs.MAX_ITERATIONS}）")
     ap.add_argument("--number", type=int, default=1, metavar="K",
                     help="导出 K 个互不相同的候选，按 objective 从小到大（默认 1）")
-    ap.add_argument('-s', "--seed", type=int, default=None, metavar="SEED",
+    ap.add_argument('-s', "--seeds", type=int, default=None, metavar="SEED",
                     help="随机种子，固定后结果可复现（会自动单线程运行）")
-    ap.add_argument('-n', "--name", type=str, metavar="NAME",
+    ap.add_argument('-n', "--names", type=str, metavar="NAME",
                     help="导出包名称（默认 sqs-化学式-原子数）")
-    ap.add_argument('-F', "--formats", type=str,
+    ap.add_argument('-F', "--formt", type=str,
                     default=",".join(config.DEFAULT_FORMATS),
                     help="结构文件格式，逗号分隔：cif,poscar,json,xyz"
                          f"（默认 {','.join(config.DEFAULT_FORMATS)}）")
     ap.add_argument("--job-template", action="store_true",
                     help="同时生成 INCAR / KPOINTS / slurm 模板")
-    ap.add_argument('-y', "--dry-run", action="store_true",
+    ap.add_argument('-R', "--dryrn", action="store_true",
                     help="只搜索、不写盘、不打包，把候选 objective 打印出来预览")
     ap.add_argument("--home", type=str, metavar="DIR",
                     help="工作根目录（exports/cache/db 落在此处），默认当前目录")
@@ -104,7 +104,7 @@ def main(argv=None) -> int:
     if args.home:
         config.set_home(args.home)
 
-    formats = [f.strip().lower() for f in args.formats.split(",") if f.strip()]
+    formats = [f.strip().lower() for f in args.formt.split(",") if f.strip()]
     unknown = [f for f in formats if f not in config.STRUCT_FORMATS]
     if not formats or unknown:
         print(f"无效的结构格式：{', '.join(unknown) or '(空)'}；"
@@ -125,11 +125,11 @@ def main(argv=None) -> int:
               f"目标 {comp}；迭代 {p['iterations']}…",
               file=sys.stderr, flush=True)
 
-    r = sqs.run(args.cell, host=args.host, alloy=args.alloy,
-                supercell=args.supercell, iterations=args.iterations,
-                number=args.number, seed=args.seed, name=args.name,
+    r = sqs.run(args.cells, host=args.host, alloy=args.alloy,
+                supercell=args.supcl, iterations=args.iterations,
+                number=args.number, seed=args.seeds, name=args.names,
                 formats=formats, with_job_template=args.job_template,
-                dry_run=args.dry_run, progress=_plan)
+                dry_run=args.dryrn, progress=_plan)
     if "error" in r:
         print(r["error"], file=sys.stderr)
         return 1

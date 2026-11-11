@@ -1,7 +1,7 @@
 """LLM 薄封装：任意 OpenAI 兼容端点。
 
 引擎由 config.LLM_PROVIDERS 预设（openai / deepseek / qwen / glm / kimi /
-siliconflow / gemini / openrouter / ollama / vllm），用 --provider 或
+siliconflow / gemini / openrouter / ollama / vllm），用 --provs 或
 MT_SEEKER_PROVIDER 切换；MT_SEEKER_BASE_URL / _MODEL 可单独覆盖。
 未配置密钥时返回 None，回落到规则流水线。
 """

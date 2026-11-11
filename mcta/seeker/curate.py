@@ -362,7 +362,7 @@ def top_up(n: int, chemsys: str = None, formula: str = None,
     """按化学体系/化学式再下载 n 个本地没有的结构。"""
     from .tools import get_structure, search_mp, write_structure_files
     if not (chemsys or formula):
-        return {"error": "补下载需要 --chemsys 或 --formula（或让 LLM 计划给出 top_up.chemsys）"}
+        return {"error": "补下载需要 --chems 或 --frmla（或让 LLM 计划给出 top_up.chemsys）"}
     exclude = set(exclude)
     found = search_mp(chemsys=chemsys, formula=formula, limit=max(n * 4, 10),
                       max_ehull=max_ehull)
@@ -370,7 +370,7 @@ def top_up(n: int, chemsys: str = None, formula: str = None,
         return found
     if not found.get("candidates"):
         return {"error": f"{chemsys or formula} 在 ehull<={max_ehull} eV/atom 内没有候选相；"
-                         f"可放宽 -m/--max-ehull"} 
+                         f"可放宽 -m/--maxeh"} 
     entries, skipped = [], []
     for c in found.get("candidates", []):
         if len(entries) >= n:
@@ -435,7 +435,7 @@ def run(task: str = None, where: str = None, do_dedup: bool = False,
     """执行一次策展：LLM 计划 → 筛选 → 去重 → 多样性 → 补下载 → 导出。"""
     rows = load_dataset()
     if not rows and not top_n and not task:
-        return {"error": "本地还没有数据：先运行 mt.seeker --chemsys ... 导出结构；"
+        return {"error": "本地还没有数据：先运行 mt.seeker --chems ... 导出结构；"
                          "或用 -T N -c X 直接下载"}
     lines = [f"本地数据集：{len(rows)} 个结构"
              f"（批次 {len({r['batch'] for r in rows})} 个）"]
@@ -510,10 +510,10 @@ def run(task: str = None, where: str = None, do_dedup: bool = False,
         lines.append(f"多样性挑选：保留 {len(rows)} 个（特征空间最远点采样）")
         steps.append({"step": "diverse", "n": len(rows)})
 
-    # 6) 补下载（-y/--dry-run 不做真实下载，也不落缓存）
+    # 6) 补下载（-R/--dryrn 不做真实下载，也不落缓存）
     extra = []
     if top_n and dry_run:
-        lines.append(f"补下载：请求 {top_n} 个（-y 仅预览，未联网、未落盘）")
+        lines.append(f"补下载：请求 {top_n} 个（-R 仅预览，未联网、未落盘）")
     elif top_n:
         cached = {p.stem for p in config.STRUCT_CACHE.glob("*.json")} if \
             config.STRUCT_CACHE.exists() else set()
@@ -528,7 +528,7 @@ def run(task: str = None, where: str = None, do_dedup: bool = False,
             lines.append(f"补下载：请求 {tu['n_requested']}，成功 {tu['n_got']}"
                          f"（跳过已有 {len(tu['skipped_existing'])}）")
             if tu["n_got"] == 0:
-                lines.append("  · 该体系在阈值内没有更多新相，可放宽 -m/--max-ehull")
+                lines.append("  · 该体系在阈值内没有更多新相，可放宽 -m/--maxeh")
             for e in extra:
                 lines.append(f"  + {e['mp_id']} {e['meta'].get('formula', '?')}")
             steps.append({"step": "top_up", "n": len(extra)})
@@ -550,7 +550,7 @@ def run(task: str = None, where: str = None, do_dedup: bool = False,
             lines.append(f"... 其余 {len(rows) - 25} 个见清单 CSV")
 
     if dry_run:
-        lines.append("\n（-y/--dry-run：仅预览，未写清单、未导出）")
+        lines.append("\n（-R/--dryrn：仅预览，未写清单、未导出）")
         return {"report": "\n".join(lines), "n": len(rows), "steps": steps,
                 "duplicates": dup_groups, "bundle": {}, "csv": "", "plan": plan}
 
@@ -587,7 +587,7 @@ def summary() -> dict:
             return {"error": "本地只有 SQS 包或策展包，没有 MP 检索批次"
                              "（这两类默认不计入 -d 统计）。\n"
                              "  先用 mt.seeker -c Ti-C / -f MoS2 / -I mp-149 导出一些 MP 结构。"}
-        return {"error": "本地还没有数据：先 mt.seeker --chemsys ... 导出结构"}
+        return {"error": "本地还没有数据：先 mt.seeker --chems ... 导出结构"}
     batches = {}
     for r in rows:
         batches[r["batch"]] = batches.get(r["batch"], 0) + 1

@@ -1,32 +1,22 @@
-"""mt.ph —— phonopy 声子谱计算流程
+"""mt.ph: phonopy 声子谱计算流程（命令形态按本机 phonopy 版本选 v4+/v3）
 
-生成 band.conf / mesh.conf，并按步骤提示、执行 phonopy 命令。
-默认新版（phonopy v4+）命令，加 -O/--old 改用旧版（v3）：
+    扩胞   phonopy-init -d --dim="2 2 1" -c POSCAR-unitcell  (supercell)
+    力数据 一份 vasprun.xml -> --fc；多份 -> --sp -f         (fs)
+    能带   phonopy --config band.conf [输入 yaml]            (band)
+    态密度 phonopy --config mesh.conf [输入 yaml]            (dos)
+    其它   tprop 热学性质(.dat) / born(NAC) / symmetry / qha / gruneisen
+    词库   v / V 查本地 phonopy 用法（英文/中文）
 
-    扩胞    phonopy-init -d --dim="2 2 1" -c POSCAR-unitcell     (mt.ph supercell)
-    力常数  phonopy-init --fc vasprun.xml                        (mt.ph fc)
-    位移力  phonopy-init -f {001..020}/vasprun.xml               (mt.ph f)
-    能带    phonopy --config band.conf phonopy_params.yaml
-    态密度  phonopy --config mesh.conf phonopy_params.yaml
-    -O      phonopy -d / --fc / -f、-c --dim、-p / -t
+输入 yaml 优先 phonopy_params.yaml（fs 的 --sp -f 生成），其次 phonopy_disp.yaml / phonopy.yaml（配合 FORCE_CONSTANTS / FORCE_SETS）。
+结构文件自动探测 POSCAR-unitcell -> CONTCAR -> POSCAR（-c 指定）；DIM 取 1~3 个整数（-s，缺省补 1，默认 1 1 1）。
+-n 给位移目录/后缀/范围（001-003、dir-{001..003}，花括号留给 bash 展开）；-x 单独用是单份力文件，配 -n 是各目录内的文件名。-b/-d 写 band.conf / mesh.conf（文件名 -B/-D，band/dos 也读它们；内容用 -p/-l/-N/-m）。
 
-结构文件按 POSCAR-unitcell -> CONTCAR -> POSCAR 自动探测，找到即用，
-都没有才询问（-c 可指定）。DIM 取 1~3 个整数，缺省补 1（默认 1 1 1），
-分隔符不限（空格 , ; / x × * 等），-s 后可跟多个数字。
--n 给多个目录/后缀/范围（-n 001-003、-n dir-{001..003}）：先查同级
-vasprun.xml-取值 / vasprun.xml_取值，再查含力文件的目录；命令保留
-{001..003} 花括号形式，展开交给 bash。
--r/--xname 力文件（默认 vasprun.xml）：无 -n 时执行 fc（文件或目录，
-目录中只认 vasprun.xml）；有 -n 时执行 f（各目录内的力文件名）。
--b 写 band.conf、-d 写 mesh.conf，文件名由 -B / -D 指定（可同时给）；
-mt.ph band / dos 也用 -B / -D 指定要读的配置文件。
-
-提示中 B/b+回车 = 返回上一层，Q/q+回车 = 退出；
-执行命令需回车确认，-Y 跳过确认，-y 只打印不执行。
-无子命令默认扩胞；只给 -n 执行 f；只给 -r 执行 fc；只给 -b/-d 只写配置。
+交互提示 B=返回上一层、Q=退出；执行命令需回车确认，-Y 跳过，-R 只打印。
+无子命令默认扩胞；只给 -n 或 -x 执行 fs；只给 -b/-d 只写配置。
 """
 
 import argparse
+import functools
 import os
 import platform
 import re
@@ -113,7 +103,7 @@ def _read_conf_value(path, key):
 
 def _write_file(path, content, yes, dry=False):
     if dry:
-        # -y/--dry-run：只打印将要写入的内容，不创建文件
+        # -R/--dryrn：只打印将要写入的内容，不创建文件
         print("--- %s（dry-run，未写入）" % path)
         print(content, end="")
         return True
@@ -125,7 +115,7 @@ def _write_file(path, content, yes, dry=False):
                 break
             except StepBack:
                 continue  # B：重新询问
-        if answer not in ("y", "yes"):
+        if answer not in ("y", "yess"):
             print("保留原 %s。" % path)
             return False
     with open(path, "w") as handle:
@@ -169,7 +159,7 @@ def _run(cmd, yes, dry, stdout=None, quiet_fail=False):
             if answer.upper() == "B":
                 raise StepBack
             answer = answer.lower()
-        if answer not in ("", "y", "yes"):
+        if answer not in ("", "y", "yess"):
             print("已跳过。")
             return "skip"
     if dry:
@@ -245,7 +235,8 @@ def _need(cmd, name):
 
 
 DEFAULT_CELLS = ("POSCAR-unitcell", "CONTCAR", "POSCAR")
-SUBCOMMANDS = ("supercell", "fc", "f", "band", "dos")
+SUBCOMMANDS = ("supercell", "fs", "band", "dos", "tprop",
+               "born", "symmetry", "qha", "gruneisen")
 
 
 def _detect_cell():
@@ -256,9 +247,62 @@ def _detect_cell():
     return None
 
 
+@functools.lru_cache(maxsize=1)
+def _phonopy_version():
+    """本机 phonopy 版本号（如 '4.10.0'），取不到返回 None。"""
+    try:
+        from importlib.metadata import version
+        return version("phonopy")
+    except Exception:
+        pass
+    try:
+        import phonopy
+        return getattr(phonopy, "__version__", None)
+    except Exception:
+        return None
+
+
+def _phonopy_is_v4():
+    """按本机 phonopy 版本判断命令形态：v4+ 用 phonopy-init / --config。"""
+    v = _phonopy_version()
+    if v:
+        m = re.match(r"\s*(\d+)", str(v))
+        if m:
+            return int(m.group(1)) >= 4
+    # 版本不可用时退化为能力探测：phonopy-init 是 v4+ 才提供的
+    if shutil.which("phonopy-init"):
+        return True
+    if shutil.which("phonopy"):
+        return False
+    return True        # 完全没装 phonopy 时默认按 v4+ 显示
+
+
 def _phonopy_prog(ctx):
-    """setup 命令（-d/--fc/-f）：新版默认 phonopy-init，-O 时用 phonopy。"""
+    """setup 命令（-d/--fc/-f）：v4+ 用 phonopy-init，v3 用 phonopy。"""
     return "phonopy" if ctx.old else "phonopy-init"
+
+
+def _yaml_arg(ctx):
+    """v4 ``phonopy`` 后处理的输入文件。
+
+    优先 phonopy_params.yaml（由 --sp 生成）；否则用 phonopy_disp.yaml /
+    phonopy.yaml 配合同目录的 FORCE_CONSTANTS 或 FORCE_SETS（实测可行）；
+    都没有时不传位置参数，让 phonopy 自行探测并给出报错。
+    """
+    for name in ("phonopy_params.yaml", "phonopy_disp.yaml", "phonopy.yaml"):
+        if os.path.exists(name):
+            return [name]
+    return []
+
+
+def _require_yaml(ctx):
+    """非 dry-run 时要求至少有一个 phonopy 输入文件。"""
+    if ctx.dry or _yaml_arg(ctx):
+        return True
+    print("ERROR: 找不到 phonopy 输入文件（phonopy_params.yaml / "
+          "phonopy_disp.yaml / phonopy.yaml）；请先运行 mt.ph supercell，"
+          "再运行 mt.ph fs。")
+    return False
 
 
 def _atom_count(path):
@@ -278,8 +322,8 @@ def _atom_count(path):
 
 
 def _pdos_line(ctx):
-    """v4 的 mesh.conf 需要 PDOS = 原子序号列表。"""
-    cell = getattr(ctx.args, "cell", None) or _detect_cell() or DEFAULT_CELLS[0]
+    """mesh.conf 的 PDOS 行：v3/v4 都要原子序号列表（.TRUE. 会被当序号解析）。"""
+    cell = getattr(ctx.args, "cells", None) or _detect_cell() or DEFAULT_CELLS[0]
     count = _atom_count(cell)
     if count:
         return "PDOS = " + " ".join(str(i) for i in range(1, count + 1)) + "\n"
@@ -293,7 +337,7 @@ DIM_PROMPT = "超胞尺寸 DIM（1~3 个整数，其余补 1）"
 
 def _dim_value(ctx):
     """取 DIM（命令行 -s 可传多个 token），规范化为 "a b c"。"""
-    raw = ctx.get("dim", DIM_PROMPT, DEFAULT_DIM)
+    raw = ctx.get("dimns", DIM_PROMPT, DEFAULT_DIM)
     if isinstance(raw, (list, tuple)):
         raw = " ".join(str(x) for x in raw)
     return _parse_dim(raw)
@@ -302,17 +346,18 @@ def _dim_value(ctx):
 def _band_conf_text(ctx):
     """band.conf 的内容（按需交互询问 DIM / BAND / BAND_LABELS / BAND_POINTS）。"""
     dim = _dim_value(ctx)
-    band = ctx.get("band", "高对称点路径 BAND（分数坐标）", DEFAULT_BAND)
-    labels = ctx.get("labels", "路径标签 BAND_LABELS", DEFAULT_LABELS)
-    points = ctx.get("points", "每段路径取样点数 BAND_POINTS", "101")
+    band = ctx.get("bpath", "高对称点路径 BAND（分数坐标）", DEFAULT_BAND)
+    labels = ctx.get("xlabl", "路径标签 BAND_LABELS", DEFAULT_LABELS)
+    points = ctx.get("point", "每段路径取样点数 BAND_POINTS", "101")
     return BAND_TEMPLATE.format(dim=dim, band=band, labels=labels, points=points)
 
 
 def _mesh_conf_text(ctx):
     """mesh.conf 的内容（按需交互询问 DIM / MP）。"""
     dim = _dim_value(ctx)
-    mp = ctx.get("mp", "mesh 网格 MP", DEFAULT_MP)
-    pdos = "PDOS = .TRUE.\n" if ctx.old else _pdos_line(ctx)
+    mp = ctx.get("mgrid", "mesh 网格 MP", DEFAULT_MP)
+    # v3/v4 的 PDOS 都只接受 "auto" 或原子序号列表，写 .TRUE. 会被当成序号解析
+    pdos = _pdos_line(ctx)
     return MESH_TEMPLATE.format(dim=dim, mp=mp, pdos=pdos)
 
 
@@ -337,8 +382,9 @@ def step_supercell(ctx):
               % (cell, "/".join(DEFAULT_CELLS)))
         return False
     dim = _dim_value(ctx)
-    return _run([prog, "-d", "--dim=" + dim, "-c", cell],
-                ctx.yes, ctx.dry) != "fail"
+    # -d 生成 phonopy_disp.yaml；phonopy_params.yaml 由 mt.ph fs 的 --sp -f 生成
+    cmd = [prog, "-d", "--dim=" + dim, "-c", cell]
+    return _run(cmd, ctx.yes, ctx.dry) != "fail"
 
 
 def _find_forces_file(directory, name="vasprun.xml"):
@@ -365,20 +411,21 @@ def _probe_forces(directory, fname=None):
     return _find_forces_file(directory)
 
 
-def step_fc(ctx):
-    """力常数：mt.ph fc（或只给 -r）-> phonopy(-init) --fc FILE
+def _fs_fc(ctx, given=None):
+    """fs 的单份力文件分支 -> phonopy(-init) --fc FILE
 
-    -r 默认为 vasprun.xml：不给 -r 时只看当前目录的 vasprun.xml
-    （不匹配 vasprun.xml-数字）；给了文件就照用，给了目录则用其中的
-    vasprun.xml。
+    given 显式指定力文件（fs 已经数好只有一份时传入）；不给时用 -x：
+    裸 -x / 不给 -x 都指当前目录的 vasprun.xml（不匹配 vasprun.xml-数字），
+    给了文件就照用，给了目录则用其中的 vasprun.xml。
     """
     prog = _phonopy_prog(ctx)
     if not ctx.dry and not _need(prog, "phonopy"):
         return False
-    given = getattr(ctx.args, "fc", None)          # 裸 -r 为 ""，按默认处理
+    if given is None:
+        given = getattr(ctx.args, "xname", None)   # 裸 -x 为 ""，按默认处理
     if not given:
         if not ctx.dry and not os.path.isfile(FILE_PREFIX):
-            print("ERROR: 当前目录没有 %s；可用 -r 指定文件或目录。" % FILE_PREFIX)
+            print("ERROR: 当前目录没有 %s；可用 -x 指定文件或目录。" % FILE_PREFIX)
             return False
         fcfile = FILE_PREFIX
     elif os.path.isdir(given):
@@ -498,11 +545,12 @@ def _resolve_fdir_group(group, dry, fname=None):
     return kind, items, (inner if kind == "dir" else None)
 
 
-def step_f(ctx):
-    """FORCE_SETS：mt.ph f -> phonopy(-init) -f ...
+def _fs_f(ctx, tokens=None):
+    """fs 的多份力文件分支 -> phonopy(-init) [--sp] -f ...
 
-    -n 的每个取值既可能是位移目录，也可能是同级 vasprun.xml 的后缀：
-    先找同级 vasprun.xml-<取值> / vasprun.xml_<取值>（如 vasprun.xml-001），
+    tokens 由 step_fs 传入；不给时回退到 -n / 交互询问。每个取值既可能
+    是位移目录，也可能是同级 vasprun.xml 的后缀：先找同级
+    vasprun.xml-<取值> / vasprun.xml_<取值>（如 vasprun.xml-001），
     再找目录 <取值>（且目录里要有力文件，如 001/vasprun.xml）；两者都没有
     才报错。dir-{001..003} 表示 dir-001、dir-002、dir-003 三个目录。
     命令中不逐个展开，写成花括号紧凑形式，展开交给 bash。
@@ -510,13 +558,15 @@ def step_f(ctx):
     prog = _phonopy_prog(ctx)
     if not ctx.dry and not _need(prog, "phonopy"):
         return False
-    raw = getattr(ctx.args, "fdirs", None)
+    raw = tokens
+    if not raw:
+        raw = getattr(ctx.args, "fdirs", None)
     if not raw:
         raw = ctx.get("fdirs",
                       "位移目录或 vasprun.xml 后缀，可多个（如 001-003）", None)
     if not raw:
-        print("ERROR: 未指定位移目录（用 -n 指定，例如 -n 001-003 或 "
-              "-n dir-{001..003}）。")
+        print("ERROR: 未指定位移目录（用 mt.ph fs 的位置参数或 -n 指定，"
+              "例如 fs 001-003 或 -n dir-{001..003}）。")
         return False
     tokens = re.split(r"[,\s]+", raw) if isinstance(raw, str) else list(raw)
     groups = _fdir_groups([t for t in tokens if t])
@@ -524,8 +574,8 @@ def step_f(ctx):
         print("ERROR: 未能解析位移目录：%s" % raw)
         return False
 
-    # -r 指定各目录中的力文件名；不给时逐个目录自动查找 vasprun.xml
-    fname = getattr(ctx.args, "fc", None)
+    # -x 指定各目录中的力文件名；不给时逐个目录自动查找 vasprun.xml
+    fname = getattr(ctx.args, "xname", None)
     resolved = []
     for group in groups:
         kind, items, inner = _resolve_fdir_group(group, ctx.dry, fname)
@@ -553,33 +603,100 @@ def step_f(ctx):
             continue
         dir_count += len(items)
         if len(set(inner)) == 1:
-            parts.append("%s/%s" % (brace, inner[0]))
+            parts.append("%s/%s" % (brace.rstrip("/"), inner[0]))
         else:
             parts += [os.path.join(d, n) for d, n in zip(items, inner)]
 
-    cmd = "%s -f %s" % (prog, " ".join(parts))
+    # v4：--sp 把位移-力数据写进 phonopy_params.yaml，而不是 FORCE_SETS
+    save = "--sp " if not ctx.old else ""
+    cmd = "%s %s-f %s" % (prog, save, " ".join(parts))
     print("共 %d 个目录、%d 个同级 %s 后缀文件、%d 组；命令中不逐个展开"
           "（由 bash 展开花括号）。" % (dir_count, file_count, FILE_PREFIX,
                                         len(groups)))
     return _run(cmd, ctx.yes, ctx.dry) != "fail"
 
 
+def step_fs(ctx):
+    """力数据一步到位（原 fc 与 f 合并）：mt.ph fs
+
+    数一共有几份 vasprun.xml 力文件：只有一份 -> --fc（力常数，
+    FORCE_CONSTANTS 路径）；多于一份 -> [--sp] -f（FORCE_SETS /
+    phonopy_params.yaml 路径）。力文件来源：
+
+    * 位置参数（fs 的 NAME）：文件、含 vasprun.xml 的目录、位移目录 /
+      后缀 / 范围（001-003、dir-{001..003}）；
+    * -n/--fdirs：同位置参数，多个取值；
+    * -x/--xname：单独使用 = 单份力文件（文件或目录）；与多个目录连用
+      = 各目录内的力文件名（同 -f 分支）。
+
+    什么都不给时：当前目录有 vasprun.xml 就走 --fc，否则交互询问。
+    """
+    tokens = [t for t in (getattr(ctx.args, "names", None) or []) if t]
+    tokens += [t for t in (getattr(ctx.args, "fdirs", None) or []) if t]
+    xname = getattr(ctx.args, "xname", None)
+
+    if xname is not None and not tokens:
+        # 只给 -x（或裸 -x -> ./vasprun.xml）：单份力文件
+        return _fs_fc(ctx)
+    if xname not in (None, "") and tokens:
+        # -x 与多个目录连用：xname 是各目录内的力文件名
+        return _fs_f(ctx, tokens)
+
+    if not tokens:
+        if os.path.isfile(FILE_PREFIX) or ctx.dry:
+            return _fs_fc(ctx)         # 当前目录有 vasprun.xml（dry 预览默认）
+        raw = ctx.get("fdirs",
+                      "力文件 / 位移目录，可多个（如 vasprun.xml、001-003）",
+                      None)
+        if not raw:
+            print("ERROR: 未指定力文件（可用 mt.ph fs 的位置参数、-n 或 -x）。")
+            return False
+        if isinstance(raw, str):
+            tokens = [t for t in re.split(r"[,\s]+", raw) if t]
+        else:
+            tokens = [t for t in raw if t]
+        if len(tokens) == 1 and os.path.isfile(tokens[0]):
+            return _fs_fc(ctx, given=tokens[0])     # 只给了一份文件
+
+    groups = _fdir_groups(tokens)
+    if not groups:
+        print("ERROR: 未能解析力文件：%s" % " ".join(tokens))
+        return False
+    total = 0
+    resolved = []
+    for group in groups:
+        kind, items, inner = _resolve_fdir_group(group, ctx.dry, None)
+        if kind is None:
+            return False
+        resolved.append((group, kind, items, inner))
+        total += len(items)
+
+    if total == 1:
+        # 只有一份力文件：直接把它的路径交给 --fc
+        group, kind, items, inner = resolved[0]
+        if kind == "file" or not os.path.isdir(items[0]):
+            fcfile = items[0]       # dry-run 时名字可能还不存在，按文件预览
+        else:
+            fcfile = os.path.join(items[0], inner[0])
+        print("只有一份力文件 %s，执行 --fc。" % fcfile)
+        return _fs_fc(ctx, given=fcfile)
+    return _fs_f(ctx, tokens)
+
+
 def step_band(ctx):
     """能带：计算 band.yaml，再导出 BAND.dat。"""
     if not ctx.dry and not _need("phonopy", "phonopy"):
         return False
-    conf = (getattr(ctx.args, "conf", None)
-            or getattr(ctx.args, "band_name", None) or "band.conf")
+    conf = getattr(ctx.args, "bfile", None) or "band.conf"
     if not ctx.dry and not os.path.exists(conf):
         print("ERROR: 找不到 %s；请先运行 mt.ph -b。" % conf)
         return False
 
     if not ctx.old:
-        params = "phonopy_params.yaml"
-        if not ctx.dry and not os.path.exists(params):
-            print("ERROR: 找不到 %s；请先运行 mt.ph fc（phonopy-init 会生成它）。" % params)
+        if not _require_yaml(ctx):
             return False
-        status = _run(["phonopy", "--config", conf, params], ctx.yes, ctx.dry)
+        status = _run(["phonopy", "--config", conf] + _yaml_arg(ctx),
+                      ctx.yes, ctx.dry)
     else:
         cell = ctx.cell()
         if not ctx.dry and not os.path.exists(cell):
@@ -596,8 +713,8 @@ def step_band(ctx):
             return False
     if not ctx.dry and not _need("phonopy-bandplot", "phonopy"):
         return False
-    # 旧版的 phonopy-bandplot 需要 --legacy，新版已移除该选项
-    plot_cmd = ["phonopy-bandplot"] + (["--legacy"] if ctx.old else []) + ["--gnuplot"]
+    # v3/v4 的 phonopy-bandplot 都只认 --gnuplot（--legacy 是更老版本才有的）
+    plot_cmd = ["phonopy-bandplot", "--gnuplot"]
     result = _run(plot_cmd, ctx.yes, ctx.dry, stdout="BAND.dat", quiet_fail=True)
     if result == "fail":
         # 新版 phonopy-bandplot --gnuplot 写出文件后固定返回退出码 1
@@ -614,29 +731,27 @@ def step_dos(ctx):
     """态密度：projected_dos.dat（可选 total_dos.dat）。"""
     if not ctx.dry and not _need("phonopy", "phonopy"):
         return False
-    conf = (getattr(ctx.args, "meshconf", None)
-            or getattr(ctx.args, "mesh_name", None) or "mesh.conf")
+    conf = getattr(ctx.args, "mfile", None) or "mesh.conf"
     if not ctx.dry and not os.path.exists(conf):
         print("ERROR: 找不到 %s；请先运行 mt.ph -d。" % conf)
         return False
 
     if not ctx.old:
-        params = "phonopy_params.yaml"
-        if not ctx.dry and not os.path.exists(params):
-            print("ERROR: 找不到 %s；请先运行 mt.ph fc（phonopy-init 会生成它）。" % params)
+        if not _require_yaml(ctx):
             return False
+        yamls = _yaml_arg(ctx)
         projected = _read_conf_value(conf, "PDOS") is not None
         if not projected:
             # conf 中没有 PDOS：只输出总 DOS，跑一次即可，不必再问 total
-            return _run(["phonopy", "--config", conf, params],
+            return _run(["phonopy", "--config", conf] + yamls,
                         ctx.yes, ctx.dry) != "fail"
-        status = _run(["phonopy", "--config", conf, params], ctx.yes, ctx.dry)
+        status = _run(["phonopy", "--config", conf] + yamls, ctx.yes, ctx.dry)
         if status == "fail":
             return False
         want_total = ctx.total
         if want_total is None and not ctx.dry and not ctx.yes:
             answer = _ask("是否同时输出 total_dos.dat？y/n", "n")
-            want_total = answer.strip().lower() in ("y", "yes")
+            want_total = answer.strip().lower() in ("y", "yess")
         if want_total:
             # conf 里的 PDOS 会让 --dos 转为投影 DOS，需临时去掉
             total_conf = conf + ".total-tmp"
@@ -646,7 +761,7 @@ def step_dos(ctx):
                     for line in src:
                         if not line.strip().upper().startswith("PDOS"):
                             dst.write(line)
-            ok = _run(["phonopy", "--dos", "--config", total_conf, params],
+            ok = _run(["phonopy", "--dos", "--config", total_conf] + yamls,
                       ctx.yes, ctx.dry) != "fail"
             if not ctx.dry:
                 os.remove(total_conf)
@@ -659,10 +774,191 @@ def step_dos(ctx):
     want_total = ctx.total
     if want_total is None and not ctx.dry and not ctx.yes:
         answer = _ask("同时输出 total_dos.dat？y/n", "n")
-        want_total = answer.strip().lower() in ("y", "yes")
+        want_total = answer.strip().lower() in ("y", "yess")
     if want_total:
         return _run(["phonopy", "-t", conf], ctx.yes, ctx.dry) != "fail"
     return True
+
+
+
+# ------------------------------------------------------- 常用扩展命令 ---
+DEFAULT_PROPS = "thermal_properties.yaml"
+
+
+def _dat_output(ctx):
+    """热学性质数据文件：-o 优先，否则 thermal_properties.dat。"""
+    return getattr(ctx.args, "outpt", None) or "thermal_properties.dat"
+
+
+def _temp_opts(ctx):
+    """热学温度选项（phonopy 原生长名，原样透传）。"""
+    opts = []
+    for key in ("tmin", "tmax", "tstep"):
+        value = getattr(ctx.args, key, None)
+        if value is not None:
+            opts += ["--" + key, str(value)]
+    return opts
+
+
+def _grid_tokens(ctx):
+    raw = getattr(ctx.args, "mgrid", None)
+    if raw:
+        nums = re.findall(r"\d+", str(raw))
+        if nums:
+            return nums[:3]
+    return DEFAULT_MP.split()
+
+
+def _prop_dat_cmd(ctx, inputs=None):
+    """phonopy-propplot --gnuplot：只导出数据列，不调用绘图后端。"""
+    return ["phonopy-propplot", "--gnuplot"] + (inputs or [DEFAULT_PROPS])
+
+
+def step_tprop(ctx):
+    """热学性质：phonopy -t -> thermal_properties.yaml，再导出 .dat 数据列。
+
+    不生成图片；phonopy-propplot --gnuplot 只把温度、自由能、熵、热容、
+    能量写成纯文本列，供后续自行绘图或 phonopy-qha 使用。
+    """
+    if not ctx.dry and not _need("phonopy", "phonopy"):
+        return False
+    if not ctx.old:
+        if not _require_yaml(ctx):
+            return False
+        cmd = (["phonopy", "--mesh"] + _grid_tokens(ctx) + ["-t"]
+               + _temp_opts(ctx) + _yaml_arg(ctx))
+    else:
+        conf = getattr(ctx.args, "mfile", None) or "mesh.conf"
+        if not ctx.dry and not os.path.exists(conf):
+            print("ERROR: 找不到 %s；请先运行 mt.ph -d。" % conf)
+            return False
+        cmd = ["phonopy", "-t", conf] + _temp_opts(ctx)
+    if _run(cmd, ctx.yes, ctx.dry) == "fail":
+        return False
+    if not ctx.dry and not _need("phonopy-propplot", "phonopy"):
+        return False
+    # --gnuplot 输出到 stdout，重定向为 .dat；全程不产生图片
+    return _run(_prop_dat_cmd(ctx), ctx.yes, ctx.dry,
+                stdout=_dat_output(ctx)) != "fail"
+
+
+def step_symmetry(ctx):
+    """对称性检查：phonopy(-init) --symmetry -c CELL -> BPOSCAR / PPOSCAR。"""
+    prog = _phonopy_prog(ctx)
+    if not ctx.dry and not _need(prog, "phonopy"):
+        return False
+    cell = ctx.cell()
+    if not ctx.dry and not os.path.exists(cell):
+        print("ERROR: 找不到结构文件 %s（用 -c 指定）。" % cell)
+        return False
+    return _run([prog, "--symmetry", "-c", cell], ctx.yes, ctx.dry) != "fail"
+
+
+def step_born(ctx):
+    """BORN / NAC：phonopy-vasp-born -> BORN（极性体系 LO-TO 分裂必需）。"""
+    prog = "phonopy-vasp-born"
+    if not ctx.dry and not _need(prog, "phonopy"):
+        return False
+    cmd = [prog]
+    if getattr(ctx.args, "nost", False):
+        cmd.append("--nost")
+    if getattr(ctx.args, "dimns", None) is not None:
+        cmd.append("--dim=" + _dim_value(ctx))
+    if getattr(ctx.args, "outcar", False):
+        # OUTCAR 模式需要同时给出 OUTCAR 与含结构信息的文件
+        inputs = ["OUTCAR", ctx.cell()]
+        cmd += ["--outcar"] + inputs
+    else:
+        inputs = [getattr(ctx.args, "xname", None) or FILE_PREFIX]
+        cmd += inputs
+    if not ctx.dry:
+        missing = [f for f in inputs if not os.path.exists(f)]
+        if missing:
+            print("ERROR: 找不到 %s；BORN 需要 VASP 的 vasprun.xml / "
+                  "vaspout.h5，或 --outcar 时的 OUTCAR + POSCAR。"
+                  % ", ".join(missing))
+            return False
+    return _run(cmd, ctx.yes, ctx.dry) != "fail"
+
+
+def step_qha(ctx):
+    """准谐近似：phonopy-qha e-v.dat thermal_properties.yaml-*。"""
+    prog = "phonopy-qha"
+    if not ctx.dry and not _need(prog, "phonopy"):
+        return False
+    raw = getattr(ctx.args, "files", None)
+    if not raw:
+        raw = ctx.get("files",
+                      "e-v.dat 与各体积的 thermal_properties.yaml（空格分隔）", None)
+    if not raw:
+        print("ERROR: 未提供输入文件（用 -F 指定 e-v.dat 与各体积的 "
+              "thermal_properties.yaml）。")
+        return False
+    tokens = re.split(r"[,\s]+", raw) if isinstance(raw, str) else list(raw)
+    names = [t for t in tokens if t]
+    if len(names) < 2 and not ctx.dry:
+        print("ERROR: 至少需要 e-v.dat 与 1 个 thermal_properties.yaml；"
+              "EOS 拟合要求至少 5 个体积点。")
+        return False
+    cmd = prog
+    if getattr(ctx.args, "plots", False):
+        cmd += " -p"
+    if getattr(ctx.args, "saved", False):
+        cmd += " -s"
+    for key in ("tmax", "eos", "sparse", "pressure", "efe"):
+        value = getattr(ctx.args, key, None)
+        if value is not None:
+            cmd += " --%s=%s" % (key, value)
+    cmd += " " + " ".join(names)
+    # 字符串命令：保留 {00..10} 之类的花括号，交给 bash 展开
+    return _run(cmd, ctx.yes, ctx.dry) != "fail"
+
+
+def step_gruneisen(ctx):
+    """模式 Grüneisen 参数：三个体积点 -> gruneisen.yaml。"""
+    prog = "phonopy-gruneisen"
+    if not ctx.dry and not _need(prog, "phonopy"):
+        return False
+    dirs = getattr(ctx.args, "gdirs", None) or ["orig", "plus", "minus"]
+    if len(dirs) != 3:
+        print("ERROR: -G 需要正好 3 个目录（平衡体积、较大体积、较小体积）。")
+        return False
+    # phonopy-gruneisen 会在每个体积目录里查找与 -c 同名的结构文件，
+    # 以及 FORCE_SETS（默认）或 FORCE_CONSTANTS（需 --readfc）。
+    cell_name = os.path.basename(ctx.cell())
+    use_readfc = False
+    for name in dirs:
+        if not os.path.isdir(name):
+            if ctx.dry:
+                continue
+            print("ERROR: 找不到体积目录 %s。" % name)
+            return False
+        has_fs = os.path.exists(os.path.join(name, "FORCE_SETS"))
+        has_fc = os.path.exists(os.path.join(name, "FORCE_CONSTANTS"))
+        if has_fc and not has_fs:
+            use_readfc = True
+        if ctx.dry:
+            continue
+        if not os.path.exists(os.path.join(name, cell_name)):
+            print("ERROR: 目录 %s 中缺少结构文件 %s（-c 指定的文件名需与"
+                  "各体积目录内的结构文件同名）。" % (name, cell_name))
+            return False
+        if not has_fs and not has_fc:
+            print("ERROR: 目录 %s 中缺少 FORCE_SETS 或 FORCE_CONSTANTS。" % name)
+            return False
+    cmd = [prog] + list(dirs) + ["--dim=" + _dim_value(ctx)]
+    if use_readfc:
+        cmd.append("--readfc")
+    if getattr(ctx.args, "mgrid", None) is not None:
+        cmd.append("--mp=" + " ".join(_grid_tokens(ctx)))
+    if getattr(ctx.args, "band", None):
+        cmd.append("--band=" + str(ctx.args.band))
+    if getattr(ctx.args, "plots", False):
+        cmd.append("-p")
+    if getattr(ctx.args, "outpt", None):
+        cmd += ["-o", ctx.args.outpt]
+    cmd += ["-c", ctx.cell()]
+    return _run(cmd, ctx.yes, ctx.dry) != "fail"
 
 
 # -------------------------------------------------------------------- ctx ---
@@ -671,12 +967,19 @@ class Ctx:
 
     def __init__(self, args):
         self.args = args
-        self.yes = getattr(args, "yes", False)
-        self.dry = getattr(args, "dry_run", False)
-        self.total = getattr(args, "total", None)
-        # 默认按新版（phonopy v4+）流程：setup 用 phonopy-init，
-        # 能带/态密度用 --config + phonopy_params.yaml；-O 切回旧版命令
-        self.old = bool(getattr(args, "old", False))
+        self.yes = getattr(args, "yesal", False)
+        self.dry = getattr(args, "dryrn", False)
+        # --total / --no-total 不再共用 dest：在这里合成
+        # None（未指定，交互询问）/ True（写）/ False（不写）
+        if getattr(args, "no_total", False):
+            self.total = False
+        elif getattr(args, "total", False):
+            self.total = True
+        else:
+            self.total = None
+        # 命令形态按本机 phonopy 版本自动选择：v4+ 用 phonopy-init +
+        # --config + phonopy_params.yaml，v3 用 phonopy 的旧式选项
+        self.old = not _phonopy_is_v4()
         self._cache = {}
         self._order = []   # 交互提问的 key 顺序，供 B 回退使用
 
@@ -702,13 +1005,13 @@ class Ctx:
 
     def cell(self, prompt="原胞结构文件（POSCAR-unitcell/CONTCAR/POSCAR）"):
         """结构文件：-c 优先，其次自动探测，都没有才交互询问。"""
-        given = getattr(self.args, "cell", None)
+        given = getattr(self.args, "cells", None)
         if given:
             return given
         found = _detect_cell()
         if found:
             return found          # 目录里有就直接用，不再提问
-        return self.get("cell", prompt, DEFAULT_CELLS[0])
+        return self.get("cells", prompt, DEFAULT_CELLS[0])
 
     def back(self):
         """B：撤销最近一个交互提问，供步骤重走；无可回退时返回 False。"""
@@ -721,22 +1024,27 @@ class Ctx:
 
 # ------------------------------------------------------------------- main ---
 def main():
+    # mt.ph v / V：查询词常是 --dim、-t 这类选项形式，argparse 会把它们
+    # 误解析为选项，因此在 parser 之前直接处理，保留全部原始 token。
+    argv = sys.argv[1:]
+    if argv and argv[0] in ("v", "V"):
+        from mcta.bandplot import phdoc
+        sys.exit(phdoc.run(argv[1:]))
+
     parser = argparse.ArgumentParser(
         prog="mt.ph",
         add_help=False,
         # 开头的模块说明直接作为 -h 的 description
         description=(__doc__ or "").strip(),
         epilog=r'''
-Example (默认 v4+ 命令，旧版加 -O):
+Example（命令按本机 phonopy 版本自动选择）:
 mt.ph                               # 扩胞（默认步骤）
-mt.ph supercell -s 2 2 1 -c POSCAR-unitcell
-mt.ph -b -d                          # 写 band.conf + mesh.conf
-mt.ph -r                             # fc：同目录 vasprun.xml
-mt.ph -r calc/                       # fc：目录中的 vasprun.xml
-mt.ph -n 001-003                     # f：vasprun.xml-{001..003}
-mt.ph band                           # 能带 -> BAND.dat
-mt.ph dos --total                    # 态密度 -> projected/total_dos.dat
-mt.ph -O -y supercell -s 2 2 1       # 旧版命令预览
+mt.ph -b -d -p "0 0 0 0.5 0 0" -l "G X" -N 51 -m "20 20 20"
+mt.ph fs vasprun.xml                # 单份力文件 -> --fc
+mt.ph -n 001-003                    # 多份 -> --sp -f vasprun.xml-{001..003}
+mt.ph band                          # band.conf -> band.yaml -> BAND.dat
+mt.ph -R supercell -s 2 2 1         # 只预览命令，不执行
+mt.ph v --dim BAND_LABELS           # 查词库
 ''',
         formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('-h', '-H', "--help",       action="help",        help='show this help message and exit')
@@ -746,106 +1054,186 @@ mt.ph -O -y supercell -s 2 2 1       # 旧版命令预览
         # 子命令里重复定义顶层已有的选项时用 SUPPRESS 默认值，
         # 避免未给出时覆盖顶层解析结果；两种书写位置均可：
         # mt.ph -c POSCAR band  与  mt.ph band -c POSCAR
-        p.add_argument('-Y', "--yes", action="store_true",
+        p.add_argument('-Y', "--yesal", action="store_true",
                        default=argparse.SUPPRESS,
                        help="do not ask before running commands")
-        p.add_argument('-y', "--dry-run", dest="dry_run", action="store_true",
+        p.add_argument('-R', "--dryrn", action="store_true",
                        default=argparse.SUPPRESS,
                        help="only print the commands, do not run them")
-        p.add_argument('-s', "--dim", nargs="+", default=argparse.SUPPRESS,
-                       metavar="N",
-                       help='supercell dimension, 1-3 integers (missing -> 1), '
-                            'default "1 1 1"; -s 2 2 1 / 2x2x1 / 2,2,1')
-        p.add_argument('-c', "--cell", default=argparse.SUPPRESS, metavar="FILE",
-                       help="unit cell file, default: auto-detect "
-                            "POSCAR-unitcell -> CONTCAR -> POSCAR")
-        p.add_argument('-O', "--old", action="store_true",
-                       default=argparse.SUPPRESS,
-                       help="legacy (v3) commands: phonopy instead of "
-                            "phonopy-init, -c/--dim, -p/-t")
-        p.add_argument('-r', "--xname", dest="fc", nargs="?", const="",
+        p.add_argument('-s', "--dimns", nargs="+", default=argparse.SUPPRESS, metavar="N",
+                       help='supercell dimension, 1-3 integers, default "1 1 1"')
+        p.add_argument('-c', "--cells", default=argparse.SUPPRESS, metavar="FILE",
+                       help="unit cell file (auto-detected)")
+        p.add_argument('-x', "--xname", nargs="?", const="",
                        default=argparse.SUPPRESS, metavar="FILE",
-                       help="forces file, default: vasprun.xml; alone (no -n) "
-                            "runs mt.ph fc (file or directory holding vasprun.xml), "
-                            "with -n runs mt.ph f (name inside each directory)")
+                       help="forces file; alone -> --fc route (file or dir), "
+                            "with -n -> name inside each dir")
 
     common(parser)
-    parser.add_argument('-n', "--fdirs", nargs="+", default=None,
-                        metavar="NAME",
-                        help="displaced dirs / suffixes / ranges for mt.ph f "
-                             "(implied), e.g. -n 001-003, -n dir-{001..003}; tried "
-                             "as vasprun.xml-NAME first, then as a directory; "
-                             "brace form left to bash")
-    parser.add_argument('-b', "--band-conf", dest="gen_band", action="store_true",
-                        help="write band.conf (name from -B); with -d writes both")
-    parser.add_argument('-d', "--mesh-conf", dest="gen_mesh", action="store_true",
-                        help="write mesh.conf (name from -D); with -b writes both")
-    parser.add_argument('-B', "--band-file", dest="band_name", default=None,
+    parser.add_argument('-n', "--fdirs", nargs="+", default=None, metavar="dir",
+                        help="displaced dirs / suffixes / ranges (implied fs), "
+                             "e.g. 001-003, dir-{001..003}")
+    parser.add_argument('-b', "--bconf", action="store_true",
+                        help="write band.conf (name from -B)")
+    parser.add_argument('-d', "--mconf", action="store_true",
+                        help="write mesh.conf (name from -D)")
+    parser.add_argument('-B', "--bfile", default=None,
                         metavar="FILE",
-                        help="file name written by -b (default band.conf); also the "
-                             "band.conf read by mt.ph band")
-    parser.add_argument('-D', "--mesh-file", dest="mesh_name", default=None,
+                        help="band.conf name (written by -b, read by mt.ph band)")
+    parser.add_argument('-D', "--mfile", default=None,
                         metavar="FILE",
-                        help="file name written by -d (default mesh.conf); also the "
-                             "mesh.conf read by mt.ph dos")
-    parser.add_argument('--band', default=None, metavar='"0 0 0 0.5 0 0 ..."',
+                        help="mesh.conf name (written by -d, read by mt.ph dos)")
+    parser.add_argument('-p', "--bpath", default=None,
                         help='BAND path in fractional coordinates (with -b)')
-    parser.add_argument('--labels', default=None, metavar='"G X M G"',
+    parser.add_argument('-l', "--xlabl", default=None,
                         help='BAND_LABELS of the path (with -b)')
-    parser.add_argument('--points', default=None, metavar="N",
+    parser.add_argument('-N', "--point", default=None, metavar="N",
                         help='BAND_POINTS per segment, default: 101 (with -b)')
-    parser.add_argument('--mp', default=None, metavar='"20 20 20"',
+    parser.add_argument('-m', "--mgrid", default=None,
                         help='mesh grid for DOS, e.g. "20 20 20" (with -d)')
-    sub = parser.add_subparsers(dest="cmd")
+    sub = parser.add_subparsers()
 
-    p_sc = sub.add_parser('supercell', help='phonopy -d --dim=... -c CELL')
+    p_sc = sub.add_parser('supercell', help='phonopy-init -d --dim=... -c CELL')
+    p_sc.set_defaults(cmd='supercell')
     common(p_sc)
 
-    p_fc = sub.add_parser('fc', help='phonopy --fc vasprun.xml (single file)')
-    common(p_fc)
+    p_fs = sub.add_parser(
+        'fs', help='one vasprun.xml -> --fc, many -> [--sp] -f')
+    p_fs.set_defaults(cmd='fs')
+    common(p_fs)
+    p_fs.add_argument('names', nargs='*', default=argparse.SUPPRESS,
+                      metavar="NAME",
+                      help="force sources: one vasprun.xml (file or directory "
+                           "holding it) runs --fc; several run -f")
+    p_fs.add_argument('-n', "--fdirs", nargs="+", default=argparse.SUPPRESS,
+                      metavar="NAME",
+                      help="same as the top-level -n")
 
-    p_f = sub.add_parser('f', help='phonopy -f {001..020}/vasprun.xml (FORCE_SETS)')
-    common(p_f)
-    p_f.add_argument('-n', "--fdirs", nargs="+", default=argparse.SUPPRESS,
-                     metavar="NAME",
-                     help="same as the top-level -n")
-
-    p_band = sub.add_parser('band', help='phonopy ... band.conf -> band.yaml -> BAND.dat')
+    p_band = sub.add_parser('band', help='band.conf -> band.yaml -> BAND.dat')
+    p_band.set_defaults(cmd='band')
     common(p_band)
-    p_band.add_argument('-B', "--band-file", dest="conf", nargs="?", const="",
+    p_band.add_argument('-B', "--bfile", nargs="?", const="",
                         default=argparse.SUPPRESS, metavar="FILE",
                         help="band setting file, default: band.conf")
 
-    p_dos = sub.add_parser('dos', help='phonopy -p mesh.conf -> projected_dos.dat')
+    p_dos = sub.add_parser('dos', help='mesh.conf -> projected_dos.dat')
+    p_dos.set_defaults(cmd='dos')
     common(p_dos)
-    p_dos.add_argument('-D', "--mesh-file", dest="meshconf", nargs="?", const="",
+    p_dos.add_argument('-D', "--mfile", nargs="?", const="",
                        default=argparse.SUPPRESS, metavar="FILE",
                        help="mesh setting file, default: mesh.conf")
-    p_dos.add_argument('--total', dest="total", action="store_true", default=None,
-                       help="also write total_dos.dat (phonopy -t)")
-    p_dos.add_argument('--no-total', dest="total", action="store_false",
-                       help="do not ask about total_dos.dat")
+    total_group = p_dos.add_mutually_exclusive_group()
+    total_group.add_argument('--total', action='store_true', default=None,
+                             help="also write total_dos.dat (phonopy -t)")
+    total_group.add_argument('--no-total', action='store_true', default=False,
+                             help="do not ask about total_dos.dat")
+
+    p_tp = sub.add_parser('tprop',
+                          help='thermal properties -> thermal_properties.yaml + .dat')
+    p_tp.set_defaults(cmd='tprop')
+    common(p_tp)
+    p_tp.add_argument('-m', "--mgrid", default=argparse.SUPPRESS,
+                      metavar='"20 20 20"',
+                      help='mesh grid for thermal properties (default "20 20 20")')
+    p_tp.add_argument('-o', "--outpt", default=argparse.SUPPRESS, metavar="FILE",
+                      help='output .dat data file (default thermal_properties.dat)')
+    p_tp.add_argument('--tmin', default=argparse.SUPPRESS, metavar="T",
+                      help='TMIN, phonopy native option')
+    p_tp.add_argument('--tmax', default=argparse.SUPPRESS, metavar="T",
+                      help='TMAX, phonopy native option')
+    p_tp.add_argument('--tstep', default=argparse.SUPPRESS, metavar="T",
+                      help='TSTEP, phonopy native option')
+
+    p_sy = sub.add_parser('symmetry',
+                          help='phonopy-init --symmetry -> BPOSCAR / PPOSCAR')
+    p_sy.set_defaults(cmd='symmetry')
+    common(p_sy)
+
+    p_bn = sub.add_parser('born',
+                          help='phonopy-vasp-born -> BORN (NAC / LO-TO splitting)')
+    p_bn.set_defaults(cmd='born')
+    common(p_bn)
+    p_bn.add_argument('--outcar', action='store_true',
+                      default=argparse.SUPPRESS,
+                      help='read OUTCAR + POSCAR instead of vasprun.xml')
+    p_bn.add_argument('--nost', action='store_true', default=argparse.SUPPRESS,
+                      help='do not symmetrize Born charges / dielectric tensor')
+
+    p_qh = sub.add_parser('qha', help='quasi-harmonic approximation (phonopy-qha)')
+    p_qh.set_defaults(cmd='qha')
+    common(p_qh)
+    p_qh.add_argument('-F', "--files", nargs="+", default=argparse.SUPPRESS,
+                      metavar="FILE",
+                      help='e-v.dat followed by thermal_properties.yaml-* '
+                           '(>= 5 volume points)')
+    p_qh.add_argument('-P', "--plots", action="store_true",
+                      default=argparse.SUPPRESS, help='show plots (phonopy-qha -p)')
+    p_qh.add_argument('-S', "--saved", action="store_true",
+                      default=argparse.SUPPRESS,
+                      help='save plot data in PDF (phonopy-qha -s)')
+    for _key, _help in (("tmax", "maximum temperature"),
+                        ("eos", "vinet / birch_murnaghan / murnaghan"),
+                        ("sparse", "thin out F-V plots"),
+                        ("pressure", "pressure in GPa"),
+                        ("efe", "electronic free energy file")):
+        p_qh.add_argument("--" + _key, default=argparse.SUPPRESS, metavar="VAL",
+                          help=_help)
+
+    p_gr = sub.add_parser('gruneisen',
+                          help='mode Gruneisen parameters (phonopy-gruneisen)')
+    p_gr.set_defaults(cmd='gruneisen')
+    common(p_gr)
+    p_gr.add_argument('-G', "--gdirs", nargs=3, default=argparse.SUPPRESS,
+                      metavar="DIR",
+                      help='three volume dirs: equilibrium, plus, minus '
+                           '(default orig plus minus); each needs the -c '
+                           'cell file and FORCE_SETS / FORCE_CONSTANTS')
+    p_gr.add_argument('-P', "--plots", action="store_true",
+                      default=argparse.SUPPRESS,
+                      help='plot (phonopy-gruneisen -p)')
+    p_gr.add_argument('-o', "--outpt", default=argparse.SUPPRESS, metavar="FILE",
+                      help='output filename (phonopy-gruneisen -o)')
+    p_gr.add_argument('-m', "--mgrid", default=argparse.SUPPRESS,
+                      metavar='"20 20 20"',
+                      help='sampling mesh (phonopy-gruneisen --mp)')
+    p_gr.add_argument('--band', default=argparse.SUPPRESS,
+                      metavar='"0 0 0 0.5 0 0"',
+                      help='band path in reduced coordinates')
+
+    # v / V 放在最后；真正解析在 main() 开头（词形 --dim 等会干扰 argparse）
+    p_doc = sub.add_parser(
+        'v', aliases=['V'],
+        help='phonopy wordbook (no word: list; EN first, then ZH)')
+    p_doc.set_defaults(cmd='docs')
+    p_doc.add_argument('words', nargs=argparse.REMAINDER,
+                       help='commands / options / tags to look up, e.g. '
+                            '--dim BAND_LABELS; --all prints the whole file')
 
     args = parser.parse_args()
-    # -b/-d 只写配置文件，与 -n（执行 f）/ -r（执行 fc）混用容易误以为会跑计算
-    if args.cmd is None and (args.gen_band or args.gen_mesh):
-        if getattr(args, "fdirs", None) or getattr(args, "fc", None) is not None:
-            print("ERROR: -b/-d 只写配置文件，不能与 -n / -r 同时使用。")
+    if not hasattr(args, "cmd"):
+        args.cmd = None               # 无子命令时 add_subparsers 不写 cmd
+    if args.cmd == "docs":
+        from mcta.bandplot import phdoc
+        sys.exit(phdoc.run(getattr(args, "words", [])))
+    # -b/-d 只写配置文件，与 -n（执行 fs）/ -x（执行 fs）混用容易误以为会跑计算
+    if args.cmd is None and (args.bconf or args.mconf):
+        if getattr(args, "fdirs", None) or getattr(args, "xname", None) is not None:
+            print("ERROR: -b/-d 只写配置文件，不能与 -n / -x 同时使用。")
             sys.exit(1)
     # -n/--fdirs 是 nargs="+"，若把子命令写在它后面会被吞掉，这里还原：
-    # mt.ph -n 001-003 f  ->  cmd="f", fdirs=["001-003"]
+    # mt.ph -n 001-003 fs  ->  cmd="fs", fdir=["001-003"]
     if args.cmd is None and isinstance(getattr(args, "fdirs", None), list):
         if len(args.fdirs) > 1 and args.fdirs[-1] in SUBCOMMANDS:
             args.cmd = args.fdirs.pop()
         if args.cmd is None:
-            args.cmd = "f"            # 给了 -n 就默认执行 mt.ph f
-    # -r 是 nargs="?"，同样可能吞掉后面的子命令：mt.ph -r calc/ fc
-    if args.cmd is None and getattr(args, "fc", None) in SUBCOMMANDS:
-        args.cmd = args.fc
-        args.fc = ""
+            args.cmd = "fs"           # 给了 -n 就默认执行 mt.ph fs
+    # -x 是 nargs="?"，同样可能吞掉后面的子命令：mt.ph -x calc/ fc
+    if args.cmd is None and getattr(args, "xname", None) in SUBCOMMANDS:
+        args.cmd = args.xname
+        args.xname = ""
     ctx = Ctx(args)
-    if ctx.old:
-        print("使用旧版命令（phonopy）。")
+    print("检测到 phonopy %s，命令形态：%s。" %
+          (_phonopy_version() or "版本未知", "v3 旧版" if ctx.old else "v4+ 新版"))
 
     def run_step(step):
         """运行一个步骤；捕获 B（回退一个提问后重走该步骤）与 Q（退出）。"""
@@ -860,58 +1248,55 @@ mt.ph -O -y supercell -s 2 2 1       # 旧版命令预览
             except QuitFlow:
                 sys.exit(0)
 
-    gen_options = (args.band or args.labels or args.points or args.mp
-                   or args.band_name or args.mesh_name)
-    if args.cmd is None and (args.gen_band or args.gen_mesh):
+    gen_options = (args.bpath or args.xlabl or args.point or args.mgrid
+                   or args.bfile or args.mfile)
+    if args.cmd is None and (args.bconf or args.mconf):
         # mt.ph -b / -d：只生成对应的配置文件（文件名 -B / -D，或默认名）
-        if not args.gen_band and (args.band or args.labels or args.points):
-            print("ERROR: --band/--labels/--points 需与 -b 一起使用。")
+        if not args.bconf and (args.bpath or args.xlabl or args.point):
+            print("ERROR: --bpath/--xlabl/--point 需与 -b 一起使用。")
             sys.exit(1)
-        if not args.gen_mesh and args.mp:
-            print("ERROR: --mp 需与 -d 一起使用。")
+        if not args.mconf and args.mgrid:
+            print("ERROR: --mgrid 需与 -d 一起使用。")
             sys.exit(1)
 
         def gen_band(c):
-            return make_band_conf(c, args.band_name or "band.conf")
+            return make_band_conf(c, args.bfile or "band.conf")
 
         def gen_mesh(c):
-            return make_mesh_conf(c, args.mesh_name or "mesh.conf")
+            return make_mesh_conf(c, args.mfile or "mesh.conf")
 
         ok = True
-        if args.gen_band:
+        if args.bconf:
             ok = run_step(gen_band)
-        if args.gen_mesh:
+        if args.mconf:
             ok = run_step(gen_mesh) and ok
         sys.exit(0 if ok else 1)
 
     if args.cmd is None and gen_options:
-        print("ERROR: --band/--labels/--points/--mp/-B/-D 需与 -b 或 -d 一起使用，"
+        print("ERROR: --bpath/--xlabl/--point/--mgrid/-B/-D 需与 -b 或 -d 一起使用，"
               "例如 mt.ph -b -B band-new.conf。")
         sys.exit(1)
 
-    if args.cmd is None and getattr(args, "fc", None) is not None:
-        args.cmd = "fc"               # 只给 -r（没有 -n）时执行 mt.ph fc
+    if args.cmd is None and getattr(args, "xname", None) is not None:
+        args.cmd = "fs"               # 只给 -x（没有 -n）时执行 mt.ph fs
 
     if args.cmd in ("supercell", None):
         # 不带子命令默认执行扩胞
         if not run_step(step_supercell):
             sys.exit(1)
 
-    if args.cmd == "fc":
-        if not run_step(step_fc):
-            sys.exit(1)
-
-    if args.cmd == "f":
-        if not run_step(step_f):
-            sys.exit(1)
-
-    if args.cmd == "band":
-        if not run_step(step_band):
-            sys.exit(1)
-
-    if args.cmd == "dos":
-        if not run_step(step_dos):
-            sys.exit(1)
+    steps = {
+        "fs": step_fs,
+        "band": step_band,
+        "dos": step_dos,
+        "tprop": step_tprop,
+        "symmetry": step_symmetry,
+        "born": step_born,
+        "qha": step_qha,
+        "gruneisen": step_gruneisen,
+    }
+    if args.cmd in steps and not run_step(steps[args.cmd]):
+        sys.exit(1)
 
     sys.exit(0)
 
