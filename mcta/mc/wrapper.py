@@ -1,0 +1,204 @@
+import argparse, os, platform
+import numpy as np
+from mcta import version_string
+
+try:
+    import numba                       # numba 是可选依赖（pip install mcta[mc]）
+except ImportError:
+    numba = None
+
+from mcta.mc import parallel
+
+
+def main():
+    parser = argparse.ArgumentParser(description='mt.mc: Monte Carlo simulation of the phase transition in 2D/3D magnetic materials',
+                                     add_help=False,
+                                     epilog='''
+configurations:       init:                                 parameters:
+square                fm, afm1, afm2, afm3                  Ja, Jb, Jc
+triangular            fm, afm1, afm2, afm3                  Ja, Jb, Jc
+bilayer-aa            fm, afm1, afm2, afm3                  J0, J1, Ja
+bilayer-ab            fm, afm1, afm2, afm3, afm4, afm5      J0, J1, Ja, Jb, J1_
+bilayer-ab-u-3        fm, afm1, afm2, afm3                  J0, J1, Ja
+simple-cubic          fm, afm1, afm2                        Ja, Jb, Jc
+
+default values:
+x, y, z = 64, 64, 64
+iterations for equilibrium, works = 1000, 1000
+exchange coupling (meV) = 1.0
+single-ion anisotropy (meV) = 0.1
+temperatures = 35
+
+Example:
+mt.mc -x 100 -y 100 -e 2000 -w 5000 -N 8 -t 35
+mt.mc -x 128 -y 128 -t 0 40 2 -C 6 -S 42
+mt.mc -x 64 -y 64 -t 20 40 2 -W 20 -S 42
+mt.mc -x 64 -y 64 -t 20 40 2 -R        # run only, no plots
+
+''',
+    formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('-h', '-H', "--help",    action="help",        help='show this help message and exit')
+    parser.add_argument('-v', '-V', "--version", action="version",     version=version_string())
+    parser.add_argument('-x', "--sizex",         type=int,   default=64  )
+    parser.add_argument('-y', "--sizey",         type=int,   default=64  )
+    parser.add_argument('-z', "--sizez",         type=int,   default=64  )
+    parser.add_argument('-e', "--equil",         type=int,   default=1000)
+    parser.add_argument('-w', "--works",         type=int,   default=1000)
+    parser.add_argument('-a', "--aniso",         type=float, default=None,  nargs='*')
+    parser.add_argument('-p', "--param",         type=float, default=[1.0], nargs='+')
+    parser.add_argument('-j', "--parax",         type=float, default=[],    nargs='+')
+    parser.add_argument('-k', "--paray",         type=float, default=[],    nargs='+')
+    parser.add_argument('-t', "--temps",         type=float, default=[35],  nargs='+')
+    parser.add_argument('-i', "--inits",         default="fm",              type=str.lower, choices=['fm', 'afm1', 'afm2','afm3', 'afm4', 'afm5', 'random'])
+    parser.add_argument('-c', "--confg",         default="square",          type=str.lower, choices=['square', 'triangular', 'bilayer-aa', 'bilayer-ab', 'bilayer-ab-u-3', 'simple-cubic'])
+    parser.add_argument('-N', "--thrds",         type=int,   default=0   ,  help="numba 线程数；0=自动（物理核数的约 3/5，不超过物理核总数）")
+    parser.add_argument('-C', "--chain",         type=int,   default=0   ,  help="并行推进的独立链数（多核加速），0 表示与线程数相同；回火模式下链数=温度点数")
+    parser.add_argument('-S', "--seeds",         type=int,   default=None,  help="随机数种子，给定后结果可复现")
+    parser.add_argument('-W', "--swaps",         type=int,   default=0   ,  help="每多少个 sweep 交换一次相邻温度的构型（0=关闭，链数=温度点数）")
+    parser.add_argument('-R', "--dryrn",         action='store_true',       help="不自动绘图（只跑模拟并写日志）；默认结束后绘图")
+    parser.add_argument('-l', "--label",         type=str,   default='',    help='图例')
+    parser.add_argument('-o', "--plots",         type=str,                  help="日志文件绘图")
+    parser.add_argument('-f', "--imgfm",         default="png", type=str.lower, help="输出图片格式（任意 matplotlib 支持的格式，如 png/pdf/svg/jpg/tif）；无法保存时会提示并回退为 png")
+    args = parser.parse_args()
+
+    if numba is None:
+        print('ERROR: mt.mc 需要 numba（可选依赖），请先安装：'
+              'pip install mcta[mc]')
+        return 1
+
+    seed = args.seeds
+    swap = args.swaps
+
+    arrays_temperatures = temperatures(args.temps)
+
+    # 按本机核数决定并行策略：
+    #   独立多链 -> 链数 = 线程数（统计量取平均，误差更小）
+    #   并行回火 -> 链数 = 温度点数
+    # 线程数默认取"略多于物理核数的一半"（见 mcta/mc/parallel.py 的说明）：
+    # 把核心跑满实测反而更慢，超线程的边际收益也很小。
+    # 用户显式给了 -C / -N 就按用户说的来。
+    mode = "tempering" if swap > 0 else "chains"
+    NP, chains = parallel.thread_plan(mode, args.chain, args.thrds,
+                                        n_temps=len(arrays_temperatures))
+    numba.set_num_threads(NP)
+
+    X = check(args.sizex)
+    Y = check(args.sizey)
+    Z = check(args.sizez)
+    config = args.confg
+    init = args.inits
+    # 多链并行与 replica exchange 都是通用能力（内核只读表），
+    # 所有构型都支持；这里只在初态可能不被某些构型支持时提示。
+
+    nequilibrium = args.equil
+    nworks       = args.works
+    J  = args.param
+    JX = args.parax
+    JY = args.paray
+    format = args.imgfm
+    legend = args.label
+
+    if args.plots and os.path.exists(args.plots):
+        from mcta.mc import plots
+        plots.main(args.plots, format, legend)
+    else:
+        if args.aniso is not None:
+            A = [0.1] if args.aniso == [] else args.aniso
+            # 矢量自旋：同样表驱动，只是换成矢量内核族
+            from mcta.mc import geometry
+            from mcta.mc import engine
+            file = '{}_single_{}_{}.log'.format(config, X, Y)
+            lattice = geometry.build(config, X, Y, Z)
+            engine.run_vector(lattice, file, init, J, A, arrays_temperatures,
+                              nequilibrium, nworks, chains, seed, swap)
+        else:
+            # Ising（标量自旋）：表驱动。几何只在表里，计算代码通用。
+            from mcta.mc import geometry
+            from mcta.mc import engine
+            file = '{}_Ising_{}_{}.log'.format(config, X, Y)
+            lattice = geometry.build(config, X, Y, Z)
+            engine.run(lattice, file, init, J, arrays_temperatures,
+                       nequilibrium, nworks, chains, seed, swap)
+
+        if not args.dryrn and os.path.exists(file):
+            from mcta.mc import plots
+            plots.main(file, format, legend)
+
+def check(num):
+    if num < 10:
+        num = 10
+    if num % 2 != 0:
+        num += 1
+    if num % 4 != 0:
+        num += 2
+#    if num % 8 != 0:
+#        num += 4
+    return num
+
+def temperatures(arr_temperatures):
+    """把 -t 的参数解析成温度数组。
+
+    规则
+    ----
+    * 1 个值  T          -> 0, 1, ..., T-1（整数温度）
+    * 2 个值  T0 T1      -> T0, T0+1, ..., T1（闭区间）
+    * 3 个值  T0 T1 d    -> T0, T0+d, ..., T1（闭区间，步长 d）
+    * 3k 个值            -> k 段三元组，每段都是闭区间
+    * 3k+2 个值          -> k 段三元组 + 末尾一段 (T0, T1) 闭区间
+
+    三元组的两种解读
+    ----------------
+    ``-t 20 26 2`` 里第三个数 2 是**步长**（2 K 一档），这是文档里
+    推荐的用法。但 ``-t 20 25 30`` 里步长 30 大于跨度 5，按步长解读
+    只会得到 [20, 25]——第三个温度被静默丢掉，这几乎肯定不是用户的
+    本意（他想说的是"算 20、25、30 这三个温度"）。
+
+    所以：**当步长 >= 跨度时，整组按"离散温度点列表"处理**，三个数
+    就是三个温度。这样两种意图都能正确表达：
+
+        -t 20 26 2      ->  20, 22, 24, 26          （步长 2）
+        -t 20 25 30     ->  20, 25, 30               （三个离散点）
+        -t 0 40 2       ->  0, 2, 4, ..., 40         （步长 2）
+    """
+    i = len(arr_temperatures)
+    if i == 1:
+        return np.arange(arr_temperatures[0] + 1)
+    if i == 2:
+        return np.arange(arr_temperatures[0], arr_temperatures[1] + 1)
+
+    def _segment(t0, t1, step):
+        """闭区间 [t0, t1]，步长 step。
+
+        step >= 跨度时，整组按"离散温度点"处理（见 docstring）。
+        """
+        if step >= t1 - t0:
+            return np.array([t0, t1, step], dtype=float)
+        if step <= 0:
+            return np.array([t0, t1], dtype=float)
+        pts = np.arange(t0, t1 + 1e-9, step)
+        if pts.size == 0 or pts[-1] < t1 - 1e-9:
+            pts = np.append(pts, t1)
+        return pts
+
+    k, l = divmod(i, 3)
+    segments = []
+    for j in range(k):
+        base = j * 3
+        segments.append(_segment(arr_temperatures[base],
+                                 arr_temperatures[base + 1],
+                                 arr_temperatures[base + 2]))
+    if l == 2:
+        # 末尾一段 (T0, T1)：闭区间
+        base = k * 3
+        segments.append(np.arange(arr_temperatures[base],
+                                  arr_temperatures[base + 1] + 1))
+    elif l == 1:
+        # 末尾还剩一个值：它就是一个单独的温度点。
+        # （旧实现这里什么都不做，末尾的温度被静默丢掉——比如
+        #  -t 20 22 24 26 28 30 32 34 36 38 只会得到 9 个温度。）
+        segments.append(np.array([arr_temperatures[k * 3]], dtype=float))
+    if not segments:
+        return np.array([])
+    out = np.concatenate(segments)
+    # 去重并保持顺序（步长恰好等于跨度时可能出现重复端点）
+    return np.unique(out) if out.size > 1 else out

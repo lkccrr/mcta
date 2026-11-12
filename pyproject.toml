@@ -1,0 +1,87 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mcta"
+dynamic = ["version"]
+description = "Meta Crystal Toolkit & Analysis (mcta)."
+readme = { file = "README.md", content-type = "text/markdown" }
+requires-python = ">=3.9"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Kan" },
+]
+keywords = ["DFT", "VASP", "DOS", "band", "plot", "Phonon", "materials-project", "pymatgen", "crystal-structure", "SQS", "Ising", "Monte-Carlo", "magnetism"]
+classifiers = [
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+    "numpy>=1.22.0",
+    "matplotlib>=3.6.0",
+    "ase>=3.22.0",
+    "spglib>=2.0",
+]
+
+[project.optional-dependencies]
+# mt.seeker 核心（结构检索 / 策展 / 机器学习分析 / 自然语言模式）
+# 注意：-D / --outliers 等本地策展功能也用到 sklearn，所以 seeker 保留 scikit-learn
+seeker = [
+    "pymatgen>=2024.1.1",
+    "mp-api>=0.40",
+    "scikit-learn>=1.3",
+    "joblib>=1.3",
+    "openai>=1.30",
+]
+# mt.skl 独立入口：随机森林分析 exports/*/manifest.csv
+# 只需要 scikit-learn + joblib（不需要 pymatgen/mp-api）
+skl = [
+    "scikit-learn>=1.3",
+    "joblib>=1.3",
+]
+# mt.sqs 准随机固溶体（sqsgenerator 引擎）
+sqs = ["sqsgenerator>=0.5"]
+# mt.mc 蒙特卡洛（Ising）模拟，计算内核用 numba 加速
+mc = ["numba>=0.54.0"]
+# 一键装全（seeker + skl + sqs + mc）
+all = [
+    "mcta[seeker,skl,sqs,mc]",
+]
+
+[project.urls]
+Homepage = "https://github.com/lkccrr/mcta"
+
+[project.scripts]
+mt = "mcta.cli:main"
+"mt.band" = "mcta.bandplot.wrapper:main"
+"mt.dos" = "mcta.bandplot.dos:main"
+"mt.phband" = "mcta.bandplot.wrapper:pmain"
+"mt.phdos" = "mcta.bandplot.phdos:main"
+"mt.ph" = "mcta.bandplot.ph:main"
+"mt.ph3" = "mcta.bandplot.ph3:main"
+"mt.seeker" = "mcta.seeker.cli:main"
+"mt.skl" = "mcta.skl.cli:main"
+"mt.sqs" = "mcta.sqs.cli:main"
+"mt.sh" = "mcta.sh.cli:main"
+"mt.mc" = "mcta.mc.wrapper:main"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.package-data]
+"mcta.sh" = ["scripts/*"]
+"mcta.bandplot" = ["*.json"]
+
+[tool.setuptools.packages.find]
+include = ["mcta*"]
+
+[tool.setuptools.dynamic]
+version = { attr = "mcta.__version__" }

@@ -1,0 +1,40 @@
+# --- Python build artefacts ---
+__pycache__/
+*.py[cod]
+*.egg
+*.egg-info/
+.eggs/
+build/
+dist/
+*.whl
+*.tar.gz
+
+# --- Test / type-checker / linter caches ---
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# --- Virtual environments ---
+.venv/
+venv/
+env/
+
+# --- Editors and IDEs ---
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# --- OS metadata ---
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# --- Local scratch ---
+*.log
+.workbuddy/
