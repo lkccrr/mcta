@@ -23,6 +23,7 @@
 <meta name="twitter:description" content="McTa（格塔）把 VASP 与 phonopy 的常见后处理收进一组 mt.* 命令：直接读取原始输出绘制能带、态密度与声子谱，并支持结构检索、SQS、描述符分析与磁性蒙特卡洛。">
 <noscript><style>.page{display:block!important}.term-wrap,.lang-switch{display:none}</style></noscript>
 <style>
+  @font-face{font-family:"McTa Wordmark";src:url("data:font/woff2;base64,d09GMgABAAAAAALYABAAAAAABRAAAAJ9AAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGhYbIBwqBmA/U1RBVCoATBEICoM8gnwBNgIkAxQLDAAEIAU+ByAMBxusA1FUDHYhPhbjmBSHxp44ETzwdtn783eCFWYjewNWOZBt0J2gokIFsbtKQ/T9iXsvP5lnAYllEkhBOl4taIHqBaoUAArPv7fnzTzxEO+wz8/eLE2jUSfkWbbj/UADLY0inUjqzVSJxLWvRegBCDADgCJiiIDRRgTi0dDWS4AB6DoAIMDoJAnF4md9T1wyjyCjYt1QG5VbqCg/ZRBopT7iRY5oItLCz9UOddezj3Ymy4W6Buos2gABKLu0gCikiBZwIyAM5TN9xhIBUAQQs3ILAAUkuJECbgzugFEr5UkvE5ms65Au6pf0M/oBff8DRcjZvbABqABG8Idx4AoAYAAAoUxyBN5ZHXZjgmnkhFA3njSNBs80zt5pGj2OYcMxo94lzqA2ZFaipC2ZqahZxp/ZnKb2E0cePVLCjx+bRh8+xLjhwYP+0c5C5yopHgrghhUDfWNeJ+Wbd8VtuqLd86FefSd161XP4d3uB9u0l9ph7wst4k/RoqisRX8itBfew9pPj/ZS8+SpnsCw6F+KX57S0Qp5OuMpGaJPeU54RumdJyiXzYubatb4fE1r1zR1dKxuouJL9Gnobt5Qri8rvTe/YIM6uTmdWRm9BfkAIUe/dlfb7pzZHfu6vY8u2bmmqWGNr6t+7coGX+nEtDmvF4Y91V7K5tz2jNSe4oK0Hl9WfmxV11/nbUvOy8YaABCADHnb59vjHbaV/Q6Q8gvAo6SzwQCf46I+YtP/ykXSAiQWBSD4Ul/IPzbrtAghIqHWQuLlI6Yom7HVQSqUISoQoLohAYRYky6kjEBKkyYEzDpSKg01zGcOUxhgKjOZzgyWIAHQd5EDxteE/j1nGAcAAAA=") format("woff2");font-style:normal;font-weight:700 900;font-display:swap;} /* Comfortaa subset, SIL OFL 1.1 */
   :root {
     --bg: #f1f4f9;
     --ink: #39424f;
@@ -78,7 +79,7 @@
   .brand { padding: 0 8px; }
   .brand .logo,
   h1.wordmark {
-    font-family: "Baloo 2", "Fredoka", "Arial Rounded MT Bold",
+    font-family: "McTa Wordmark", "Baloo 2", "Fredoka", "Arial Rounded MT Bold",
                  "Chalkboard SE", "Comic Sans MS", cursive;
     font-weight: 900;
     letter-spacing: 1px;
@@ -88,6 +89,7 @@
   .wordmark span {
     display: inline-block; cursor: pointer; user-select: none;
     transition: transform .25s ease;
+    -webkit-text-stroke: 2px #fff; paint-order: stroke fill;
     text-shadow:
       2.5px 0 0 #fff, -2.5px 0 0 #fff, 0 2.5px 0 #fff, 0 -2.5px 0 #fff,
       1.8px 1.8px 0 #fff, -1.8px 1.8px 0 #fff,
@@ -95,6 +97,7 @@
       0 6px 10px rgba(96, 108, 130, .22);
   }
   .brand .logo span {
+    -webkit-text-stroke: 1.5px #fff; paint-order: stroke fill;
     text-shadow:
       1.8px 0 0 #fff, -1.8px 0 0 #fff, 0 1.8px 0 #fff, 0 -1.8px 0 #fff,
       1.3px 1.3px 0 #fff, -1.3px 1.3px 0 #fff,
@@ -124,7 +127,7 @@
   }
   .lang-switch {
     display: inline-flex; align-items: center; gap: 6px;
-    margin: 14px 8px 0; padding: 6px 13px;
+    margin: 14px 8px 0; padding: 6px 13px; height: 26px; box-sizing: border-box;
     border: 0; border-radius: 999px;
     background: var(--bg); color: var(--accent);
     font: inherit; font-size: 11.5px; font-weight: 700; line-height: 1;
@@ -136,6 +139,25 @@
     box-shadow: inset 3px 3px 6px var(--sd), inset -3px -3px 6px var(--sl);
   }
   .lang-globe { font-size: 13px; line-height: 1; }
+  .lang-caret { font-size: 8px; line-height: 1; opacity: .75; }
+  .lang-wrap { position: relative; display: inline-flex; }
+  .lang-menu {
+    position: absolute; top: calc(100% + 6px); left: 0; width: 100%; min-width: 0;
+    flex-direction: column; gap: 0; padding: 0; display: none; z-index: 210;
+    background: var(--bg); border-radius: 999px; overflow: hidden;
+    box-shadow: 4px 4px 12px var(--sd), -4px -4px 12px var(--sl);
+  }
+  .lang-menu.open { display: flex; }
+  .lang-menu-item {
+    display: flex; align-items: center; justify-content: center;
+    border: 0; background: transparent; color: var(--accent);
+    box-shadow: none; width: 100%; height: 26px; box-sizing: border-box;
+    font: inherit; font-size: 11.5px; font-weight: 700; line-height: 1;
+    padding: 6px 13px; border-radius: 999px; cursor: pointer;
+    text-align: center; white-space: nowrap;
+  }
+  .lang-menu-item:hover { background: rgba(120,134,156,.14); box-shadow: none; }
+  .lang-menu-item:active { box-shadow: none; }
   .about-brand { color: #2c3648; font-weight: 700; }
   .about-line { display: flex; align-items: baseline; gap: 10px; margin: 12px 0 0; }
   .about-line .about-anim { margin: 0; }
@@ -143,13 +165,14 @@
   /* 关于页：代码结构前的字母跳跃发光 */
   .about-anim {
     display: flex; gap: 4px; margin: 10px 0 0;
-    font-family: "Baloo 2", "Fredoka", "Arial Rounded MT Bold",
+    font-family: "McTa Wordmark", "Baloo 2", "Fredoka", "Arial Rounded MT Bold",
                  "Chalkboard SE", "Comic Sans MS", cursive;
     font-size: 21px; font-weight: 900; letter-spacing: 1px;
     user-select: none;
   }
   .about-anim span {
     display: inline-block;
+    -webkit-text-stroke: 1.6px #fff; paint-order: stroke fill;
     animation: hop 1.6s ease-in-out infinite, glow 1.6s ease-in-out infinite;
   }
   .about-anim .w-m, .about-anim .w-t { --glow: 224, 85, 61; }
@@ -206,7 +229,33 @@
 
   .side-foot {
     display: flex; gap: 8px; align-items: center;
-    margin: 22px 12px 2px; font-size: 12.5px; color: var(--muted);
+    margin: 6px 12px 0; font-size: 12.5px; color: var(--muted);
+  }
+  .side-foot a { color: var(--accent); text-decoration: none; }
+  .side-foot a:hover { text-decoration: underline; }
+  .license-link { cursor: pointer; }
+  .license-link:hover { text-decoration: underline; }
+  .license-overlay {
+    position: fixed; inset: 0; z-index: 9700;
+    display: flex; align-items: center; justify-content: center; padding: 24px;
+    background: rgba(23, 32, 46, .03);
+    -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
+  }
+  .license-text {
+    margin: 0; position: relative; max-width: min(680px, 94vw); max-height: 80vh; overflow: auto;
+    scrollbar-width: none; -ms-overflow-style: none;
+    white-space: pre-wrap; overflow-wrap: anywhere;
+    padding: 22px 28px; background: transparent; border: 0; box-shadow: none; color: #fff;
+    font-family: ui-monospace, Consolas, "Courier New", monospace;
+    font-size: 13px; line-height: 1.7;
+    text-shadow: 0 0 2px rgba(8,14,26,1), 0 0 10px rgba(8,14,26,.9), 0 0 22px rgba(8,14,26,.6);
+  }
+  .license-text::-webkit-scrollbar { display: none; }
+  .license-line { display: block; min-height: 1.7em; visibility: hidden; }
+  .license-line.shown { visibility: visible; animation: lic-line-in .32s ease-out both; }
+  @keyframes lic-line-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
 
   /* 侧栏：本地模拟终端 */
@@ -275,7 +324,8 @@
   .term-tools button:active {
     box-shadow: inset 2px 2px 4px var(--sd), inset -2px -2px 4px var(--sl);
   }
-  .term-tools .win-glyph { display: block; line-height: 1; font-family: ui-monospace, Menlo, Consolas, monospace; }
+  .term-tools .win-glyph { display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
+  .win-glyph svg { display: block; width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
   .hidden { display: none !important; }
   /* 最小化：主体隐藏，只留顶栏，停靠页面下方 */
   .term-wrap.floating.win-min {
@@ -362,6 +412,10 @@
     box-shadow: inset 5px 5px 10px var(--sd), inset -5px -5px 10px var(--sl);
   }
   pre.help { padding: 16px 18px; line-height: 1.75; }
+  .param-ref { display: grid; gap: 10px; }
+  .param-item { border: 1px solid var(--sd); border-radius: 12px; background: var(--sl); overflow: hidden; }
+  .param-item > summary { cursor: pointer; padding: 10px 16px; font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 600; color: var(--ink); }
+  .param-item > pre.help { margin: 0; border-top: 1px solid var(--sd); border-radius: 0; font-size: 12.5px; }
   pre .c { color: #8a94a6; }
   .pre-wrap { position: relative; }
   .pre-group { display: grid; gap: 10px; }
@@ -420,7 +474,7 @@
     }
     .brand { padding: 0 4px; }
     .nav { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-    .side-foot { display: none; }
+    .side-foot { display: flex; margin: 12px 4px 0; }
     .nav-item { margin: 0; white-space: nowrap; padding: 8px 12px; font-size: 13.5px; }
     .nav-sub { width: 100%; }
     .nav-sub.open { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -440,7 +494,7 @@
   <aside class="sidebar">
     <div class="brand">
       <div class="logo wordmark" role="img" aria-label="McTa"><span class="w-m">M</span><span class="w-c">c</span><span class="w-t">T</span><span class="w-a">a</span></div>
-      <button type="button" class="lang-switch" id="langToggle" title="切换语言 / Switch language" aria-label="切换语言 / Switch language"><span class="lang-globe" aria-hidden="true">◎</span><span class="lang-name">中文</span></button>
+      <span class="lang-wrap" id="langWrap"><button type="button" class="lang-switch" id="langToggle" title="切换语言 / Switch language" aria-label="切换语言 / Switch language" aria-haspopup="true" aria-expanded="false"><span class="lang-globe" aria-hidden="true">◎</span><span class="lang-name">中文</span><span class="lang-caret" aria-hidden="true">▼</span></button><span class="lang-menu" id="langMenu" role="menu"><button type="button" class="lang-menu-item" id="langMenuItem" role="menuitem">English</button></span></span>
       <a class="brand-sub" href="#overview">格塔 · Meta Crystal Toolkit &amp; Analysis</a>
     </div>
 
@@ -465,6 +519,12 @@
 
     <button type="button" class="term-open" id="termOpen" aria-label="打开终端">终端</button>
 
+    <div class="side-foot">
+      <a href="https://github.com/lkccrr/mcta" target="_blank" rel="noopener">GitHub</a><span>·</span>
+      <a href="https://pypi.org/project/mcta/" target="_blank" rel="noopener">PyPI</a><span>·</span>
+      <a class="license-link" id="sideMit" href="#" role="button" tabindex="0" title="查看许可">MIT</a>
+    </div>
+
     <div class="term-wrap">
       <div class="term-head">
         <span class="term-title">
@@ -472,10 +532,10 @@
           <span class="term-state">本地模拟</span>
         </span>
         <span class="term-tools" role="group">
-          <button type="button" data-term-act="min" title="最小化" aria-label="最小化"><span class="win-glyph" aria-hidden="true">—</span></button>
-          <button type="button" data-term-act="restore" title="还原" aria-label="还原"><span class="win-glyph" aria-hidden="true">↺</span></button>
-          <button type="button" data-term-act="max" title="放大到整个页面" aria-label="放大到整个页面"><span class="max-icon win-glyph" aria-hidden="true">⤢</span><span class="restore-icon win-glyph hidden" aria-hidden="true">⤡</span></button>
-          <button type="button" data-term-act="dock" title="还原到侧栏" aria-label="还原到侧栏"><span class="win-glyph" aria-hidden="true">⇤</span></button>
+          <button type="button" data-term-act="min" title="最小化" aria-label="最小化"><span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></span></button>
+          <button type="button" data-term-act="restore" title="还原" aria-label="还原"><span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 11a9 9 0 1 1 2.6 6.4"/><path d="M3 5v6h6"/></svg></span></button>
+          <button type="button" data-term-act="max" title="放大到整个页面" aria-label="放大到整个页面"><span class="max-icon win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 17 17 7"/><path d="M9 7h8v8"/></svg></span><span class="restore-icon win-glyph hidden" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M17 7 7 17"/><path d="M15 17H7V9"/></svg></span></button>
+          <button type="button" data-term-act="dock" title="还原到侧栏" aria-label="还原到侧栏"><span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/><path d="m14 9-3 3 3 3"/></svg></span></button>
         </span>
       </div>
       <div class="term-box" id="siteTerm">
@@ -493,12 +553,6 @@
       <span class="resize-handle rh-tl"></span><span class="resize-handle rh-t"></span><span class="resize-handle rh-tr"></span>
       <span class="resize-handle rh-l"></span><span class="resize-handle rh-r"></span>
       <span class="resize-handle rh-bl"></span><span class="resize-handle rh-b"></span><span class="resize-handle rh-br"></span>
-    </div>
-
-    <div class="side-foot">
-      <a href="https://github.com/lkccrr/mcta" target="_blank" rel="noopener">GitHub</a><span>·</span>
-      <a href="https://pypi.org/project/mcta/" target="_blank" rel="noopener">PyPI</a><span>·</span>
-      <span>MIT</span>
     </div>
   </aside>
 
@@ -527,7 +581,7 @@
         <li><b>电子结构</b>：<code>mt.band</code> 出能带与投影，<code>mt.dos</code> 出态密度，可计算有效质量。</li>
         <li><b>晶格动力学</b>：<code>mt.phband</code>、<code>mt.phdos</code> 出谱与态密度；<code>mt.ph</code>、<code>mt.ph3</code> 查词条与流程。</li>
         <li><b>结构数据</b>：<code>mt.seek</code> 检索并导出结构，<code>mt.sqs</code> 生成准随机固溶体，<code>mt.skl</code> 评估描述符重要性。</li>
-        <li><b>模拟与脚本</b>：<code>mt.mc</code> 跑磁性蒙特卡洛，<code>mt.sh</code> 调用随包脚本，<code>mt.server</code> 起本地文件服务。</li>
+        <li><b>模拟与脚本</b>：<code>mt.mc</code> 跑磁性蒙特卡洛，<code>mt.sh</code> 调用随包脚本，<code>mt.server</code> 运行本地文件服务。</li>
       </ul>
 
       <h2 class="sec-title">常用示例</h2>
@@ -605,6 +659,10 @@
           <code>PBE_PATH</code>、<code>LDA_PATH</code>、<code>GGA_PATH</code>。
         </p>
       </div>
+
+      <h2 class="sec-title">命令参数清单</h2>
+      <p style="margin:0 0 10px">展开查看每个命令的完整参数；与虚拟终端中 <code>mt 命令 -h</code> 的输出一致。</p>
+      <div id="paramRef" class="param-ref"></div>
 
     </section>
 
@@ -856,7 +914,7 @@ mt.server -S</pre>
         <li><code>-f/--serve</code> 在当前终端里直接运行服务（默认转入后台）；<code>-S/--stop</code> 停止后台服务，<code>-S --all</code> 停止当前用户所有端口的服务；<code>--status</code> 列出当前用户所有端口上运行的 mt.server。</li>
         <li><code>-N/--no-token</code> 不启用 token 鉴权，直接用地址和端口访问；<code>-L/--host</code> 监听地址，默认只监听本机 <code>127.0.0.1</code>，也接受 <code>::1</code>、<code>::</code> 等 IPv6 地址。这两项都要在终端输入 <code>yes</code>/<code>YES</code> 才能启动，同时使用时需输入两次。</li>
         <li><code>-o/--log [PATH]</code> 输出日志文件；默认不写日志。<code>-o</code> 不带参数时写到当前目录的 <code>mcta-server-&lt;端口&gt;.log</code>，也可给出目录或文件名，已存在的同名文件会被覆盖。</li>
-        <li>3D 查看器的晶胞棱与轴箭头可用环境变量或 <code>~/.config/mcta/config</code> 调整（每行 <code>KEY = VALUE</code>，<code>#</code>/<code>;</code> 开头为注释；环境变量优先于配置文件，配置文件优先于默认值，重启生效）：<code>MCTA_DEPTH_CUE</code>（深度雾强度 0–1，0 关闭 / 1 最强，默认 0）、<code>MCTA_CELL_RADIUS</code>（棱半径，默认 0.015 Å）、<code>MCTA_CELL_DASHED</code>（0 实线 / 1 虚线，默认 1）、<code>MCTA_CELL_DASH_LENGTH</code>（虚线段长度 Å，默认 0.25）、<code>MCTA_CELL_GAP_LENGTH</code>（虚线间隔 Å，默认 0.25）、<code>MCTA_CELL_COLOR</code>（棱颜色，默认 #0000FF 蓝色）；<code>MCTA_AXIS_RADIUS</code>（箭头粗细，默认 0.1）、<code>MCTA_AXIS_HEAD_RATIO</code>（箭头头部尺寸，默认 1.618）、<code>MCTA_AXIS_MIDPOS</code>（箭头位置，&gt;0 为沿线比例、≤0 为距末端 Å，默认 -1）、<code>MCTA_AXIS_OPACITY</code>（透明度，默认 1 不透明）、<code>MCTA_AXIS_COLOR_A</code> / <code>_B</code> / <code>_C</code>（三轴颜色，默认 #FF0000 / #00FF00 / #0000FF）。<code>mt.server -h</code> 会列出每项当前生效值及其来源；数值越界会自动收敛，非法颜色回退默认值。</li>
+        <li>3D 查看器的键粗、深度雾、晶胞棱，可在结构窗口空白处右键打开的“样式设置”弹窗中调整；左下角坐标轴的长度、颜色和样式在坐标轴区域右键调整，它只跟随结构旋转、长度固定。修改即时生效；在原子上右键可单独调整该原子的颜色和大小。</li>
       </ul>
       <h2 class="sec-title">要点</h2>
       <ul class="plain">
@@ -875,13 +933,17 @@ mt.server -S</pre>
       <div class="about-anim sm" aria-hidden="true"><span class="w-m">M</span><span class="w-c">c</span><span class="w-t">T</span><span class="w-a">a</span></div>
       <h2 class="sec-title">许可</h2>
       <p style="margin:0">
-        MIT License · 源码与问题反馈：
+        <a class="license-link" id="footMit" href="#" role="button" tabindex="0" title="查看许可">MIT License</a><span> · 源码与问题反馈：</span>
         <a href="https://github.com/lkccrr/mcta" target="_blank" rel="noopener">GitHub</a> ·
         <a href="https://pypi.org/project/mcta/" target="_blank" rel="noopener">PyPI</a>
       </p>
     </footer>
 
   </main>
+</div>
+
+<div class="license-overlay hidden" id="licenseOverlay" role="dialog" aria-label="MIT License" aria-modal="false">
+  <pre class="license-text" id="licenseText"></pre>
 </div>
 
 <script>
@@ -927,7 +989,7 @@ mt.server -S</pre>
       "模拟与脚本": "Simulation & scripting",
       "跑磁性蒙特卡洛，": "run magnetic Monte Carlo, ",
       "调用随包脚本，": "call bundled scripts, ",
-      "起本地文件服务。": "start the local file server.",
+      "运行本地文件服务。": "run the local file server.",
       "常用示例": "Common examples",
       "命令": "Command",
       "能带": "Bands",
@@ -952,6 +1014,7 @@ mt.server -S</pre>
       "，环境变量优先。": ", with environment variables taking priority.",
       "许可": "License",
       "MIT License · 源码与问题反馈：": "MIT License · Source and issues:",
+      "· 源码与问题反馈：": " · Source and issues:",
       "进入计算目录后，先看它认得哪些文件，再决定画什么。": "Enter a calculation directory, see which files it recognizes, then decide what to plot.",
       "运行": "Run",
       "总览当前目录，查看可用的计算文件。": "to overview the current directory and see which calculation files are available.",
@@ -1105,22 +1168,8 @@ mt.server -S</pre>
       "不带参数时写到当前目录的": "without a path writes",
       "mcta-server-<端口>.log": "mcta-server-<port>.log",
       "，也可给出目录或文件名，已存在的同名文件会被覆盖。": " in the current directory; a directory or file name may also be given, and an existing file of the same name is overwritten.",
-      "3D 查看器的晶胞棱与轴箭头可用环境变量或": "The 3D viewer cell edges and axis arrows can be configured with environment variables or",
-      "调整（每行": "(one",
       "，": ", ",
-      "开头为注释；环境变量优先于配置文件，配置文件优先于默认值，重启生效）：": "at line start marks a comment; environment variables override the config file, which overrides defaults; restart to apply):",
-      "（深度雾强度 0–1，0 关闭 / 1 最强，默认 0）、": "(depth-fog strength 0–1; 0 off / 1 strongest; default 0), ",
-      "（棱半径，默认 0.015 Å）、": "(edge radius, default 0.015 Å), ",
-      "（0 实线 / 1 虚线，默认 1）、": "(0 solid / 1 dashed; default 1), ",
-      "（虚线段长度 Å，默认 0.25）、": "(dash length in Å, default 0.25), ",
-      "（虚线间隔 Å，默认 0.25）、": "(gap length in Å, default 0.25), ",
-      "（棱颜色，默认 #0000FF 蓝色）；": "(edge color, default #0000FF blue); ",
-      "（箭头粗细，默认 0.1）、": "(arrow radius, default 0.1), ",
-      "（箭头头部尺寸，默认 1.618）、": "(arrow head size, default 1.618), ",
-      "（箭头位置，>0 为沿线比例、≤0 为距末端 Å，默认 -1）、": "(arrow position: >0 is a fraction along the line, ≤0 is a distance in Å from the far end; default -1), ",
-      "（透明度，默认 1 不透明）、": "(opacity, default 1, opaque), ",
-      "（三轴颜色，默认 #FF0000 / #00FF00 / #0000FF）。": "(axis colors, default #FF0000 / #00FF00 / #0000FF).",
-      "会列出每项当前生效值及其来源；数值越界会自动收敛，非法颜色回退默认值。": "lists each effective value and its source; out-of-range numbers are clamped and invalid colors fall back to the defaults.",
+      "3D 查看器的键粗、深度雾、晶胞棱，可在结构窗口空白处右键打开的“样式设置”弹窗中调整；左下角坐标轴的长度、颜色和样式在坐标轴区域右键调整，它只跟随结构旋转、长度固定。修改即时生效；在原子上右键可单独调整该原子的颜色和大小。": "In the 3D viewer, bond radius, depth cue and cell edges can be adjusted in the Style settings panel opened by right-clicking empty space. The bottom-left axes (length, color, style) are configured by right-clicking the axes area; they follow rotation only with a fixed length. Changes apply immediately. Right-click an atom to change its color and size individually.",
       "启动后打印带随机 token 的地址（形如": "On start it prints an address with a random token (like",
       "）；所有请求都要校验该 token，每次重启都会换新，旧链接立即失效。链接本身就是访问凭据，请勿分享。": "); every request validates that token, it changes on each restart and old links stop working. The link itself is the credential, so do not share it.",
       "不需要登录：服务以当前用户身份运行，文件浏览、编辑与下载限定在运行": "No login: the service runs as the current user and confines file browsing, editing and download to the directory where",
@@ -1131,7 +1180,9 @@ mt.server -S</pre>
       "左侧栏里是真实的 PTY shell，和 SSH 登录一致，也从同一目录起步；终端切换目录时文件列表会同步跟随（起始目录外显示绝对路径），目录每 2 秒自动刷新。": "The sidebar is a real PTY shell, identical to an SSH login, starting in the same directory; when the terminal changes directory the file list follows (absolute paths outside the start directory), and directories refresh every 2 seconds.",
       "目录中的图片按数量排列：1 张占内容区宽度 80%，2 张平分一行，3 张及以上每行 3 张；支持 PNG、JPG/JPEG、GIF、WebP、BMP、ICO、SVG，TIF/TIFF 无法预览，按普通文件下载。": "Images in a directory are laid out by count: one takes 80% of the content width, two share a row, three or more use three per row; PNG, JPG/JPEG, GIF, WebP, BMP, ICO and SVG are supported, while TIF/TIFF cannot be previewed and download as regular files.",
       "结构文件与轨迹可直接在浏览器里查看（3Dmol.js）：默认正交投影，可一键切到透视；支持沿 x/y/z 轴按固定角度旋转、按比例缩放、重置视图，以及 1×–8×（默认 4×）分辨率导出 PNG / JPEG / WebP 图片。多帧轨迹可播放、逐帧拖动并选择 0.5×–4× 速度，最多读取 300 帧。": "Structure files and trajectories can be viewed directly in the browser (3Dmol.js): orthographic projection by default with one-click perspective; rotate around x/y/z by fixed angles, scale, reset the view, and export PNG / JPEG / WebP at 1×–8× resolution (default 4×). Multi-frame trajectories can be played, scrubbed frame by frame and played at 0.5×–4× speed, reading up to 300 frames.",
-      "默认只监听回环地址；命令以当前用户权限执行，请勿把带 token 的链接或端口暴露到外网。": "Listens on loopback only by default; commands run with the current user's privileges, so never expose a token-bearing link or port to the internet."
+      "默认只监听回环地址；命令以当前用户权限执行，请勿把带 token 的链接或端口暴露到外网。": "Listens on loopback only by default; commands run with the current user's privileges, so never expose a token-bearing link or port to the internet.",
+      "命令参数清单": "Command options",
+      "展开查看每个命令的完整参数；与虚拟终端中 <code>mt 命令 -h</code> 的输出一致。": "Expand to see the complete options for each command; identical to <code>mt command -h</code> in the demo terminal."
     };
     /* I18N_EN_END */
 
@@ -1183,25 +1234,48 @@ mt.server -S</pre>
     window.MCTA_LANG = lang;
     document.documentElement.lang = lang === "en" ? "en" : "zh-CN";
 
-    /* 语言切换：一个按钮，文案随当前语言变化；写入偏好后带 ?lang= 重新加载 */
+    /* 语言切换：按钮显示当前语言，下拉只列出可切换到的另一种语言 */
     var langBtn = document.getElementById("langToggle");
     if (langBtn) {
       var langName = langBtn.querySelector(".lang-name");
+      var langMenu = document.getElementById("langMenu");
+      var langItem = document.getElementById("langMenuItem");
       var nextLang = lang === "zh" ? "en" : "zh";
-      if (langName) langName.textContent = lang === "zh" ? "中文" : "En";
+      if (langName) langName.textContent = lang === "en" ? "English" : "中文";
+      if (langItem) langItem.textContent = nextLang === "en" ? "English" : "中文";
       langBtn.setAttribute("lang", lang === "zh" ? "zh-CN" : "en");
-      langBtn.title = lang === "zh" ? "Switch to English" : "切换到中文";
+      langBtn.title = nextLang === "en" ? "Switch to English" : "切换到中文";
       langBtn.setAttribute("aria-label", langBtn.title);
-      langBtn.addEventListener("click", function () {
+      function switchLang() {
         saveLang(nextLang);
         var url = new URL(location.href);
         url.searchParams.delete("hl");
         url.searchParams.set("lang", nextLang);
         location.href = url.toString();
+      }
+      langBtn.addEventListener("click", function () {
+        if (!langMenu) { switchLang(); return; }
+        langMenu.classList.toggle("open");
+        langBtn.setAttribute("aria-expanded", langMenu.classList.contains("open") ? "true" : "false");
+      });
+      if (langItem) langItem.addEventListener("click", function (e) {
+        e.stopPropagation(); switchLang();
+      });
+      document.addEventListener("click", function (e) {
+        if (!langMenu) return;
+        if (langMenu.contains(e.target) || langBtn.contains(e.target)) return;
+        langMenu.classList.remove("open");
+        langBtn.setAttribute("aria-expanded", "false");
       });
     }
 
     if (lang !== "en") return;
+
+    /* MIT / MIT License 的悬停提示随页面语言切换 */
+    ["sideMit", "footMit"].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.title = "View license";
+    });
 
     document.title = "McTa · Meta Crystal Toolkit & Analysis";
     var EN_DESC = "McTa (Meta Crystal Toolkit & Analysis) collects common VASP and phonopy post-processing into mt.* commands: plot bands, DOS and phonon spectra directly from raw output, plus structure search, SQS, descriptor analysis and magnetic Monte Carlo.";
@@ -1226,7 +1300,7 @@ mt.server -S</pre>
     while ((node = walker.nextNode())) {
       var parent = node.parentNode;
       if (!parent) continue;
-      if (parent.closest && parent.closest(".lang-switch")) continue;
+      if (parent.closest && parent.closest(".lang-wrap")) continue;
       var tag = parent.nodeName;
       if (tag === "SCRIPT" || tag === "STYLE" || tag === "PRE" || tag === "CODE" || tag === "KBD" || tag === "SAMP") continue;
       var raw = node.nodeValue;
@@ -1319,6 +1393,7 @@ mt.server -S</pre>
     let rainVisible = true;
     let rainStep = null;
     let rainLast = 0;
+    let rainLastTick = 0;
     let rainPaused = false;
     let rainResize = null;
 
@@ -1358,6 +1433,8 @@ mt.server -S</pre>
       const x = Math.min(window.innerWidth - 1, Math.max(0, r.left + r.width / 2));
       const y = Math.min(window.innerHeight - 1, Math.max(0, r.top + r.height / 2));
       const top = document.elementFromPoint(x, y);
+      // LICENSE 浮层只是覆盖显示，不视为遮挡终端，字符雨继续运行。
+      if (top && top.closest && top.closest('#licenseOverlay')) return false;
       return !!top && !box.contains(top);
     }
 
@@ -1370,16 +1447,23 @@ mt.server -S</pre>
 
     function frame(ts) {
       if (!rainActive) return;
-      if (!rainLast || ts - rainLast >= 60) { rainLast = ts; rainStep(); }
+      if (!rainLast || ts - rainLast >= 60) {
+        rainLast = ts;
+        try { rainStep(); rainLastTick = Date.now(); }
+        catch (err) { stopRain(); rainLastTick = 0; }
+      }
       rainRaf = requestAnimationFrame(frame);
     }
 
     function startRain() {
       if (rainActive || !canRain()) return;
+      let next;
+      try { next = setupRain(); } catch (err) { return; }
+      rainStep = next;
       rainActive = true;
       rainCanvas.style.opacity = '';
-      rainStep = setupRain();
       rainLast = 0;
+      rainLastTick = Date.now();
       rainRaf = requestAnimationFrame(frame);
     }
 
@@ -1389,6 +1473,21 @@ mt.server -S</pre>
       rainCanvas.style.opacity = '0';
       if (rainRaf) { cancelAnimationFrame(rainRaf); rainRaf = null; }
     }
+
+    // 卡死自恢复：RAF 停摆、绘制抛错、暂停标记残留时强制重建。
+    function kickRain() {
+      stopRain();
+      rainLastTick = 0;
+      startRain();
+    }
+    setInterval(function () {
+      const now = Date.now();
+      if (!canRain()) {
+        if (rainPaused && !rainResize) rainPaused = false;
+        return;
+      }
+      if (!rainActive || !rainLastTick || now - rainLastTick > 1500) kickRain();
+    }, 1000);
 
     function syncRain() {
       if (canRain()) startRain(); else stopRain();
@@ -1433,6 +1532,10 @@ mt.server -S</pre>
     box.addEventListener('keydown', function () { pauseRain(500); }, true);
     box.addEventListener('input', function () { pauseRain(500); }, true);
     startRain();
+    window.__mctaRainKick = kickRain;
+    window.__mctaRainState = function () {
+      return { active: rainActive, paused: rainPaused, lastTick: rainLastTick, canRun: canRain() };
+    };
 
     /* ---- 终端逻辑 ---- */
 
@@ -1466,164 +1569,261 @@ mt.server -S</pre>
     }).catch(function () { /* 本地 file:// 打开时无法读取，回退 dev */ });
 
     const HELP_ZH = {
-      band: `mt.band — 电子能带 / 态密度
-用法：mt.band [-i PATH ...] [-o OUTPT] [-y star end] [-p PARTS ...] ...
+  band: `mt.band — 电子能带 / 态密度
 
-  -i, --input   VASP 输出目录（EIGENVAL/DOSCAR/PROCAR/vasprun.xml）或 *.dat
-  -o, --outpt   输出文件名，默认 BAND.png
-  -y, --vrang   能量范围，默认 -5.0 5.0 eV
-  -x, --horiz   态密度范围，electrons/eV
-  -p, --parts   投影分量：s p d，或元素-s,p,d
-  -C / -k / -w  线色 / 线型 / 线宽
-  -z, --alpha   填充透明度
-  -n, --exchg   交换坐标轴
-  -d            并排附带态密度
-  -r            投影能带（PROCAR）
-  -h, --help    显示帮助`,
+  -h -H --help     显示帮助
+  -v -V --version  显示版本
+  -i --input       输入目录或 .dat 文件（默认当前目录）
+  -o --outpt       输出图片名
+  -S --figsz       图片尺寸：宽 高
+  -y --vrang       能量 / 频率范围
+  -x --horiz       态密度范围 electrons/eV
+  -p --parts       投影分量 s p d，或 元素-s,p,d
+  -e --elems       投影图例名
+  -G --legnd       图例文字
+  -a --legndx      图例水平偏移，1.0 = 图宽 10%
+  -A --legndy      图例垂直偏移，1.0 = 图高 10%
+  -C --color       线色：b/g/r/c/m/y/k 或 (r,g,b)
+  -k --style       线型：solid/dashed/dashdot/dotted
+  -w --width       线宽，默认 0.8
+  -z --alpha       填充透明度，默认 0.2
+  -n --exchg       交换坐标轴
+  -D --divid       上下自旋分图显示
+  -m --emass       有效质量，默认 0.15
+  -r --projs       投影能带（PROCAR）
+  -l --label       高对称点标签，如 X S Y K M
+  --klabels        KLABELS 文件名，默认 KLABELS
+  -d --dospl       并排附加态密度（无值则自动探测）
+  -W --ratio       态密度子图宽度比例
+  --vasp           （旧）同 -i，兼容保留
+  --no-shift       不按费米能级平移能量
+  --keep-weights   保留非零权重 k 点（HSE 网格）
+  --export-dat     同时导出 vaspkit BAND.dat/KLABELS/PDOS
+  --no-mirror      自旋向下 DOS 保持为正
+`,
 
-      dos: `mt.dos — 态密度（DOS / PDOS）
-用法：mt.dos [-i PATH ...] [-o OUTPT] [-y star end] [-p PARTS ...] ...
+  dos: `mt.dos — 态密度（DOS / PDOS）
 
-  -i, --input   DOSCAR、PDOS*.dat / TDOS*.dat 或 .dat 文件
-  -o, --outpt   输出文件名，默认 DOS.png
-  -y, --energ   能量范围，默认 -5.0 5.0 eV
-  -x, --horiz   态密度范围，electrons/eV
-  -p, --parts   投影分量：s p d，或元素-s,p,d
-  -C / -k / -w  线色 / 线型 / 线宽
-  -z, --alpha   填充透明度
-  -n, --exchg   交换坐标轴，能量在纵轴
-  -h, --help    显示帮助`,
+  -h -H --help     显示帮助
+  -v -V --version  显示版本
+  -i --input       输入目录或 .dat 文件（默认当前目录）
+  -o --outpt       输出图片名
+  -S --figsz       图片尺寸：宽 高
+  -y --energ       能量范围，默认 -5 5 eV
+  -x --horiz       态密度范围 electrons/eV
+  -p --parts       投影分量 s p d，或 元素-s,p,d
+  -e --elems       投影图例名
+  -G --legnd       图例文字
+  -a --legndx      图例水平偏移，1.0 = 图宽 10%
+  -A --legndy      图例垂直偏移，1.0 = 图高 10%
+  -C --color       线色：b/g/r/c/m/y/k 或 (r,g,b)
+  -k --style       线型：solid/dashed/dashdot/dotted
+  -w --width       线宽，默认 0.8
+  -z --alpha       填充透明度，默认 0.2
+  -n --exchg       交换坐标轴
+  --no-mirror      自旋向下 DOS 保持为正
+  --no-shift       不按费米能级平移能量
+`,
 
-      phband: `mt.phband — 声子能带
-用法：mt.phband [-i BAND.dat] [-o OUTPT] [-y star end] [-B star end] ...
+  phband: `mt.phband — 声子能带
 
-  -i, --input   phonopy BAND.dat，可给多个文件对比
-  -o, --outpt   输出文件名，默认 BAND.png
-  -y, --vrang   频率范围（THz）
-  -x, --horiz   声子态密度范围
-  -B, --brkax   断轴显示：起点 终点
-  --hratios     断轴高度比例，默认 0.2
-  -C / -k / -w  线色 / 线型 / 线宽
-  -z, --alpha   填充透明度
-  -n, --exchg   交换声子态密度的坐标轴
-  -d            并排附带声子态密度
-  -h, --help    显示帮助`,
+  -h -H --help     显示帮助
+  -v -V --version  显示版本
+  -i --input       输入目录或 .dat 文件（默认当前目录）
+  -o --outpt       输出图片名
+  -S --figsz       图片尺寸：宽 高
+  -y --vrang       能量 / 频率范围
+  -x --horiz       态密度范围 electrons/eV
+  -e --elems       投影图例名
+  -G --legnd       图例文字
+  -a --legndx      图例水平偏移，1.0 = 图宽 10%
+  -A --legndy      图例垂直偏移，1.0 = 图高 10%
+  -C --color       线色：b/g/r/c/m/y/k 或 (r,g,b)
+  -k --style       线型：solid/dashed/dashdot/dotted
+  -w --width       线宽，默认 0.8
+  -z --alpha       填充透明度，默认 0.2
+  -n --exchg       交换坐标轴
+  -B --brkax       断轴：起点 终点
+  --hratios        断轴高度比例，默认 0.2
+  -j --bconf       band.conf 文件名 / 写出 band.conf
+  -l --label       高对称点标签，如 X S Y K M
+  -d --dospl       并排附加态密度（无值则自动探测）
+  -W --ratio       态密度子图宽度比例
+`,
 
-      phdos: `mt.phdos — 声子态密度
-用法：mt.phdos [-i PATH ...] [-o OUTPT] [-y star end] ...
+  phdos: `mt.phdos — 声子态密度
 
-  -i, --input   projected_dos.dat / total_dos.dat 或 .dat 文件
-  -o, --outpt   输出文件名，默认 PHDOS.png
-  -y, --freqs   频率范围（THz）
-  -x, --horiz   声子态密度范围
-  -C / -k / -w  线色 / 线型 / 线宽
-  -z, --alpha   填充透明度
-  -n, --exchg   交换坐标轴，频率在纵轴
-  -h, --help    显示帮助`,
+  -h -H --help     显示帮助
+  -v -V --version  显示版本
+  -i --input       输入目录或 .dat 文件（默认当前目录）
+  -o --outpt       输出图片名
+  -S --figsz       图片尺寸：宽 高
+  -y --freqs       频率范围（THz）
+  -x --horiz       态密度范围 electrons/eV
+  -e --elems       投影图例名
+  -G --legnd       图例文字
+  -a --legndx      图例水平偏移，1.0 = 图宽 10%
+  -A --legndy      图例垂直偏移，1.0 = 图高 10%
+  -C --color       线色：b/g/r/c/m/y/k 或 (r,g,b)
+  -k --style       线型：solid/dashed/dashdot/dotted
+  -w --width       线宽，默认 0.8
+  -z --alpha       填充透明度，默认 0.2
+  -n --exchg       交换坐标轴
+`,
 
-      ph: `mt.ph — phonopy 声子流程引导
-用法：mt.ph [-s N ...] [-c FILE] [-n DIR ...] [子命令] [参数...]
+  ph: `mt.ph — phonopy 声子流程引导
+  子命令  supercell fs fc band dos tprop symmetry born qha gruneisen w / W（查本地用法）
 
-子命令  supercell  fs  fc  band  dos  tprop  symmetry  born  qha
-        gruneisen  w / W（查本地用法）
-  -s, --supercell 扩胞维数，默认 1 1 1
-  -c, --cell      结构文件（默认自动探测 POSCAR-unitcell/CONTCAR/POSCAR）
-  -n, --names     位移目录 / 后缀 / 范围
-  -x, --files     各目录力文件名，默认 vasprun.xml
-  -b / -d         写 band.conf / mesh.conf
-  -Y / -R         跳过确认 / 只打印命令
-  -h, --help      显示帮助`,
+  -h -H --help     显示帮助
+  -v -V --version  显示版本
+  -Y --yesal       跳过命令执行确认
+  -R --dryrn       只打印命令，不执行
+  -s --dimns       超胞维数，1-3 个整数
+  -c --cells       原胞文件（自动探测 POSCAR-unitcell/CONTCAR/POSCAR）
+  -x --xname       力文件名
+  --rd --random    随机方向位移
+  --amplitude      位移幅度（Å）
+  --tolerance      对称等价容差（Å）
+  --random-seed    随机种子
+  --pa             原胞矩阵 "a b c; d e f; g h i" 或 auto
+  --symfc          用 symfc 算力常数
+  --alm            用 ALM 算力常数
+  --fc-calc-opt    传给力常数计算器的选项，如 cutoff=5
+  -n --fdirs       位移目录 / 后缀 / 范围，如 001-003
+  -b --bconf       band.conf 文件名 / 写出 band.conf
+  -d --mconf       写出 mesh.conf
+  -B --bfile       band.conf 名
+  -D --mfile       mesh.conf 名
+  -p --bpath       BAND 路径（分数坐标，配 -b）
+  -l --xlabl       BAND_LABELS（配 -b）
+  -N --point       每段 BAND_POINTS，默认 101
+  -m --mgrid       DOS / kappa 网格
+`,
 
-      ph3: `mt.ph3 — phono3py 热导率流程
-用法：mt.ph3 [-s 2 2 2] [-S 4 4 4] [-c FILE] [-m 11 11 11] [子命令]
+  ph3: `mt.ph3 — phono3py 热导率流程
+  子命令  supercell cf3 cf2 cfs fs2f2 kappa kaccum kdeplot w / W
 
-子命令  supercell  cf3  cf2  cfs  fs2f2  kappa  kaccum  kdeplot  w / W
-  -s / -S         fc3 / fc2 超胞维数，默认 2 2 2
-  -c, --cell      结构文件（默认自动探测）
-  -n, --names     位移目录 / 后缀 / 范围
-  -x, --files     各目录力文件，默认 vasprun.xml
-  -m, --mesh      kappa 网格，默认 11 11 11
-  -k, --hdf5      kappa-m*.hdf5（kaccum / kdeplot 输入）
-  -Y / -R         跳过确认 / 只打印命令
-  -h, --help      显示帮助`,
+  -h -H --help     显示帮助
+  -v -V --version  显示版本
+  -Y --yesal       跳过命令执行确认
+  -R --dryrn       只打印命令，不执行
+  -s --dimns       超胞维数，1-3 个整数
+  -S --dimf2       fc2 超胞维数（同 -s 语法）
+  -c --cells       原胞文件（自动探测 POSCAR-unitcell/CONTCAR/POSCAR）
+  -x --xname       力文件名
+  -m --mgrid       kappa 网格，默认 11 11 11
+  -n --fdirs       位移目录 / 后缀 / 范围，如 001-003
+  -k --kfile       kappa-m*.hdf5（kaccum/kdeplot 输入）
+  --rd             随机方向位移
+  --rd-fc2         fc2 随机位移（需 -S）
+  --random-seed    随机种子
+  --amplitude      位移幅度（Å）
+  --sp --save-params写出 phono3py_params.yaml
+  --cfz            扣除残余力
+  --cutoff-pair    位移原子对截断距离
+  --cfs --create-force-sets由 FORCES_FC3 生成 FORCE_SETS
+  --fs2f2 --force-sets-to-forces-fc2由 FORCE_SETS 生成 FORCES_FC2
+`,
 
-      seek: `mt.seek — Materials Project 结构检索与策展
-用法：mt.seek [-c Ti-C | -f MoS2 | -I mp-id ...] [-k N] [-F cif,poscar] ...
+  seek: `mt.seek — Materials Project 结构检索与策展
 
-  -c, --chems   化学体系，如 Ti-C
-  -f, --frmla   化学式，如 MoS2
-  -I, --mpids   直接指定 mp_id，可多个
-  -k, --topks   检索取前 k 个，默认 3
-  -n, --names   导出包名称
-  -F, --formt   结构格式：cif,poscar,json,xyz
-  -d            查看本地数据集概况
-  -w EXPR       规则筛选（ehull、gap、is_2d、mag 等）
-  -r            结构级去重
-  -R            只预览不导出
-  --home DIR    工作根目录
-  -h, --help    显示帮助`,
+  -h -H --help     显示帮助
+  -v -V --version  显示版本
+  --offline        离线自检（内置结构）
+  -c --chems       化学体系，如 Ti-C
+  -f --frmla       化学式，如 MoS2
+  -I --mpids       直接指定 mp_id，可多个
+  -n --names       导出包名称
+  -k --topks       取前 k 个，默认 3
+  -Q --refsh       忽略缓存，强制重新查询 MP
+  -F --formt       结构格式：cif,poscar,json,xyz
+  --job-template   同时生成 INCAR/KPOINTS/slurm 模板
+  -t --tasks       自然语言任务（LLM 模式）
+  -p --provs       LLM 引擎，默认 openai
+  -L --lists       列出历史导出包
+  --home           工作根目录，默认当前目录
+`,
 
-      skl: `mt.skl — 用 scikit-learn 分析结构清单
-用法：mt.skl [--home DIR]
+  skl: `mt.skl — 用 scikit-learn 分析结构清单
 
-  --home DIR   工作根目录（exports/ 与 ml/），默认当前目录
-  -h, --help   显示帮助
+  -h -H --help     显示帮助
+  -v -V --version  显示版本
+  --home           工作根目录，默认当前目录
+`,
 
-扫描 exports/*/manifest.csv，对 ehull 与 band_gap 做随机森林回归。`,
+  sqs: `mt.sqs — 自定义晶胞 → 准随机固溶体（SQS）
 
-      sqs: `mt.sqs — 自定义晶胞 → 准随机固溶体（SQS）
-用法：mt.sqs -c FILE -a SPEC [-x 3,3,3] [--iterations N]
-
-  -c, --cells      晶胞文件（POSCAR / CONTCAR / CIF / JSON）
-  --host SYM       参与随机化的元素位点（多元素时必须给）
-  -a, --alloy      合金成分，如 Cu:0.5,Au:0.5 或 Cu,Au
-  -x, --supcl      扩胞倍数，默认 3,3,3
-  --iterations     搜索迭代次数，默认 100000
+  -h -H --help     显示帮助
+  -v -V --version  显示版本
+  -c --cells       原胞文件（自动探测 POSCAR-unitcell/CONTCAR/POSCAR）
+  --host           参与随机化的元素位点
+  -a --alloy       合金成分，如 Cu:0.5,Au:0.5
+  -x --supcl       扩胞倍数，默认 3,3,3
+  --iterations     SQS 搜索迭代次数，默认 100000
   --number         导出候选数，默认 1
-  -s, --seeds      随机种子
-  -n / -F / -R     包名 / 格式 / 只搜索不写盘
-  --home DIR       工作根目录
-  -h, --help       显示帮助`,
+  -s --seeds       随机种子
+  -n --names       导出包名称
+  -F --formt       结构格式：cif,poscar,json,xyz
+  --job-template   同时生成 INCAR/KPOINTS/slurm 模板
+  -R --dryrn       只打印命令，不执行
+  --home           工作根目录，默认当前目录
+`,
 
-      mc: `mt.mc — 磁性蒙特卡洛模拟
-用法：mt.mc [-x 32] [-y 32] [-z 32] [-t T ...] [-p J ...] ...
+  mc: `mt.mc — 磁性蒙特卡洛模拟
 
-  -x / -y / -z     晶格尺寸或超胞倍数，默认 32
-  -e / -w          平衡与统计步数，默认 1000 / 1000
-  -p, --param      交换耦合参数，按通道顺序
-  -J / -K          矢量自旋 x / y 方向交换参数
-  -t, --temps      温度序列，如 -t 0 40 2
-  -i, --inits      初态：fm、afm1…afm5、random
-  -c, --confg      晶格：square、triangular、bilayer-*、simple-cubic
-  -s, --struc      结构文件（POSCAR/CIF，ASE 可读）
-  -A / -D / --mom  结构模式：磁性元素 / 截断距离 / 磁矩
-  -N / -C          线程数 / 并行链数
-  -S / -W          随机种子 / 回火交换间隔
-  -R               只跑模拟，不自动绘图
-  -h, --help       显示帮助`,
+  -h -H --help     显示帮助
+  -v -V --version  显示版本
+  -x -X --sizex    x 方向尺寸/超胞倍数，默认 32
+  -y -Y --sizey    y 方向尺寸/超胞倍数，默认 32
+  -z -Z --sizez    z 方向尺寸/超胞倍数，默认 32
+  -e --equil       平衡步数，默认 1000
+  -w --works       统计步数，默认 1000
+  -a --aniso       各向异性（矢量自旋）
+  -p --param       交换耦合参数，按通道顺序
+  -J --parax       矢量自旋 x 方向交换参数
+  -K --paray       矢量自旋 y 方向交换参数
+  -t --temps       温度序列，如 -t 0 40 2
+  -i --inits       初态：fm / afm1…afm5 / random
+  -c --confg       晶格：square/triangular/bilayer-*/simple-cubic
+  -s --struc       结构文件（POSCAR/CIF，ASE 可读）
+  -A --magat       磁性元素，如 Fe,Co
+  -D --cutof       结构模式各通道距离上限（Å）
+  --mom            原子磁矩标称值，默认 2
+  --ini            结构模式自旋初态 fm/afm/random 或 ±1 列表
+  -N --thrds       numba 线程数，0=自动
+  -C --chain       并行链数，0=同线程数
+  -S --seeds       随机种子
+  -W --swaps       回火交换间隔 sweep 数（0=关闭）
+  -R --dryrn       只打印命令，不执行
+  -l --label       高对称点标签，如 X S Y K M
+  -o --plots       由日志文件重新绘图
+  -T --vtemp       XY 涡旋箭头图温度（K）
+  -I --imgfm       输出图片格式，默认 png
+`,
 
-      sh: `mt.sh — 执行内置、自定义或随包脚本
-用法：mt.sh [NAME] [参数...]
+  sh: `mt.sh — 执行内置、自定义或随包脚本
+  mt.sh                  列出可用脚本及来源
+  mt.sh NAME [args...]   执行 NAME 脚本（如 mt.sh xy），参数原样转发
+  查找顺序：./NAME.sh → $MTSH_SCRIPTS → 随包 scripts/；NAME 只是脚本名，不接受路径
+`,
 
-  mt.sh          列出可用脚本及来源
-  mt.sh xy       执行 xy.sh，参数原样转给脚本
+  server: `mt.server — 本地文件服务、结构查看与终端
 
-查找顺序：./NAME.sh → $MTSH_SCRIPTS → 随包 scripts/`,
-
-      server: `mt.server — 本地文件服务、结构查看与终端
-用法：mt.server [-d PATH] [-p PORT] [-f] [-L HOST] [-S] [-N] [-o [PATH]]
-
-  -d, --directory   运行目录（页面起始目录），默认为当前目录
-  -p, --port        监听端口，默认 9068
-  -f, --serve       在当前终端直接运行（默认转入后台）
-  -L, --host        监听地址，默认 127.0.0.1（对外监听需输入 yes）
-  -S, --stop        停止后台服务；-S --all 停止所有端口
-  -N, --no-token    不启用 token 鉴权（需输入 yes）
-  -o, --log [PATH]  输出日志文件（默认不写，同名文件覆盖）
-  --status          列出当前用户所有运行中的端口
-  -v, -V, --version 显示版本
-  -h, --help        显示帮助`
-    };
+  -v -V --version  显示版本
+  -h -H --help     显示帮助
+  -p --port        监听端口，默认 9068
+  -f --serve       前台运行（默认后台）
+  -o --log         输出日志文件，默认不写
+  -d --directory   运行目录（页面起点），默认当前目录
+  -N --no-token    不启用 token 鉴权（需输入 yes）
+  -L --host        监听地址，默认 127.0.0.1
+  -Y --yes         跳过危险选项的 yes 确认
+  --status         列出本用户所有运行端口
+  -S --stop        停止后台服务
+  --all            配合 -S 停止所有端口
+  --no-hup         终端关闭后服务继续运行
+`,
+};
 
     const MT_HELP_EN = `Usage: mt <command> [options...]   options are forwarded unchanged, e.g. mt ph -h
 
@@ -1642,168 +1842,288 @@ mt.server -S</pre>
   -v, -V, --version     show the version (supported by every subcommand)`;
 
     const HELP_EN = {
-      band: `mt.band — electronic bands / DOS
-Usage: mt.band [-i PATH ...] [-o OUTPT] [-y star end] [-p PARTS ...] ...
+  band: `mt.band — electronic bands / DOS
 
-  -i, --input   VASP output directory (EIGENVAL/DOSCAR/PROCAR/vasprun.xml) or *.dat
-  -o, --outpt   output file name, default BAND.png
-  -y, --vrang   energy range, default -5.0 5.0 eV
-  -x, --horiz   DOS range, electrons/eV
-  -p, --parts   projections: s p d, or Element-s,p,d
-  -C / -k / -w  line color / style / width
-  -z, --alpha   fill opacity
-  -n, --exchg   swap axes
-  -d            attach DOS side by side
-  -r            projected bands (PROCAR)
-  -h, --help    show help`,
+  -h -H --help     show help
+  -v -V --version  show version
+  -i --input       input directory or .dat files (default: current)
+  -o --outpt       output figure filename
+  -S --figsz       figure size: width height
+  -y --vrang       energy / frequency range
+  -x --horiz       DOS range, electrons/eV
+  -p --parts       projections: s p d, or Element-s,p,d
+  -e --elems       PDOS legend labels
+  -G --legnd       legend labels
+  -a --legndx      shift legend horizontally; 1.0 = 10% of figure width, positive = right
+  -A --legndy      shift legend vertically; 1.0 = 10% of figure height, positive = up
+  -C --color       line color: b/g/r/c/m/y/k or (r,g,b)
+  -k --style       linestyle: solid/dashed/dashdot/dotted
+  -w --width       line width, default 0.8
+  -z --alpha       fill opacity, default 0.2
+  -n --exchg       exchange the axes
+  -D --divid       plot the up and down spin in divided subplot
+  -m --emass       calculate the effective masses, default: 0.15
+  -r --projs       plot the projected band structure
+  -l --label       high-symmetry labels, e.g. X S Y K M
+  --klabels        filename of KLABELS, default: KLABELS
+  -d --dospl       also plot DOS (from DOSCAR or PDOS*.dat/TDOS.dat); no value means auto-...
+  -W --ratio       width ratio for DOS subplot
+  --vasp           (legacy) same as -i DIR; kept for backward compatibility
+  --no-shift       keep raw energies (do not shift by E-fermi)
+  --keep-weights   keep the k points with a non-zero weight (e.g
+  --export-dat     also write vaspkit-style BAND.dat/KLABELS/PDOS files into DIR (default:...
+  --no-mirror      keep the spin-down DOS positive (default: spin-up > 0, spin-down < 0)
+`,
 
-      dos: `mt.dos — density of states (DOS / PDOS)
-Usage: mt.dos [-i PATH ...] [-o OUTPT] [-y star end] [-p PARTS ...] ...
+  dos: `mt.dos — density of states (DOS / PDOS)
 
-  -i, --input   DOSCAR, PDOS*.dat / TDOS*.dat or .dat files
-  -o, --outpt   output file name, default DOS.png
-  -y, --energ   energy range, default -5.0 5.0 eV
-  -x, --horiz   DOS range, electrons/eV
-  -p, --parts   projections: s p d, or Element-s,p,d
-  -C / -k / -w  line color / style / width
-  -z, --alpha   fill opacity
-  -n, --exchg   swap axes, energy on the vertical axis
-  -h, --help    show help`,
+  -h -H --help     show help
+  -v -V --version  show version
+  -i --input       input directory or .dat files (default: current)
+  -o --outpt       output figure filename
+  -S --figsz       figure size: width height
+  -y --energ       energy range, default -5 5 eV
+  -x --horiz       DOS range, electrons/eV
+  -p --parts       projections: s p d, or Element-s,p,d
+  -e --elems       PDOS legend labels
+  -G --legnd       legend labels
+  -a --legndx      shift legend horizontally; 1.0 = 10% of figure width, positive = right
+  -A --legndy      shift legend vertically; 1.0 = 10% of figure height, positive = up
+  -C --color       line color: b/g/r/c/m/y/k or (r,g,b)
+  -k --style       linestyle: solid/dashed/dashdot/dotted
+  -w --width       line width, default 0.8
+  -z --alpha       fill opacity, default 0.2
+  -n --exchg       exchange the axes
+  --no-mirror      keep the spin-down DOS positive (default: spin-up > 0, spin-down < 0)
+  --no-shift       keep raw energies (do not shift by E-fermi)
+`,
 
-      phband: `mt.phband — phonon bands
-Usage: mt.phband [-i BAND.dat] [-o OUTPT] [-y star end] [-B star end] ...
+  phband: `mt.phband — phonon bands
 
-  -i, --input   phonopy BAND.dat; several files can be compared
-  -o, --outpt   output file name, default BAND.png
-  -y, --vrang   frequency range (THz)
-  -x, --horiz   phonon DOS range
-  -B, --brkax   broken axis: start end
-  --hratios     height ratio of the broken axis, default 0.2
-  -C / -k / -w  line color / style / width
-  -z, --alpha   fill opacity
-  -n, --exchg   swap axes of the phonon DOS
-  -d            attach phonon DOS side by side
-  -h, --help    show help`,
+  -h -H --help     show help
+  -v -V --version  show version
+  -i --input       input directory or .dat files (default: current)
+  -o --outpt       output figure filename
+  -S --figsz       figure size: width height
+  -y --vrang       energy / frequency range
+  -x --horiz       DOS range, electrons/eV
+  -e --elems       PDOS legend labels
+  -G --legnd       legend labels
+  -a --legndx      shift legend horizontally; 1.0 = 10% of figure width, positive = right
+  -A --legndy      shift legend vertically; 1.0 = 10% of figure height, positive = up
+  -C --color       line color: b/g/r/c/m/y/k or (r,g,b)
+  -k --style       linestyle: solid/dashed/dashdot/dotted
+  -w --width       line width, default 0.8
+  -z --alpha       fill opacity, default 0.2
+  -n --exchg       exchange the axes
+  -B --brkax       broken axis: start, end
+  --hratios        height ratio for broken axis, default: 0.2
+  -j --bconf       filename of band setting file, default: band.conf
+  -l --label       high-symmetry labels, e.g. X S Y K M
+  -d --dospl       also plot Phonon DOS from .dat file; for a standalone DOS figure use mt...
+  -W --ratio       width ratio for DOS subplot, default 0.5
+`,
 
-      phdos: `mt.phdos — phonon density of states
-Usage: mt.phdos [-i PATH ...] [-o OUTPT] [-y star end] ...
+  phdos: `mt.phdos — phonon density of states
 
-  -i, --input   projected_dos.dat / total_dos.dat or .dat files
-  -o, --outpt   output file name, default PHDOS.png
-  -y, --freqs   frequency range (THz)
-  -x, --horiz   phonon DOS range
-  -C / -k / -w  line color / style / width
-  -z, --alpha   fill opacity
-  -n, --exchg   swap axes, frequency on the vertical axis
-  -h, --help    show help`,
+  -h -H --help     show help
+  -v -V --version  show version
+  -i --input       input directory or .dat files (default: current)
+  -o --outpt       output figure filename
+  -S --figsz       figure size: width height
+  -y --freqs       frequency range (THz)
+  -x --horiz       DOS range, electrons/eV
+  -e --elems       PDOS legend labels
+  -G --legnd       legend labels
+  -a --legndx      shift legend horizontally; 1.0 = 10% of figure width, positive = right
+  -A --legndy      shift legend vertically; 1.0 = 10% of figure height, positive = up
+  -C --color       line color: b/g/r/c/m/y/k or (r,g,b)
+  -k --style       linestyle: solid/dashed/dashdot/dotted
+  -w --width       line width, default 0.8
+  -z --alpha       fill opacity, default 0.2
+  -n --exchg       exchange the axes
+`,
 
-      ph: `mt.ph — phonopy workflow helper
-Usage: mt.ph [-s N ...] [-c FILE] [-n DIR ...] [subcommand] [args...]
+  ph: `mt.ph — phonopy workflow helper
+  subcommands  supercell fs fc band dos tprop symmetry born qha gruneisen w / W (local reference)
 
-subcommands  supercell  fs  fc  band  dos  tprop  symmetry  born  qha
-             gruneisen  w / W (local reference)
-  -s, --supercell  supercell dimensions, default 1 1 1
-  -c, --cell       structure file (auto-detects POSCAR-unitcell/CONTCAR/POSCAR)
-  -n, --names      displacement directories / suffixes / ranges
-  -x, --files      force file name in each directory, default vasprun.xml
-  -b / -d          write band.conf / mesh.conf
-  -Y / -R          skip confirmation / print commands only
-  -h, --help       show help`,
+  -h -H --help     show help
+  -v -V --version  show version
+  -Y --yesal       do not ask before running commands
+  -R --dryrn       only print the commands, do not run them
+  -s --dimns       supercell dimension, 1-3 integers, default "1 1 1"
+  -c --cells       unit cell file (auto-detected)
+  -x --xname       forces file; alone -> --fc route (file or dir), with -n -> name inside...
+  --rd --random    random displacements; number of supercells or 'auto' (bare --rd = auto)...
+  --amplitude      displacement amplitude (Å); phonopy default if omitted
+  --tolerance      symmetry-equivalence tolerance (Å)
+  --random-seed    random seed for reproducible random displacements
+  --pa             primitive matrix in the form of 'a b c; d e f; g h i' or 'auto' (phonop...
+  --symfc          use symfc to compute force constants (required for --rd random displace...
+  --alm            use ALM to compute force constants (alternative to --symfc)
+  --fc-calc-opt    options passed to the force constants calculator, e.g
+  -n --fdirs       displaced dirs / suffixes / ranges (implied fs), e.g
+  -b --bconf       write band.conf (name from -B)
+  -d --mconf       write mesh.conf (name from -D)
+  -B --bfile       band.conf name (written by -b, read by mt.ph band)
+  -D --mfile       mesh.conf name (written by -d, read by mt.ph dos)
+  -p --bpath       BAND path in fractional coordinates (with -b)
+  -l --xlabl       BAND_LABELS of the path (with -b)
+  -N --point       BAND_POINTS per segment, default: 101 (with -b)
+  -m --mgrid       mesh grid for DOS, e.g
+`,
 
-      ph3: `mt.ph3 — phono3py thermal conductivity workflow
-Usage: mt.ph3 [-s 2 2 2] [-S 4 4 4] [-c FILE] [-m 11 11 11] [subcommand]
+  ph3: `mt.ph3 — phono3py thermal conductivity workflow
+  subcommands  supercell cf3 cf2 cfs fs2f2 kappa kaccum kdeplot w / W
 
-subcommands  supercell  cf3  cf2  cfs  fs2f2  kappa  kaccum  kdeplot  w / W
-  -s / -S        fc3 / fc2 supercell dimensions, default 2 2 2
-  -c, --cell     structure file (auto-detected)
-  -n, --names    displacement directories / suffixes / ranges
-  -x, --files    force file name in each directory, default vasprun.xml
-  -m, --mesh     kappa mesh, default 11 11 11
-  -k, --hdf5     kappa-m*.hdf5 (input for kaccum / kdeplot)
-  -Y / -R        skip confirmation / print commands only
-  -h, --help     show help`,
+  -h -H --help     show help
+  -v -V --version  show version
+  -Y --yesal       do not ask before running commands
+  -R --dryrn       only print the commands, do not run them
+  -s --dimns       fc3 supercell dims, 1-3 ints, default "2 2 2"; -s 2 2 2 / 2x2x2 / 2,2,2
+  -S --dimf2       fc2 supercell dims, same syntax as -s (omit = same size as fc3)
+  -c --cells       unit cell file (auto-detect POSCAR- unitcell/CONTCAR/POSCAR)
+  -x --xname       forces file in each displacement dir (default vasprun.xml)
+  -m --mgrid       mesh grid for kappa, 1-3 ints, default "11 11 11"
+  -n --fdirs       displacement dirs / suffixes / ranges, e.g
+  -k --kfile       kappa-m*.hdf5 for kaccum/kdeplot (auto-detected)
+  --rd             random-direction displacements instead of -d (use with --symfc at kappa...
+  --rd-fc2         fc2 random displacements (needs -S/--dimf2)
+  --random-seed    random seed for --rd/--rd-fc2
+  --amplitude      displacement distance in Angstrom (VASP 0.03)
+  --sp --save-paramswrite phono3py_params.yaml instead of FORCES_FC3 (cf3 only)
+  --cfz            subtract residual forces (undisplaced-supercell force file)
+  --cutoff-pair    cutoff distance between displaced-atom pairs (setup option; on v3/v4 it...
+  --cfs --create-force-setsFORCE_SETS from FORCES_FC3 (-S: from FORCES_FC2)
+  --fs2f2 --force-sets-to-forces-fc2FORCES_FC2 from FORCE_SETS
+`,
 
-      seek: `mt.seek — Materials Project structure search and curation
-Usage: mt.seek [-c Ti-C | -f MoS2 | -I mp-id ...] [-k N] [-F cif,poscar] ...
+  seek: `mt.seek — Materials Project structure search and curation
 
-  -c, --chems   chemical system, e.g. Ti-C
-  -f, --frmla   chemical formula, e.g. MoS2
-  -I, --mpids   explicit mp_ids, one or more
-  -k, --topks   keep the top k results, default 3
-  -n, --names   export package name
-  -F, --formt   structure format: cif,poscar,json,xyz
-  -d            show a local dataset summary
-  -w EXPR       rule-based filter (ehull, gap, is_2d, mag, ...)
-  -r            structure-level deduplication
-  -R            preview only, do not export
-  --home DIR    working root directory
-  -h, --help    show help`,
+  -h -H --help     show help
+  -v -V --version  show version
+  --offline        离线自检（内置结构）
+  -c --chems       化学体系，如 Ti-C
+  -f --frmla       化学式，如 MoS2
+  -I --mpids       直接指定 mp_id，可多个
+  -n --names       export package name
+  -k --topks       检索取前 k 个（默认 3）
+  -Q --refsh       忽略本地检索缓存，强制重新查询 Materials Project
+  -F --formt       structure formats: cif,poscar,json,xyz
+  --job-template   同时生成 INCAR/KPOINTS/slurm 模板，供服务器使用
+  -t --tasks       自然语言任务（LLM 模式）
+  -p --provs       LLM 引擎（默认 openai；本地用 ollama/vllm）
+  -L --lists       列出历史导出包
+  --home           working root, default current directory
+`,
 
-      skl: `mt.skl — analyse a structure manifest with scikit-learn
-Usage: mt.skl [--home DIR]
+  skl: `mt.skl — analyse a structure manifest with scikit-learn
 
-  --home DIR   working root (exports/ and ml/), default current directory
-  -h, --help   show help
+  -h -H --help     show help
+  -v -V --version  show version
+  --home           working root, default current directory
+`,
 
-Scans exports/*/manifest.csv and fits random-forest regressions for ehull and band_gap.`,
+  sqs: `mt.sqs — custom cell to special quasirandom structure (SQS)
 
-      sqs: `mt.sqs — custom cell → special quasirandom structure (SQS)
-Usage: mt.sqs -c FILE -a SPEC [-x 3,3,3] [--iterations N]
+  -h -H --help     show help
+  -v -V --version  show version
+  -c --cells       自定义晶胞文件（POSCAR / CONTCAR / CIF / JSON 等 pymatgen 能读的格式）
+  --host           要参与随机化的元素位点。晶胞只有一种元素时可省略（自动选）；多种元素时必须显式给，否则容易把 O/S 这类亚晶格错误地随机化。
+  -a --alloy       该位点上的合金成分： Cu:0.5,Au:0.5 按分数写 Cu,Au 直接等分（自动按目标原子个数折算） Cu:27,Au:27 直接按个数...
+  -x --supcl       扩胞倍数，如 3,3,3 或 3 或 2x2x1（默认 3,3,3）
+  --iterations     SQS 搜索迭代次数（默认 100000；下限 1000，上限 50000000）
+  --number         导出 K 个互不相同的候选，按 objective 从小到大（默认 1）
+  -s --seeds       random seed
+  -n --names       export package name
+  -F --formt       structure formats: cif,poscar,json,xyz
+  --job-template   同时生成 INCAR / KPOINTS / slurm 模板
+  -R --dryrn       只搜索、不写盘、不打包，把候选 objective 打印出来预览
+  --home           working root, default current directory
+`,
 
-  -c, --cells      cell file (POSCAR / CONTCAR / CIF / JSON)
-  --host SYM       sites to randomize (required with multiple elements)
-  -a, --alloy      alloy composition, e.g. Cu:0.5,Au:0.5 or Cu,Au
-  -x, --supcl      supercell dimensions, default 3,3,3
-  --iterations     search iterations, default 100000
-  --number         number of candidates to export, default 1
-  -s, --seeds      random seed
-  -n / -F / -R     package name / format / search only without writing
-  --home DIR       working root directory
-  -h, --help       show help`,
+  mc: `mt.mc — magnetic Monte Carlo simulation
 
-      mc: `mt.mc — magnetic Monte Carlo simulation
-Usage: mt.mc [-x 32] [-y 32] [-z 32] [-t T ...] [-p J ...] ...
+  -h -H --help     show help
+  -v -V --version  show version
+  -x -X --sizex    x 方向晶格尺寸/超胞扩展倍数（默认 32）
+  -y -Y --sizey    y 方向晶格尺寸/超胞扩展倍数（默认 32）
+  -z -Z --sizez    z 方向晶格尺寸/超胞扩展倍数（默认 32；二维结构忽略）
+  -e --equil       
+  -w --works       
+  -a --aniso       
+  -p --param       交换耦合参数，按通道顺序；矢量自旋 + -J/-K 时表示 z 方向
+  -J --parax       矢量自旋 x 方向交换参数；不设时取 -p
+  -K --paray       矢量自旋 y 方向交换参数；不设时取 -p
+  -t --temps       
+  -i --inits       
+  -c --confg       
+  -s --struc       结构文件（POSCAR/CIF 等，ASE 可读即可）；给了就自动构建邻居表，-c 被忽略
+  -A --magat       磁性元素，空格或逗号分隔（如 Fe Co 或 Fe,Co）；默认自动识别 d/f 区元素
+  -D --cutof       结构模式：各通道距离上限 (A)，如 3.0 3.6 4.2
+  --mom            nominal moments, default 2
+  --ini            initial state fm/afm/random or +/-1 list
+  -N --thrds       numba 线程数；0=自动（物理核数的约 3/5，不超过物理核总数）
+  -C --chain       并行推进的独立链数（多核加速），0 表示与线程数相同；回火模式下链数=温度点数
+  -S --seeds       random seed
+  -W --swaps       每多少个 sweep 交换一次相邻温度的构型（0=关闭，链数=温度点数）
+  -R --dryrn       不自动绘图（只跑模拟并写日志）；默认结束后绘图
+  -l --label       high-symmetry labels, e.g. X S Y K M
+  -o --plots       日志文件绘图
+  -T --vtemp       XY 涡旋状态箭头图的温度 (K)；不指定则取最高温度
+  -I --imgfm       输出图片格式（任意 matplotlib 支持的格式，如 png/pdf/svg/jpg/tif）；无法保存时会提示并回退为 png
+`,
 
-  -x / -y / -z     lattice size or supercell multiples, default 32
-  -e / -w          equilibration and sampling steps, default 1000 / 1000
-  -p, --param      exchange coupling parameters, in channel order
-  -J / -K          vector-spin exchange parameters along x / y
-  -t, --temps      temperature sequence, e.g. -t 0 40 2
-  -i, --inits      initial state: fm, afm1…afm5, random
-  -c, --confg      lattice: square, triangular, bilayer-*, simple-cubic
-  -s, --struc      structure file (POSCAR/CIF, ASE-readable)
-  -A / -D / --mom  structure mode: magnetic elements / cutoff / moments
-  -N / -C          threads / parallel chains
-  -S / -W          random seed / replica-exchange interval
-  -R               simulation only, no automatic plot
-  -h, --help       show help`,
+  sh: `mt.sh — run built-in, custom or bundled scripts
+  mt.sh                  list available scripts and their source
+  mt.sh NAME [args...]   run NAME.sh (e.g. mt.sh xy), forwarding arguments
+  Lookup order: ./NAME.sh -> $MTSH_SCRIPTS -> bundled scripts/; NAME is a script name, not a path
+`,
 
-      sh: `mt.sh — run built-in, custom or bundled scripts
-Usage: mt.sh [NAME] [args...]
+  server: `mt.server — local file service, structure viewer and terminal
 
-  mt.sh          list available scripts and their source
-  mt.sh xy       run xy.sh, forwarding arguments unchanged
-
-Lookup order: ./NAME.sh → $MTSH_SCRIPTS → bundled scripts/`,
-
-      server: `mt.server — local file service, structure viewer and terminal
-Usage: mt.server [-d PATH] [-p PORT] [-f] [-L HOST] [-S] [-N] [-o [PATH]]
-
-  -d, --directory   working directory (page start), default current directory
-  -p, --port        listen port, default 9068
-  -f, --serve       run in the current terminal (background by default)
-  -L, --host        listen address, default 127.0.0.1 (public needs yes)
-  -S, --stop        stop the background service; -S --all stops every port
-  -N, --no-token    disable token authentication (needs yes)
-  -o, --log [PATH]  write a log file (none by default, overwritten)
-  --status          list every running port of the current user
-  -v, -V, --version show the version
-  -h, --help        show help`
-    };
+  -v -V --version  show version
+  -h -H --help     show help
+  -p --port        监听端口，默认 9068
+  -f --serve       前台运行（在当前终端直接提供服务，不转入后台）
+  -o --log         输出日志文件（默认不输出）；-o 不带路径时写到当前目录 mcta-server-<端口>.log
+  -d --directory   运行目录（页面起始目录），默认为当前目录
+  -N --no-token    不启用 token 鉴权（需输入 yes 确认），直接用地址和端口访问
+  -L --host        监听地址，默认 127.0.0.1；对外监听（如 0.0.0.0）需输入 yes 确认
+  -Y --yes         跳过危险启动选项的输入确认（配合 -L 非回环地址或 -N 使用）
+  --status         列出本用户所有端口上运行的 mt.server
+  -S --stop        停止后台服务；与 --all 连用时停止本用户所有端口的服务
+  --all            配合 -S 使用：停止本用户所有端口上运行的 mt.server
+  --no-hup         终端关闭后服务继续运行（忽略 SIGHUP，不跟随启动终端退出）；只能用 -S 或 -S --all 终止
+`,
+};
 
     const IS_EN = document.documentElement.lang === 'en';
     const MT_HELP = IS_EN ? MT_HELP_EN : MT_HELP_ZH;
     const HELP = IS_EN ? HELP_EN : HELP_ZH;
+
+    /* 静态参数清单：直接复用虚拟终端的 HELP，保证两处永不漂移 */
+    (function () {
+      const host = document.getElementById("paramRef");
+      if (!host) return;
+      const order = ["band", "dos", "phband", "phdos", "ph", "ph3", "seek", "skl", "sqs", "mc", "sh", "server"];
+      const frag = document.createDocumentFragment();
+      order.forEach(function (key) {
+        const text = HELP[key];
+        if (!text) return;
+        const box = document.createElement("details");
+        box.className = "param-item";
+        const sum = document.createElement("summary");
+        sum.textContent = "mt." + key;
+        const pre = document.createElement("pre");
+        pre.className = "help";
+        pre.textContent = text;
+        box.appendChild(sum);
+        box.appendChild(pre);
+        frag.appendChild(box);
+      });
+      host.appendChild(frag);
+    })();
 
     /* ---- 虚拟工作目录与常见 bash 命令（静态模拟） ---- */
     const HOME = '/home/demo';
@@ -2272,7 +2592,7 @@ Usage: mt.server [-d PATH] [-p PORT] [-f] [-L HOST] [-S] [-N] [-o [PATH]]
           b.title = label;
           b.setAttribute('aria-label', label);
         });
-        // 最大化按钮与文件浮窗同款：⤢/⤡ 双图标切换
+        // 最大化按钮与文件浮窗同款：⬀/⬃ 双图标切换
         const maxBtn = tools.querySelector('button[data-term-act="max"]');
         if (maxBtn) {
           const mi = maxBtn.querySelector('.max-icon');
@@ -2736,6 +3056,89 @@ Usage: mt.server [-d PATH] [-p PORT] [-f] [-L HOST] [-S] [-N] [-o [PATH]]
       code.addEventListener('click', function () {
         copyText(text, function () { showToast((IS_EN ? 'Copied ' : '已复制 ') + text); });
       });
+    });
+  })();
+
+  /* ---------- MIT License：打字机浮层 ---------- */
+  (function () {
+    const LICENSE_LINES = [
+      "MIT License",
+      "",
+      "Copyright (c) 2026 Kan",
+      "",
+      "Permission is hereby granted, free of charge, to any person obtaining a copy",
+      "of this software and associated documentation files (the \"Software\"), to deal",
+      "in the Software without restriction, including without limitation the rights",
+      "to use, copy, modify, merge, publish, distribute, sublicense, and/or sell",
+      "copies of the Software, and to permit persons to whom the Software is",
+      "furnished to do so, subject to the following conditions:",
+      "",
+      "The above copyright notice and this permission notice shall be included in all",
+      "copies or substantial portions of the Software.",
+      "",
+      "THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR",
+      "IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,",
+      "FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE",
+      "AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER",
+      "LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,",
+      "OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE",
+      "SOFTWARE."
+    ];
+    const LICENSE_TEXT = LICENSE_LINES.join("\n");
+    const overlay = document.getElementById('licenseOverlay');
+    const out = document.getElementById('licenseText');
+    if (!overlay || !out) return;
+    let timer = null;
+    function hide() {
+      if (timer) { clearInterval(timer); timer = null; }
+      overlay.classList.add('hidden');
+    }
+    function show(ev) {
+      if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+      if (timer) { clearInterval(timer); timer = null; }
+      // 先把全部行放进 DOM 并隐藏，首行从一开始就在全文显示时的最终位置。
+      out.textContent = '';
+      const frag = document.createDocumentFragment();
+      LICENSE_LINES.forEach(function (line) {
+        const span = document.createElement('span');
+        span.className = 'license-line';
+        span.textContent = line;
+        frag.appendChild(span);
+      });
+      out.appendChild(frag);
+      const rows = out.querySelectorAll('.license-line');
+      out.scrollTop = 0;
+      overlay.classList.remove('hidden');
+      let i = 0;
+      function reveal() {
+        if (i >= rows.length) { clearInterval(timer); timer = null; return; }
+        const row = rows[i];
+        row.classList.add('shown');
+        // 仅当屏幕放不下时，才向上移动到刚显示的行。
+        const bottom = row.offsetTop + row.offsetHeight;
+        if (bottom > out.scrollTop + out.clientHeight) out.scrollTop = bottom - out.clientHeight;
+        else if (row.offsetTop < out.scrollTop) out.scrollTop = row.offsetTop;
+        i += 1;
+      }
+      reveal();
+      if (i < rows.length) timer = setInterval(reveal, 80);
+    }
+    ['sideMit', 'footMit'].forEach(function (id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener('click', show);
+      el.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') show(e);
+      });
+    });
+    overlay.addEventListener('click', hide);
+    document.addEventListener('click', function (ev) {
+      if (overlay.classList.contains('hidden')) return;
+      if (ev.target.closest && ev.target.closest('.license-link')) return;
+      hide();
+    });
+    document.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Escape' && !overlay.classList.contains('hidden')) hide();
     });
   })();
 </script>

@@ -146,6 +146,88 @@ TOOLS = (
     },
 )
 
+# 总览分组：每组两行解释 + 三条示例；TOOLS 仍是完整的命令表（_tool / which 使用）。
+GROUPS = (
+    {
+        "title": "能带 / 态密度绘图",
+        "names": "mt.band  mt.dos  mt.phband  mt.phdos",
+        "lines": (
+            "电子与声子的能带和态密度绘图：band / phband 画能带，dos / phdos 画态密度，可并排、投影或交换坐标轴。",
+            "数据来源：vasprun.xml / EIGENVAL / DOSCAR / PROCAR、vaspkit BAND*/PDOS*.dat，以及 phonopy BAND.dat / total_dos.dat。",
+        ),
+        "examples": (
+            ("mt.band -i calc -d", "电子能带 + 态密度并排"),
+            ("mt.dos -i calc -p d", "d 轨道投影态密度（Energy 横轴）"),
+            ("mt.phband -i BAND.dat -d", "声子能带 + 声子态密度"),
+        ),
+    },
+    {
+        "title": "声子流程",
+        "names": "mt.ph  mt.ph3",
+        "lines": (
+            "phonopy / phono3py 流程引导：写计算配置、收集力、求力常数，再衔接声子能带/态密度或热导率。",
+            "数据来源：POSCAR / CONTCAR + VASP 力计算输出 vasprun.xml；ph3 另需 POSCAR-unitcell 与位移、力文件。",
+        ),
+        "examples": (
+            ("mt.ph -b -d", "生成 band.conf 与 mesh.conf"),
+            ("mt.ph fs vasprun.xml", "由一份力计算求力常数"),
+            ("mt.ph3 kappa -m 11 11 11", "RTA 热导率 -> kappa-m*.hdf5"),
+        ),
+    },
+    {
+        "title": "结构检索与数据工具",
+        "names": "mt.seek  mt.skl  mt.sqs",
+        "lines": (
+            "从 Materials Project 检索并策展结构，用 scikit-learn 分析结构清单，或生成准随机固溶体 SQS。",
+            "数据来源：MP API（需 MP_API_KEY）、exports/*/manifest.csv（离线）、本地晶胞文件；三者共用 MT_SEEK_HOME 工作目录。",
+        ),
+        "examples": (
+            ("mt.seek -c Ti-C -k 3", "按化学体系检索近稳定相"),
+            ("mt.skl", "随机森林预测 ehull 与带隙"),
+            ('mt.sqs -c cell.vasp -a Cu,Au', "CuAu 等比合金 SQS"),
+        ),
+    },
+    {
+        "title": "蒙特卡洛模拟",
+        "names": "mt.mc",
+        "lines": (
+            "自旋（Ising / Heisenberg）蒙特卡洛：内置晶格模型，或从晶体结构的原子邻居图自动构建。",
+            "数据来源：内置方形/三角/双层模型或任意晶体结构（POSCAR/CIF）；大体系需 numba（pip install mcta[mc]）。",
+        ),
+        "examples": (
+            ("mt.mc -h", "全部参数"),
+            ("mt.mc -x 100 -y 100 -t 35", "方格子 100×100，0–34 K 共 35 个温度"),
+            ("mt.mc -s POSCAR -A Fe", "从 POSCAR 构建 Fe 原子邻居图"),
+        ),
+    },
+    {
+        "title": "内置脚本",
+        "names": "mt.sh",
+        "lines": (
+            "列出并执行随包分发的 bash 脚本，参数原样转给脚本；本地 ./NAME.sh 优先于内置同名脚本。",
+            "脚本来源：mcta/sh/scripts/ 目录；可用 MTSH_SCRIPTS 指定自定义脚本目录。",
+        ),
+        "examples": (
+            ("mt.sh", "列出可用脚本及来源"),
+            ("mt.sh xy", "执行内置 xy.sh（参数原样转发）"),
+            ("mt.sh po", "执行内置 po.sh（赝势相关）"),
+        ),
+    },
+    {
+        "title": "本地文件与终端服务",
+        "names": "mt.server",
+        "lines": (
+            "浏览器里浏览目录、编辑文本、查看图片/PDF/3D 结构，并提供与 SSH 一致的交互式终端。",
+            "以当前用户身份运行；每次启动生成随机 token 写入 URL，默认只监听 127.0.0.1，勿将链接分享给他人。",
+        ),
+        "examples": (
+            ("mt.server", "后台启动，地址与 token 在启动后打印"),
+            ("mt.server -p 8080", "指定端口"),
+            ("mt.server -S", "停止后台服务"),
+        ),
+    },
+)
+
 _VASP_MARKS = ("EIGENVAL", "DOSCAR", "PROCAR")
 _PHONON_MARKS = ("vasprun.xml", "phonopy_params.yaml", "SPOSCAR",
                  "band.yaml", "band.conf", "mesh.conf", "FORCE_SETS",
@@ -208,11 +290,12 @@ def _detect(directory="."):
 
 
 def overview(directory="."):
-    for tool in TOOLS:
-        print("  " + _line(tool["name"], _NAME_COL) + tool["what"])
-        print(_IND + "数据来源：" + tool["source"])
-        for command, note in tool["examples"]:
-            print(_IND + _line(command, _ARG_COL) + note)
+    for group in GROUPS:
+        print("  " + group["title"] + "    " + group["names"])
+        for line in group["lines"]:
+            print("    " + line)
+        for command, note in group["examples"]:
+            print("      " + _line(command, _ARG_COL) + note)
         print()
 
     print("用法      mt <命令> [参数...]        参数原样转给该命令，如 mt ph -h")

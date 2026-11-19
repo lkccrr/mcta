@@ -581,7 +581,7 @@ def _bundle_readme(name: str, rows: list, source: str = "Materials Project") -> 
     lines = [
         f"# {name}",
         "",
-        f"生成时间：{ts}　由 MicroCrystalSeeker 打包，结构来源 {source}。",
+        f"生成时间：{ts}　由 mt.seek 打包，结构来源 {source}。",
         "",
         f"结构数量：**{len(rows)}**",
     ]

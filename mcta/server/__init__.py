@@ -19,12 +19,14 @@
 
 import argparse
 import base64
+import codecs
 import getpass
 import json
 import mimetypes
 import os
 import platform
 import queue
+import re
 import secrets
 import signal
 import socket
@@ -62,7 +64,22 @@ GUARD_ENV = "MCTA_SERVER_GUARD_PID"
 SKIP_CONFIRM_ENV = "MCTA_SERVER_NO_CONFIRM"
 NOHUP_ENV = "MCTA_SERVER_NOHUP"
 
-IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".ico", ".svg"}
+IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".jfif", ".gif", ".apng", ".webp", ".bmp", ".ico", ".svg", ".avif"}
+PDF_EXTS = {".pdf"}
+AUDIO_EXTS = {".mp3", ".m4a", ".aac", ".ogg", ".oga", ".opus", ".wav", ".flac"}
+VIDEO_EXTS = {".mp4", ".m4v", ".webm", ".ogv"}
+MEDIA_EXTS = AUDIO_EXTS | VIDEO_EXTS
+MEDIA_MIMES = {
+    ".apng": "image/apng", ".avif": "image/avif", ".jfif": "image/jpeg",
+    ".m4a": "audio/mp4", ".aac": "audio/aac", ".ogg": "audio/ogg",
+    ".oga": "audio/ogg", ".opus": "audio/ogg", ".wav": "audio/wav",
+    ".flac": "audio/flac", ".m4v": "video/mp4", ".ogv": "video/ogg",
+    ".webm": "video/webm", ".pdf": "application/pdf",
+}
+MARKDOWN_EXTS = {".md", ".markdown"}
+TABLE_EXTS = {".csv", ".tsv"}
+JSON_EXTS = {".json"}
+MAX_TABLE_ROWS = 2000
 STRUCT_EXTS = {
     # 晶体学 / VASP / 通用坐标 / 分子
     ".cif", ".vasp", ".poscar", ".contcar", ".xyz", ".extxyz", ".xsf",
@@ -98,6 +115,16 @@ ASSET_DIR = Path(__file__).resolve().parent
 
 _TERMINALS = {}
 _TERMINALS_LOCK = threading.Lock()
+
+
+def _clean_sid(value, fallback="default"):
+    """把请求里的窗口会话 ID 收敛成安全的字典键；非法值回退到 default。"""
+    if isinstance(value, (list, tuple)):
+        value = value[0] if value else ""
+    value = str(value or "").strip()
+    if 1 <= len(value) <= 64 and all(ch.isalnum() or ch in "-_" for ch in value):
+        return value
+    return fallback
 
 
 # ------------------------------------------------------------------ 通用 ---
@@ -155,6 +182,10 @@ def _url(host, port, token):
 
 
 def _is_structure(path):
+    # *.json（含 CHGCAR_mcta.json / LOCPOT_mcta.json 这类视图存档与日志）
+    # 一律按文本处理；不能因 CHGCAR_/LOCPOT_ 前缀误判成 VASP 密度结构。
+    if path.suffix.lower() in JSON_EXTS:
+        return False
     if path.suffix.lower() in STRUCT_EXTS:
         return True
     if path.suffix.lower() in LAMMPS_DATA_EXTS:
@@ -170,6 +201,8 @@ def _is_structure(path):
 
 
 def _is_vasp_density(path):
+    if path.suffix.lower() in JSON_EXTS:
+        return False
     name = path.name.upper()
     if name in DENSITY_NAMES:
         return True
@@ -359,20 +392,84 @@ def _read_frames(path, limit):
 def _kind(path):
     if path.is_dir():
         return "dir"
-    if path.suffix.lower() in IMAGE_EXTS:
+    suffix = path.suffix.lower()
+    if suffix in IMAGE_EXTS:
         return "image"
+    if suffix in PDF_EXTS:
+        return "pdf"
+    if suffix in MEDIA_EXTS:
+        return "media"
     if _is_structure(path):
         return "structure"
     return "file"
 
 
-def _decode(data):
-    for encoding in ("utf-8-sig", "gb18030"):
-        try:
-            return data.decode(encoding)
-        except UnicodeDecodeError:
-            continue
+def _printable_ratio(text):
+    """文本中可打印字符（含常见空白）的占比，用于区分宽字符文本与二进制。"""
+    if not text:
+        return 0.0
+    good = 0
+    for ch in text:
+        if ch in "\r\n\t\f\v" or ch.isprintable():
+            good += 1
+    return good / len(text)
+
+
+def _decode_utf16(data, le=True):
+    """尝试把数据按 UTF-16（UCS-2）解码并验证是否为文本，成功返回文本否则 None。"""
+    enc = "utf-16-le" if le else "utf-16-be"
+    try:
+        text = data.decode(enc)
+    except (UnicodeDecodeError, ValueError):
+        return None
+    # 去掉可能存在的 BOM 残留，再按可打印比例判断
+    text = text.lstrip("\ufeff")
+    if _printable_ratio(text) >= 0.9:
+        return text
     return None
+
+
+def _decode(data):
+    """把字节解码为文本；优先 BOM，再 UTF-8 / ANSI，最后尝试无 BOM 的 UCS-2。
+
+    返回解码后的文本，无法识别为文本时返回 None。
+    """
+    if not data:
+        return ""
+    # 1) BOM 优先：先长后短，避免 UTF-32 的 FF FE 00 00 被 UTF-16LE 的 FF FE 抢先
+    for bom, enc in (
+        (codecs.BOM_UTF32_LE, "utf-32"),
+        (codecs.BOM_UTF32_BE, "utf-32"),
+        (codecs.BOM_UTF8, "utf-8-sig"),
+        (codecs.BOM_UTF16_LE, "utf-16"),
+        (codecs.BOM_UTF16_BE, "utf-16"),
+    ):
+        if data.startswith(bom):
+            try:
+                return data.decode(enc).lstrip("\ufeff")
+            except (UnicodeDecodeError, ValueError):
+                return None
+    # 2) 无 BOM：先按 UTF-8 解码；NUL 虽是合法 UTF-8 字符，但正常文本几乎不含它，
+    #    因此 UTF-8 成功但含 NUL 时也继续尝试 UCS-2，避免把 UTF-16 误判成带 NUL 的文本。
+    utf8_text = None
+    try:
+        utf8_text = data.decode("utf-8")
+        if "\x00" not in utf8_text:
+            return utf8_text
+    except UnicodeDecodeError:
+        pass
+    # 3) 含 NUL 字节时，优先按无 BOM 的 UCS-2 解码（小端优先，符合多数 Windows 文本）
+    if b"\x00" in data[:4096] and len(data) % 2 == 0:
+        decoded = _decode_utf16(data, le=True) or _decode_utf16(data, le=False)
+        if decoded is not None:
+            return decoded
+    # 4) 再按 ANSI(GB18030) 解码
+    if utf8_text is not None:
+        return utf8_text
+    try:
+        return data.decode("gb18030")
+    except UnicodeDecodeError:
+        return None
 
 
 def _mtime(path):
@@ -534,169 +631,33 @@ _CONF = {
     "start": os.environ.get(ROOT_ENV) or str(Path.cwd().resolve()),
 }
 
-# 3D 查看器外观默认值；可通过环境变量或 ~/.config/mcta/config 覆盖，
-# 优先级：环境变量 > 配置文件 > 默认值；修改后重启 mt.server 生效。
-# 相关键：MCTA_DEPTH_CUE（0–1，0 关闭深度雾、1 最强）
-#         MCTA_CELL_RADIUS / MCTA_CELL_DASHED / MCTA_CELL_DASH_LENGTH /
-#         MCTA_CELL_GAP_LENGTH / MCTA_CELL_COLOR
-#         MCTA_AXIS_RADIUS / MCTA_AXIS_HEAD_RATIO / MCTA_AXIS_MIDPOS /
-#         MCTA_AXIS_OPACITY / MCTA_AXIS_COLOR_A|_B|_C
-VIEWER_DEFAULTS = {
-    "depthCue": 0.0,
-    "cell": {"radius": 0.015, "dashed": True, "dashLength": 0.25, "gapLength": 0.25,
-             "color": "#0000FF"},
-    "axis": {
-        # 与 3Dmol addUnitCell 的内置默认一致：半径 0.1、不透明、
-        # 红/绿/蓝三色，midpos 为负表示箭头位于末端前 |midpos| Å 处
-        "radius": 0.1,
-        "headRatio": 1.618,
-        "midpos": -1.0,
-        "opacity": 1.0,
-        "colors": ["#FF0000", "#00FF00", "#0000FF"],
-    },
-}
-CONFIG_PATH = Path.home() / ".config" / "mcta" / "config"
-_CONFIG_CACHE = {}
-SOURCE_NAMES = {"env": "环境变量", "file": "配置文件", "default": "默认值"}
-
-
-def _config_file_values():
-    """读取 ~/.config/mcta/config（每行 KEY = VALUE，# 开头的整行为注释），结果按进程缓存。"""
-    if "values" in _CONFIG_CACHE:
-        return _CONFIG_CACHE["values"]
-    values = {}
-    try:
-        text = CONFIG_PATH.read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError):
-        text = ""
-    for line in text.splitlines():
-        line = line.strip()
-        if not line or line[0] in "#;" or "=" not in line:
-            continue
-        key, raw = line.split("=", 1)
-        key = key.strip().upper()
-        if key.startswith("MCTA_"):
-            values[key] = raw.strip().strip("'\"")
-    _CONFIG_CACHE["values"] = values
-    return values
-
-
-def _raw_setting(name):
-    """按 环境变量 > 配置文件 > 默认值 取原始字符串，并返回来源。"""
-    value = (os.environ.get(name) or "").strip()
-    if value:
-        return value, "env"
-    value = (_config_file_values().get(name) or "").strip()
-    if value:
-        return value, "file"
-    return "", "default"
-
-
-def _setting_float(name, default, low, high):
-    raw, source = _raw_setting(name)
-    try:
-        value = float(raw)
-    except ValueError:
-        return default, "default"
-    return min(max(value, low), high), source
-
-
-def _setting_bool(name, default):
-    raw, source = _raw_setting(name)
-    value = raw.lower()
-    if value in ("1", "true", "yes", "on"):
-        return True, source
-    if value in ("0", "false", "no", "off"):
-        return False, source
-    return default, "default"
-
-
-def _setting_color(name, default):
-    raw, source = _raw_setting(name)
-    if len(raw) in (4, 7) and raw.startswith("#") and all(
-            ch in "0123456789abcdefABCDEF" for ch in raw[1:]):
-        return raw, source
-    return default, "default"
-
-
-def _viewer_config():
-    """返回 (外观配置, [(键名, 生效值, 来源, 取值范围)])，供 /api/info 与 -h 共用。"""
-    cell = VIEWER_DEFAULTS["cell"]
-    axis = VIEWER_DEFAULTS["axis"]
-    rows = []
-
-    def number(name, default, low, high):
-        value, source = _setting_float(name, default, low, high)
-        rows.append((name, "%g" % value, source, "[%g, %g]" % (low, high)))
-        return value
-
-    def flag(name, default):
-        value, source = _setting_bool(name, default)
-        rows.append((name, "true" if value else "false", source, "0 / 1"))
-        return value
-
-    def color(name, default):
-        value, source = _setting_color(name, default)
-        rows.append((name, value, source, "#rgb / #rrggbb"))
-        return value
-
-    style = {
-        "depthCue": number("MCTA_DEPTH_CUE", VIEWER_DEFAULTS["depthCue"], 0.0, 1.0),
-        "cell": {
-            "radius": number("MCTA_CELL_RADIUS", cell["radius"], 0.005, 2.0),
-            "dashed": flag("MCTA_CELL_DASHED", cell["dashed"]),
-            "dashLength": number("MCTA_CELL_DASH_LENGTH", cell["dashLength"], 0.01, 5.0),
-            "gapLength": number("MCTA_CELL_GAP_LENGTH", cell["gapLength"], 0.01, 5.0),
-            "color": color("MCTA_CELL_COLOR", cell["color"]),
-        },
-        "axis": {
-            "radius": number("MCTA_AXIS_RADIUS", axis["radius"], 0.002, 1.0),
-            "headRatio": number("MCTA_AXIS_HEAD_RATIO", axis["headRatio"], 1.0, 5.0),
-            "midpos": number("MCTA_AXIS_MIDPOS", axis["midpos"], -5.0, 0.99),
-            "opacity": number("MCTA_AXIS_OPACITY", axis["opacity"], 0.0, 1.0),
-            "colors": [
-                color("MCTA_AXIS_COLOR_A", axis["colors"][0]),
-                color("MCTA_AXIS_COLOR_B", axis["colors"][1]),
-                color("MCTA_AXIS_COLOR_C", axis["colors"][2]),
-            ],
-        },
-    }
-    return style, rows
-
-
-def _viewer_style():
-    """3D 查看器的晶胞/轴箭头外观，数值越界或格式错误时回退默认值。"""
-    return _viewer_config()[0]
-
-
-def _viewer_help():
-    """-h 中展示的查看器外观取值表。"""
-    _, rows = _viewer_config()
-    lines = [
-        "3D 查看器外观（优先级：环境变量 > 配置文件 > 默认值，修改后重启 mt.server 生效）",
-        "  配置文件 %s（%s）" % (CONFIG_PATH, "存在" if CONFIG_PATH.is_file() else "不存在"),
-    ]
-    for name, value, source, allowed in rows:
-        lines.append("  %-22s %-10s %-12s %s" % (name, value, SOURCE_NAMES[source], allowed))
-    lines.append("  取值范围为闭区间，超出会自动收敛；颜色支持 #rgb 或 #rrggbb，非法值回退默认值")
-    lines.append("  MCTA_DEPTH_CUE 控制深度雾强度：0 完全关闭，1 最强，中间值线性过渡")
-    lines.append("  配置文件每行一个 KEY = VALUE，# 开头的整行为注释，例如：MCTA_CELL_RADIUS = 0.12")
-    return "\n".join(lines)
-
-
-def _terminal_for(rows, cols):
+def _terminal_for(rows, cols, sid="default"):
     if not _HAS_PTY:
         return None
+    sid = _clean_sid(sid)
     with _TERMINALS_LOCK:
-        term = _TERMINALS.get("default")
+        term = _TERMINALS.get(sid)
         if term and term.alive:
             term.resize(rows, cols)
             return term
         if term:
             term.close()
+        # 防止长期运行后残留大量已退出的会话。
+        if len(_TERMINALS) >= 64:
+            for key in [k for k, t in list(_TERMINALS.items()) if not t.alive]:
+                try:
+                    _TERMINALS.pop(key).close()
+                except Exception:
+                    pass
+        if len(_TERMINALS) >= 64 and _TERMINALS:
+            key = next(iter(_TERMINALS))
+            try:
+                _TERMINALS.pop(key).close()
+            except Exception:
+                pass
         start = Path(_CONF["start"]).resolve()
         term = _Terminal(str(start), rows, cols)
-        _TERMINALS["default"] = term
+        _TERMINALS[sid] = term
         return term
 
 
@@ -709,14 +670,17 @@ def _make_handler():
 
         # ---------------------------------------------------------- 基础 ---
         def _send(self, body, content_type, status=200, headers=None):
+            extra = list(headers or [])
+            names = {name.lower() for name, _ in extra}
             self.send_response(status)
             self.send_header("Content-Type", content_type)
             self.send_header("Content-Length", str(len(body)))
             self.send_header("Cache-Control", "no-store")
             self.send_header("X-Content-Type-Options", "nosniff")
             self.send_header("Referrer-Policy", "no-referrer")
-            self.send_header("X-Frame-Options", "DENY")
-            for name, value in (headers or []):
+            if "x-frame-options" not in names:
+                self.send_header("X-Frame-Options", "DENY")
+            for name, value in extra:
                 self.send_header(name, value)
             self.end_headers()
             if self.command != "HEAD":
@@ -728,6 +692,62 @@ def _make_handler():
         def _json(self, data, status=200, headers=None):
             body = json.dumps(data, ensure_ascii=False).encode("utf-8")
             self._send(body, "application/json; charset=utf-8", status, headers)
+
+        def _send_file(self, target, content_type, inline=False, extra=None):
+            """发送本地文件，支持 Range（音视频拖动进度、PDF 分页加载）。"""
+            size = target.stat().st_size
+            headers = list(extra or [])
+            disp = "inline" if inline else "attachment"
+            headers.append(("Content-Disposition",
+                            "%s; filename*=UTF-8''%s" % (disp, quote(target.name))))
+            start, end, status = 0, max(0, size - 1), 200
+            rng = (self.headers.get("Range") or "").strip()
+            match = re.fullmatch(r"bytes=(\d*)-(\d*)", rng) if rng else None
+            if match:
+                first, last = match.groups()
+                if first or last:
+                    if not first:
+                        start = max(0, size - int(last))
+                        end = size - 1
+                    else:
+                        start = int(first)
+                        end = int(last) if last else size - 1
+                    if start >= size or end < start:
+                        self._send(b"", "application/octet-stream", 416, [
+                            ("Content-Range", "bytes */%d" % size),
+                        ])
+                        return
+                    end = min(end, size - 1)
+                    status = 206
+                    headers.append(("Content-Range", "bytes %d-%d/%d" % (start, end, size)))
+            names = {name.lower() for name, _ in headers}
+            length = 0 if size == 0 else end - start + 1
+            self.send_response(status)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(length))
+            self.send_header("Accept-Ranges", "bytes")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("Referrer-Policy", "no-referrer")
+            if "x-frame-options" not in names:
+                self.send_header("X-Frame-Options", "DENY")
+            for name, value in headers:
+                self.send_header(name, value)
+            self.end_headers()
+            if self.command == "HEAD":
+                return
+            try:
+                with target.open("rb") as fh:
+                    fh.seek(start)
+                    remaining = length
+                    while remaining > 0:
+                        chunk = fh.read(min(64 * 1024, remaining))
+                        if not chunk:
+                            break
+                        self.wfile.write(chunk)
+                        remaining -= len(chunk)
+            except OSError:
+                pass
 
         def _error(self, message, status=400):
             self._json({"error": message}, status)
@@ -768,7 +788,7 @@ def _make_handler():
             root = self._root_dir()
             bases = [root]
             term_cwd = None
-            term = _TERMINALS.get("default")
+            term = _TERMINALS.get(getattr(self, "_sid", "default"))
             if term:
                 cwd = term.cwd()
                 if cwd:
@@ -825,6 +845,7 @@ def _make_handler():
             parsed = urlparse(self.path)
             route = parsed.path.rstrip("/") or "/"
             query = parse_qs(parsed.query)
+            self._sid = _clean_sid(query.get("sid"))
             if not self._authorized(query):
                 self._forbidden()
                 return
@@ -864,7 +885,7 @@ def _make_handler():
                 self._term_stream(query)
                 return
             if route == "/api/term/cwd":
-                self._term_cwd()
+                self._term_cwd(query)
                 return
             self._error("未知路径", 404)
 
@@ -887,7 +908,6 @@ def _make_handler():
                 "python": platform.python_version(),
                 "platform": platform.platform(),
                 "terminal": _HAS_PTY,
-                "viewer": _viewer_style(),
             })
 
         def _list(self, rel):
@@ -916,6 +936,8 @@ def _make_handler():
                             "path": self._rel(child),
                             "dir": is_dir,
                             "kind": kind,
+                            "mediaType": ("audio" if child.suffix.lower() in AUDIO_EXTS else "video")
+                                if kind == "media" else None,
                             "size": None if is_dir else stat.st_size,
                             "mtime": time.strftime("%Y-%m-%d %H:%M", time.localtime(stat.st_mtime)),
                             "ts": stat.st_mtime,
@@ -946,7 +968,16 @@ def _make_handler():
 
             size = target.stat().st_size
             info = {"path": self._rel(target), "name": target.name, "size": size, "mtime": _mtime(target)}
-            if _kind(target) == "image":
+            kind = _kind(target)
+            if kind in ("pdf", "media"):
+                info.update({
+                    "kind": kind,
+                    "mediaType": "audio" if target.suffix.lower() in AUDIO_EXTS else "video",
+                    "url": "/raw?path=" + quote(self._rel(target)),
+                })
+                self._json(info)
+                return
+            if kind == "image":
                 info.update({"kind": "image", "url": "/raw?path=" + quote(self._rel(target))})
                 self._json(info)
                 return
@@ -956,10 +987,6 @@ def _make_handler():
                 return
 
             data = target.read_bytes()
-            if b"\x00" in data[:4096]:
-                info.update({"kind": "binary", "url": "/raw?path=" + quote(self._rel(target))})
-                self._json(info)
-                return
             text = _decode(data)
             if text is None:
                 info.update({"kind": "binary", "url": "/raw?path=" + quote(self._rel(target))})
@@ -1073,15 +1100,18 @@ def _make_handler():
                 self._error("文件不存在", 404)
                 return
 
-            content_type = mimetypes.guess_type(str(target))[0] or "application/octet-stream"
-            disposition = "inline" if content_type.startswith("image/") else "attachment"
-            name = quote(target.name)
-            self._send(target.read_bytes(), content_type, 200, [
-                ("Content-Disposition", "%s; filename*=UTF-8''%s" % (disposition, name)),
-            ])
+            suffix = target.suffix.lower()
+            content_type = MEDIA_MIMES.get(suffix) or mimetypes.guess_type(str(target))[0] or "application/octet-stream"
+            inline = (content_type.startswith(("image/", "audio/", "video/"))
+                      or content_type == "application/pdf")
+            extra = None
+            if content_type == "application/pdf":
+                # 内置 PDF 查看器需要被同源页面嵌入；其它响应仍保持 DENY。
+                extra = [("X-Frame-Options", "SAMEORIGIN")]
+            self._send_file(target, content_type, inline=inline, extra=extra)
 
-        def _term_cwd(self):
-            term = _TERMINALS.get("default")
+        def _term_cwd(self, query):
+            term = _TERMINALS.get(_clean_sid(query.get("sid")))
             self._json({
                 "cwd": term.cwd() if term else None,
                 "base": str(self._root_dir()),
@@ -1093,7 +1123,7 @@ def _make_handler():
                 cols = max(20, min(500, int((query.get("cols") or ["100"])[0])))
             except ValueError:
                 rows, cols = 30, 100
-            term = _terminal_for(rows, cols)
+            term = _terminal_for(rows, cols, _clean_sid(query.get("sid")))
             if term is None:
                 self._error("当前平台不支持交互式终端", 501)
                 return
@@ -1137,7 +1167,9 @@ def _make_handler():
         def do_POST(self):
             parsed = urlparse(self.path)
             route = parsed.path.rstrip("/") or "/"
-            if not self._authorized(parse_qs(parsed.query)):
+            query = parse_qs(parsed.query)
+            self._sid = _clean_sid(query.get("sid"))
+            if not self._authorized(query):
                 self._forbidden()
                 return
 
@@ -1302,7 +1334,7 @@ def _make_handler():
                 return
 
             with _TERMINALS_LOCK:
-                term = _TERMINALS.get("default")
+                term = _TERMINALS.get(_clean_sid(payload.get("sid")))
             if not term or not term.alive:
                 self._error("终端未启动", 409)
                 return
@@ -1322,7 +1354,7 @@ def _make_handler():
                 self._error("无效尺寸", 400)
                 return
             with _TERMINALS_LOCK:
-                term = _TERMINALS.get("default")
+                term = _TERMINALS.get(_clean_sid(payload.get("sid")))
             if term:
                 term.resize(rows, cols)
             self._json({"ok": True})
@@ -1340,6 +1372,7 @@ PAGE = """<!doctype html>
 <title>McTa 文件服务</title>
 <link rel="stylesheet" href="/assets/xterm.css">
 <style>
+  @font-face{font-family:"McTa Wordmark";src:url("data:font/woff2;base64,d09GMgABAAAAAALYABAAAAAABRAAAAJ9AAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGhYbIBwqBmA/U1RBVCoATBEICoM8gnwBNgIkAxQLDAAEIAU+ByAMBxusA1FUDHYhPhbjmBSHxp44ETzwdtn783eCFWYjewNWOZBt0J2gokIFsbtKQ/T9iXsvP5lnAYllEkhBOl4taIHqBaoUAArPv7fnzTzxEO+wz8/eLE2jUSfkWbbj/UADLY0inUjqzVSJxLWvRegBCDADgCJiiIDRRgTi0dDWS4AB6DoAIMDoJAnF4md9T1wyjyCjYt1QG5VbqCg/ZRBopT7iRY5oItLCz9UOddezj3Ymy4W6Buos2gABKLu0gCikiBZwIyAM5TN9xhIBUAQQs3ILAAUkuJECbgzugFEr5UkvE5ms65Au6pf0M/oBff8DRcjZvbABqABG8Idx4AoAYAAAoUxyBN5ZHXZjgmnkhFA3njSNBs80zt5pGj2OYcMxo94lzqA2ZFaipC2ZqahZxp/ZnKb2E0cePVLCjx+bRh8+xLjhwYP+0c5C5yopHgrghhUDfWNeJ+Wbd8VtuqLd86FefSd161XP4d3uB9u0l9ph7wst4k/RoqisRX8itBfew9pPj/ZS8+SpnsCw6F+KX57S0Qp5OuMpGaJPeU54RumdJyiXzYubatb4fE1r1zR1dKxuouJL9Gnobt5Qri8rvTe/YIM6uTmdWRm9BfkAIUe/dlfb7pzZHfu6vY8u2bmmqWGNr6t+7coGX+nEtDmvF4Y91V7K5tz2jNSe4oK0Hl9WfmxV11/nbUvOy8YaABCADHnb59vjHbaV/Q6Q8gvAo6SzwQCf46I+YtP/ykXSAiQWBSD4Ul/IPzbrtAghIqHWQuLlI6Yom7HVQSqUISoQoLohAYRYky6kjEBKkyYEzDpSKg01zGcOUxhgKjOZzgyWIAHQd5EDxteE/j1nGAcAAAA=") format("woff2");font-style:normal;font-weight:700 900;font-display:swap;} /* Comfortaa subset, SIL OFL 1.1 */
   :root{--bg:#f1f4f9;--ink:#17202e;--muted:#5f6b7d;--accent:#3355d1;--sd:#c5ccd8;--sl:#ffffff;--radius:18px;}
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;font-size:15.5px;-webkit-font-smoothing:antialiased;}
@@ -1349,15 +1382,15 @@ PAGE = """<!doctype html>
   .side{position:sticky;top:28px;align-self:start;max-height:calc(100vh - 56px);overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;}
   .side::-webkit-scrollbar{display:none;}
   .brand{padding:0 8px;}
-  .brand .logo{font-family:"Baloo 2","Fredoka","Arial Rounded MT Bold","Chalkboard SE","Comic Sans MS",cursive;font-weight:900;letter-spacing:1px;font-size:25px;}
-  .wordmark span{display:inline-block;cursor:pointer;user-select:none;transition:transform .25s ease;text-shadow:1.8px 0 0 #fff,-1.8px 0 0 #fff,0 1.8px 0 #fff,0 -1.8px 0 #fff,1.3px 1.3px 0 #fff,-1.3px 1.3px 0 #fff,1.3px -1.3px 0 #fff,-1.3px -1.3px 0 #fff,0 4px 7px rgba(96,108,130,.2);}
+  .brand .logo{font-family:"McTa Wordmark","Baloo 2","Fredoka","Arial Rounded MT Bold","Chalkboard SE","Comic Sans MS",cursive;font-weight:900;letter-spacing:1px;font-size:25px;}
+  .wordmark span{display:inline-block;cursor:pointer;user-select:none;transition:transform .25s ease;-webkit-text-stroke:1.5px #fff;paint-order:stroke fill;text-shadow:1.8px 0 0 #fff,-1.8px 0 0 #fff,0 1.8px 0 #fff,0 -1.8px 0 #fff,1.3px 1.3px 0 #fff,-1.3px 1.3px 0 #fff,1.3px -1.3px 0 #fff,-1.3px -1.3px 0 #fff,0 4px 7px rgba(96,108,130,.2);}
   .wordmark span:nth-child(1){transform:rotate(-6deg) translateY(-1px);}
   .wordmark span:nth-child(2){transform:rotate(3deg) translateY(1px);}
   .wordmark span:nth-child(3){transform:rotate(-3deg);}
   .wordmark span:nth-child(4){transform:rotate(5deg) translateY(1px);}
   .w-m,.w-t{color:#e0553d}.w-c{color:#3b57d1}.w-a{color:#17a06b}
-  .foot-anim{display:flex;gap:3px;margin:0 0 4px;font-family:"Baloo 2","Fredoka","Arial Rounded MT Bold","Chalkboard SE","Comic Sans MS",cursive;font-size:15.75px;font-weight:900;letter-spacing:1px;user-select:none;}
-  .foot-anim span{display:inline-block;animation:hop 1.6s ease-in-out infinite,glow 1.6s ease-in-out infinite;}
+  .foot-anim{display:flex;gap:3px;margin:0 0 4px;font-family:"McTa Wordmark","Baloo 2","Fredoka","Arial Rounded MT Bold","Chalkboard SE","Comic Sans MS",cursive;font-size:15.75px;font-weight:900;letter-spacing:1px;user-select:none;}
+  .foot-anim span{display:inline-block;-webkit-text-stroke:1.3px #fff;paint-order:stroke fill;animation:hop 1.6s ease-in-out infinite,glow 1.6s ease-in-out infinite;}
   .foot-anim .w-m,.foot-anim .w-t{--glow:224,85,61}
   .foot-anim .w-c{--glow:59,87,209}
   .foot-anim .w-a{--glow:23,160,107}
@@ -1373,7 +1406,7 @@ PAGE = """<!doctype html>
   .cn:active,.service:active{box-shadow:inset 3px 3px 6px var(--sd),inset -3px -3px 6px var(--sl);}
   button.lang-switch, .side button.lang-switch {
     display: inline-flex; align-items: center; gap: 6px;
-    margin: 14px 8px 0; padding: 6px 13px;
+    margin: 14px 8px 0; padding: 6px 13px; height: 26px; box-sizing: border-box;
     border: 0; border-radius: 999px;
     background: var(--bg); color: var(--accent);
     font: inherit; font-size: 11.5px; font-weight: 700; line-height: 1;
@@ -1385,6 +1418,25 @@ PAGE = """<!doctype html>
     box-shadow: inset 3px 3px 6px var(--sd), inset -3px -3px 6px var(--sl);
   }
   .lang-globe { font-size: 13px; line-height: 1; }
+  .lang-caret { font-size: 8px; line-height: 1; opacity: .75; }
+  .lang-wrap { position: relative; display: inline-flex; }
+  .lang-menu {
+    position: absolute; top: calc(100% + 6px); left: 0; width: 100%; min-width: 0;
+    flex-direction: column; gap: 0; padding: 0; display: none; z-index: 210;
+    background: var(--bg); border-radius: 999px; overflow: hidden;
+    box-shadow: 4px 4px 12px var(--sd), -4px -4px 12px var(--sl);
+  }
+  .lang-menu.open { display: flex; }
+  .lang-wrap .lang-menu-item {
+    display: flex; align-items: center; justify-content: center;
+    border: 0; background: transparent; color: var(--accent);
+    box-shadow: none; width: 100%; height: 26px; box-sizing: border-box; margin: 0;
+    font: inherit; font-size: 11.5px; font-weight: 700; line-height: 1;
+    padding: 6px 13px; border-radius: 999px; cursor: pointer;
+    text-align: center; white-space: nowrap;
+  }
+  .lang-wrap .lang-menu-item:hover { background: rgba(120,134,156,.14); box-shadow: none; }
+  .lang-wrap .lang-menu-item:active { box-shadow: none; }
   .meta{font-size:13px;color:var(--muted);margin-bottom:6px}
   .root{display:block;word-break:break-all;border-radius:10px;padding:8px 10px;font-size:13px;color:#2f3a4a;box-shadow:inset 3px 3px 6px var(--sd),inset -3px -3px 6px var(--sl);margin-bottom:14px;}
   /* 侧栏信息行：标签后直接空格跟内容（运行目录 + 路径、运行账户 + 用户名） */
@@ -1434,6 +1486,8 @@ PAGE = """<!doctype html>
   [data-base-id="molView"]:not(.maxed) .mol-canvas{flex:1;height:auto;min-height:0;}
   [data-base-id="quickView"].preview:not(.maxed) #quickBody{flex:1;min-height:0;}
   [data-base-id="quickView"].preview:not(.maxed) #quickBody textarea{height:auto;flex:1;min-height:0;resize:none;}
+  [data-base-id="quickView"].preview:not(.maxed) .md-view,[data-base-id="quickView"].preview:not(.maxed) .json-view{height:auto;flex:1;min-height:0;overflow:auto;}
+  [data-base-id="quickView"].preview:not(.maxed) .pdf-frame{height:auto;flex:1;min-height:0;}
   [data-base-id="quickView"].preview:not(.maxed) .zoom-box{height:auto;}
   #quickBody{min-height:80px;overflow:auto;display:flex;flex-direction:column;}
   .zoom-box{position:relative;display:flex;align-items:center;justify-content:center;flex:1;min-height:0;height:min(62vh,480px);overflow:hidden;border-radius:12px;background:#fff;cursor:grab;touch-action:none;box-shadow:inset 4px 4px 9px var(--sd),inset -4px -4px 9px var(--sl);}
@@ -1441,6 +1495,31 @@ PAGE = """<!doctype html>
   .zoom-box img{max-width:100%;max-height:100%;border-radius:12px;pointer-events:none;user-select:none;transform-origin:center center;will-change:transform;}
   #quickBody textarea{width:100%;height:min(58vh,430px);resize:vertical;border:0;border-radius:12px;background:#f3f6fb;color:#2f3a4a;font-family:ui-monospace,Consolas,"Courier New",monospace;font-size:12.5px;line-height:1.6;padding:12px 14px;box-shadow:inset 5px 5px 10px var(--sd),inset -5px -5px 10px var(--sl);outline:none;}
   #quickBody input.rename-input{width:100%;border:0;border-radius:12px;background:#f3f6fb;color:#2f3a4a;font:inherit;font-size:14.5px;padding:12px 14px;box-shadow:inset 5px 5px 10px var(--sd),inset -5px -5px 10px var(--sl);outline:none;}
+  .pdf-frame{width:100%;height:min(58vh,430px);border:0;border-radius:12px;background:#fff;box-shadow:inset 5px 5px 10px var(--sd),inset -5px -5px 10px var(--sl);}
+  .md-view{padding:14px 18px;line-height:1.75;background:#f3f6fb;border-radius:12px;box-shadow:inset 5px 5px 10px var(--sd),inset -5px -5px 10px var(--sl);min-height:100px;}
+  .md-view h1,.md-view h2,.md-view h3,.md-view h4,.md-view h5,.md-view h6{margin:.7em 0 .35em;line-height:1.35;}
+  .md-view p{margin:.45em 0;}
+  .md-view ul,.md-view ol{margin:.4em 0 .4em 1.4em;padding:0;}
+  .md-view blockquote{margin:.5em 0;padding:4px 12px;border-left:3px solid var(--accent);color:var(--muted);}
+  .md-view code{font-family:ui-monospace,Consolas,"Courier New",monospace;background:rgba(120,132,154,.16);padding:1px 4px;border-radius:5px;font-size:12.5px;}
+  .md-view pre{overflow:auto;padding:10px 12px;border-radius:10px;background:#10151d;color:#d7deea;}
+  .md-view pre code{background:transparent;padding:0;color:inherit;}
+  .md-view a{color:var(--accent);}
+  .md-view table{border-collapse:collapse;font-size:13px;margin:.5em 0;}
+  .md-view th,.md-view td{border:1px solid rgba(120,132,154,.3);padding:4px 8px;text-align:left;}
+  .data-table{border-collapse:collapse;width:100%;font-size:13px;background:#fff;border-radius:10px;overflow:hidden;}
+  .data-table th,.data-table td{border:1px solid rgba(120,132,154,.22);padding:6px 9px;text-align:left;white-space:nowrap;}
+  .data-table th{background:#eaeff7;color:#2f3a4a;font-weight:600;position:sticky;top:0;}
+  .data-note{font-size:12.5px;color:var(--muted);padding:6px 2px;}
+  .json-view{font-family:ui-monospace,Consolas,"Courier New",monospace;font-size:13px;line-height:1.65;padding:12px 14px;border-radius:12px;background:#f3f6fb;box-shadow:inset 5px 5px 10px var(--sd),inset -5px -5px 10px var(--sl);white-space:pre-wrap;overflow-wrap:anywhere;}
+  .json-view details{margin-left:16px;}
+  .json-view summary{cursor:pointer;color:var(--accent);}
+  .json-key{color:#3355d1}.json-str{color:#17805a}.json-num{color:#b1522a}.json-bool{color:#8a45b5}.json-null{color:#7a8798}
+  .quick-media{display:block;max-width:100%;max-height:min(68vh,720px);margin:auto;border-radius:12px;background:#10151d;}
+  .audio-view{display:flex;align-items:center;justify-content:center;gap:14px;flex:1;min-height:180px;color:#2f3a4a;font-size:15px;}
+  .audio-view .audio-glyph{width:64px;height:64px;border-radius:18px;display:flex;align-items:center;justify-content:center;background:#f3f6fb;box-shadow:5px 5px 11px var(--sd),-5px -5px 11px var(--sl);}
+  .audio-view .audio-glyph svg{width:32px;height:32px;fill:var(--accent);}
+  .quick-tools{justify-content:center;flex:none;margin-top:8px;}
   .file-menu{position:fixed;left:0;top:0;z-index:14;min-width:158px;padding:8px;border-radius:14px;background:var(--bg);box-shadow:8px 8px 18px var(--sd),-8px -8px 18px var(--sl);display:flex;flex-direction:column;gap:6px;}
   .file-menu button{display:block;width:100%;text-align:left;padding:11px 14px;border:0;border-radius:9px;background:transparent;font-size:13.5px;color:#2c3648;cursor:pointer;}
   .file-menu button:hover{box-shadow:inset 2px 2px 5px var(--sd),inset -2px -2px 5px var(--sl);}
@@ -1464,7 +1543,8 @@ PAGE = """<!doctype html>
   .term-tools button{width:24px;height:24px;padding:0;border-radius:7px;font-size:13px;line-height:1;display:inline-flex;align-items:center;justify-content:center;box-shadow:2px 2px 5px var(--sd),-2px -2px 5px var(--sl);}
   .term-tools button:hover{color:var(--accent);}
   .term-tools button:active{box-shadow:inset 2px 2px 4px var(--sd),inset -2px -2px 4px var(--sl);}
-  .term-tools .win-glyph{display:block;line-height:1;font-family:ui-monospace,Menlo,Consolas,monospace;}
+  .term-tools .win-glyph{display:inline-flex;align-items:center;justify-content:center;line-height:1;}
+  .win-glyph svg{display:block;width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
   .term-wrap.floating{position:fixed;z-index:8;display:flex;flex-direction:column;margin:0;padding:10px 12px 12px;border-radius:18px;background:var(--bg);box-shadow:0 18px 44px rgba(28,42,64,.26),0 2px 8px rgba(28,42,64,.14),8px 8px 18px var(--sd),-8px -8px 18px var(--sl);max-width:calc(100vw - 12px);max-height:calc(100vh - 12px);}
   .term-wrap.floating .term-head{cursor:move;touch-action:none;margin-bottom:8px;}
   .term-wrap.floating .term-box{flex:1 1 auto;height:auto;min-height:140px;}
@@ -1483,6 +1563,14 @@ PAGE = """<!doctype html>
   .side-foot{display:flex;gap:8px;align-items:center;margin:16px 2px 0;font-size:12.5px;color:var(--muted);}
   .side-foot a{color:var(--accent);text-decoration:none;}
   .side-foot a:hover{text-decoration:underline}
+  .license-link{cursor:pointer;}
+  .license-link:hover{text-decoration:underline;}
+  .license-overlay{position:fixed;inset:0;z-index:9700;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(23,32,46,.03);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);}
+  .license-text{margin:0;position:relative;max-width:min(680px,94vw);max-height:80vh;overflow:auto;scrollbar-width:none;-ms-overflow-style:none;white-space:pre-wrap;overflow-wrap:anywhere;padding:22px 28px;background:transparent;border:0;box-shadow:none;color:#fff;font-family:ui-monospace,Consolas,"Courier New",monospace;font-size:13px;line-height:1.7;text-shadow:0 0 2px rgba(8,14,26,1),0 0 10px rgba(8,14,26,.9),0 0 22px rgba(8,14,26,.6);}
+  .license-text::-webkit-scrollbar{display:none;}
+  .license-line{display:block;min-height:1.7em;visibility:hidden;}
+  .license-line.shown{visibility:visible;animation:lic-line-in .32s ease-out both;}
+  @keyframes lic-line-in{from{opacity:0}to{opacity:1}}
   .foot{margin:18px 2px 4px;color:var(--muted);font-size:12.5px;line-height:1.7;}
   .foot-title{font-size:12.5px;font-weight:700;color:#2c3648;margin:0 0 6px;}
   .foot p{margin:0;}
@@ -1525,10 +1613,16 @@ PAGE = """<!doctype html>
   .mol-mask.maxed .mol-win>.mol-player{flex:none;}
   .mol-mask.maxed #quickBody{flex:1;min-height:0;}
   .mol-mask.maxed #quickBody textarea{height:auto;flex:1;min-height:0;resize:none;}
+  .mol-mask.maxed .md-view,.mol-mask.maxed .json-view{height:auto;flex:1;min-height:0;overflow:auto;}
+  .mol-mask.maxed .pdf-frame{height:auto;flex:1;min-height:0;}
+  .mol-mask.maxed .quick-media{max-height:calc(100vh - 120px);}
   .mol-mask.maxed .zoom-box{height:auto;}
   [data-base-id="quickView"].maxed .mol-win{max-height:none;}
   [data-base-id="quickView"].image-mode .zoom-box{background:#fff;}
   .mol-canvas{position:relative;width:100%;height:min(62vh,460px);border-radius:14px;overflow:hidden;background:#fff;box-shadow:inset 5px 5px 11px var(--sd),inset -5px -5px 11px var(--sl);}
+  /* 左下角坐标轴指示器：固定长度，只跟随结构旋转，不随平移/缩放变化 */
+  .mol-axis-gizmo{position:absolute;left:12px;bottom:12px;width:120px;height:120px;z-index:5;background:transparent;box-shadow:none;cursor:grab;touch-action:none;}
+  .mol-axis-gizmo.dragging{cursor:grabbing;}
   .mol-note{color:var(--muted);font-size:12.5px;line-height:1.7;margin:9px 2px 0;}
   .mol-save{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border-radius:18px;background:rgba(231,237,246,.78);z-index:3;}
   .mol-save-win{width:min(460px,92%);background:var(--bg);border-radius:14px;padding:14px 16px 16px;box-shadow:7px 7px 16px var(--sd),-7px -7px 16px var(--sl);}
@@ -1545,7 +1639,7 @@ PAGE = """<!doctype html>
   .mol-head .win-icon{width:24px;min-width:24px;height:24px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:7px;background:var(--bg);box-shadow:2px 2px 5px var(--sd),-2px -2px 5px var(--sl);color:#2c3648;font-size:13px;line-height:1;}
   .mol-head .win-icon:hover{color:var(--accent);}
   .mol-head .win-icon:active{box-shadow:inset 2px 2px 5px var(--sd),inset -2px -2px 5px var(--sl);}
-  .mol-head .win-glyph{display:block;line-height:1;font-family:ui-monospace,Menlo,Consolas,monospace;}
+  .mol-head .win-glyph{display:inline-flex;align-items:center;justify-content:center;line-height:1;}
   .mol-tools button.tool-icon{width:30px;min-width:30px;padding:0;display:inline-flex;align-items:center;justify-content:center;}
   .mol-tools .tool-icon svg{display:block;width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
   .mol-tools,.mol-player{display:flex;align-items:center;gap:8px;margin:10px 2px 0;flex-wrap:wrap;}
@@ -1572,6 +1666,27 @@ PAGE = """<!doctype html>
   .mol-density-track{width:80px;height:120px;position:relative;}
   .mol-density-track input[type=range]{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-90deg);transform-origin:center center;width:120px;height:20px;margin:0;cursor:pointer;}
   .mol-density-val{font-size:12px;font-weight:600;color:#2f3a4a;font-variant-numeric:tabular-nums;}
+  .mol-pick-panel{position:absolute;z-index:20;width:248px;padding:10px 12px;border-radius:12px;background:var(--bg);box-shadow:6px 6px 14px var(--sd),-6px -6px 14px var(--sl);font-size:13px;display:flex;flex-direction:column;gap:8px;}
+  .mol-pick-panel.hidden{display:none;}
+  .mol-pick-title{font-weight:600;color:#2f3a4a;font-size:13px;}
+  .mol-pick-row{position:relative;display:flex;align-items:center;justify-content:flex-start;gap:8px;color:var(--muted);min-height:26px;}
+  .mol-pick-row > span{margin-right:auto;}
+  .mol-pick-row.hidden{display:none;}
+  .mol-pick-panel input[type=color]{width:40px;height:24px;padding:0;border:0;background:transparent;box-shadow:none;cursor:pointer;}
+  .mol-pick-num-btn{height:24px;width:20px;min-width:20px;padding:0;font-size:10px;line-height:1;border:0;border-radius:7px;background:var(--bg);color:#2f3a4a;box-shadow:2px 2px 5px var(--sd),-2px -2px 5px var(--sl);cursor:pointer;}
+  .mol-pick-num-btn.active{box-shadow:inset 2px 2px 5px var(--sd),inset -2px -2px 5px var(--sl);color:#2563eb;}
+  .mol-pick-panel input[type=number]{width:58px;height:24px;padding:0 5px;border:0;border-radius:8px;background:#f3f6fb;color:#2f3a4a;font:inherit;font-size:12px;font-variant-numeric:tabular-nums;box-shadow:inset 2px 2px 5px var(--sd),inset -2px -2px 5px var(--sl);outline:none;}
+  .mol-pick-pop{position:absolute;right:-14px;bottom:calc(100% + 6px);width:48px;height:124px;padding:6px 0;border-radius:10px;background:var(--bg);box-shadow:5px 5px 12px var(--sd),-5px -5px 12px var(--sl);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .12s;z-index:22;}
+  .mol-pick-pop.show{opacity:1;visibility:visible;pointer-events:auto;}
+  .mol-pick-pop input[type=range]{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-90deg);width:106px;height:16px;margin:0;cursor:pointer;}
+  .mol-pick-ops{display:flex;justify-content:flex-end;gap:6px;}
+  .mol-pick-ops button{height:24px;padding:0 9px;font-size:12px;border-radius:8px;}
+  .mol-pick-tabs{display:flex;gap:4px;padding:2px 0 5px;border-bottom:1px solid rgba(120,140,170,.2);}
+  .mol-pick-tabs button{flex:1;height:23px;padding:0 3px;font-size:11px;border:0;border-radius:7px;background:transparent;color:var(--muted);cursor:pointer;white-space:nowrap;}
+  .mol-pick-tabs button.active{background:#eaf1ff;color:#2563eb;font-weight:600;}
+  .mol-pick-group{display:flex;flex-direction:column;gap:8px;}
+  .mol-pick-group.hidden{display:none;}
+  .mol-pick-panel input[type=checkbox]{width:18px;height:18px;accent-color:#2563eb;cursor:pointer;}
   .mol-dd{position:relative;display:inline-block;}
   .mol-dd-btn{height:30px;padding:0 10px;font-size:13px;border-radius:12px;background:var(--bg);color:inherit;border:0;box-shadow:3px 3px 7px var(--sd),-3px -3px 7px var(--sl);cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:4px;}
   .mol-dd.open .mol-dd-btn{box-shadow:inset 2px 2px 5px var(--sd),inset -2px -2px 5px var(--sl);}
@@ -1625,7 +1740,7 @@ PAGE = """<!doctype html>
   <aside class="side card">
     <div class="brand">
       <div class="logo wordmark" role="img" aria-label="McTa"><span class="w-m">M</span><span class="w-c">c</span><span class="w-t">T</span><span class="w-a">a</span></div>
-      <button type="button" class="lang-switch" id="langToggle" title="切换语言 / Switch language" aria-label="切换语言 / Switch language"><span class="lang-globe" aria-hidden="true">◎</span><span class="lang-name">中文</span></button>
+      <span class="lang-wrap" id="langWrap"><button type="button" class="lang-switch" id="langToggle" title="切换语言 / Switch language" aria-label="切换语言 / Switch language" aria-haspopup="true" aria-expanded="false"><span class="lang-globe" aria-hidden="true">◎</span><span class="lang-name">中文</span><span class="lang-caret" aria-hidden="true">▼</span></button><span class="lang-menu" id="langMenu" role="menu"><button type="button" class="lang-menu-item" id="langMenuItem" role="menuitem">English</button></span></span>
     </div>
     <a class="cn" href="https://lkccrr.github.io/mcta/" target="_blank" rel="noopener noreferrer">格塔 · Meta Crystal Toolkit &amp; Analysis</a>
     <a class="service" href="https://lkccrr.github.io/mcta/#server" target="_blank" rel="noopener noreferrer">mt.server</a>
@@ -1638,6 +1753,12 @@ PAGE = """<!doctype html>
       <button class="path-go" id="pathGo" type="button" title="进入" aria-label="进入">进入</button>
     </div>
 
+    <div class="side-foot">
+      <a href="https://github.com/lkccrr/mcta" target="_blank" rel="noopener noreferrer">GitHub</a><span>·</span>
+      <a href="https://pypi.org/project/mcta/" target="_blank" rel="noopener noreferrer">PyPI</a><span>·</span>
+      <a class="license-link" id="sideMit" href="#" role="button" tabindex="0" title="查看许可">MIT</a>
+    </div>
+
     <div class="term-wrap">
       <div class="term-head">
         <span class="term-title">
@@ -1645,10 +1766,10 @@ PAGE = """<!doctype html>
           <span class="muted" id="termState" aria-live="polite">连接中…</span>
         </span>
         <span class="term-tools" role="group" aria-label="终端窗口">
-          <button type="button" data-term-act="min" title="最小化" aria-label="最小化"><span class="win-glyph" aria-hidden="true">—</span></button>
-          <button type="button" data-term-act="restore" title="还原" aria-label="还原"><span class="win-glyph" aria-hidden="true">↺</span></button>
-          <button type="button" data-term-act="max" title="放大到整个页面" aria-label="放大到整个页面"><span class="max-icon win-glyph" aria-hidden="true">⤢</span><span class="restore-icon win-glyph hidden" aria-hidden="true">⤡</span></button>
-          <button type="button" data-term-act="dock" title="还原到侧栏" aria-label="还原到侧栏"><span class="win-glyph" aria-hidden="true">⇤</span></button>
+          <button type="button" data-term-act="min" title="最小化" aria-label="最小化"><span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></span></button>
+          <button type="button" data-term-act="restore" title="还原" aria-label="还原"><span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 11a9 9 0 1 1 2.6 6.4"/><path d="M3 5v6h6"/></svg></span></button>
+          <button type="button" data-term-act="max" title="放大到整个页面" aria-label="放大到整个页面"><span class="max-icon win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 17 17 7"/><path d="M9 7h8v8"/></svg></span><span class="restore-icon win-glyph hidden" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M17 7 7 17"/><path d="M15 17H7V9"/></svg></span></button>
+          <button type="button" data-term-act="dock" title="还原到侧栏" aria-label="还原到侧栏"><span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/><path d="m14 9-3 3 3 3"/></svg></span></button>
         </span>
       </div>
       <div class="term-box" id="termBox">
@@ -1660,11 +1781,6 @@ PAGE = """<!doctype html>
       <span class="resize-handle rh-bl"></span><span class="resize-handle rh-b"></span><span class="resize-handle rh-br"></span>
     </div>
 
-    <div class="side-foot">
-      <a href="https://github.com/lkccrr/mcta" target="_blank" rel="noopener noreferrer">GitHub</a><span>·</span>
-      <a href="https://pypi.org/project/mcta/" target="_blank" rel="noopener noreferrer">PyPI</a><span>·</span>
-      <span>MIT</span>
-    </div>
   </aside>
 
   <main>
@@ -1679,7 +1795,7 @@ PAGE = """<!doctype html>
     <footer class="foot">
       <div class="foot-anim" aria-hidden="true"><span class="w-m">M</span><span class="w-c">c</span><span class="w-t">T</span><span class="w-a">a</span></div>
       <p class="foot-title">许可</p>
-      <p>MIT License · 源码与问题反馈：
+      <p><a class="license-link" id="footMit" href="#" role="button" tabindex="0" title="查看许可">MIT License</a><span> · 源码与问题反馈：</span>
         <a href="https://github.com/lkccrr/mcta" target="_blank" rel="noopener noreferrer">GitHub</a> ·
         <a href="https://pypi.org/project/mcta/" target="_blank" rel="noopener noreferrer">PyPI</a>
       </p>
@@ -1690,17 +1806,19 @@ PAGE = """<!doctype html>
   <div class="mol-win">
     <div class="mol-head">
       <h2 id="molName"></h2>
-      <button id="molSave" class="win-icon" type="button" title="保存图片" aria-label="保存图片">
-        <span class="win-glyph" aria-hidden="true">↓</span>
+      <button id="molArchive" class="win-icon" type="button" title="存档" aria-label="存档"><span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/></svg></span></button>
+      <button id="molSaveImage" class="win-icon" type="button" title="保存图片到电脑" aria-label="保存图片到电脑"><span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="15" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 14-5-5-9 9"/><path d="M19 15v5"/><path d="m16 18 3 3 3-3"/></svg></span></button>
+      <button id="molSave" class="win-icon" type="button" title="下载到电脑" aria-label="下载到电脑">
+        <span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/></svg></span>
       </button>
-      <button class="min-btn win-icon" type="button" title="最小化" aria-label="最小化"><span class="win-glyph" aria-hidden="true">—</span></button>
-      <button class="restore-btn win-icon" type="button" title="还原" aria-label="还原"><span class="win-glyph" aria-hidden="true">↺</span></button>
+      <button class="min-btn win-icon" type="button" title="最小化" aria-label="最小化"><span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></span></button>
+      <button class="restore-btn win-icon" type="button" title="还原" aria-label="还原"><span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 11a9 9 0 1 1 2.6 6.4"/><path d="M3 5v6h6"/></svg></span></button>
       <button class="max-btn win-icon" type="button" title="放大到整个页面" aria-label="放大到整个页面">
-        <span class="max-icon win-glyph" aria-hidden="true">⤢</span>
-        <span class="restore-icon win-glyph hidden" aria-hidden="true">⤡</span>
+        <span class="max-icon win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 17 17 7"/><path d="M9 7h8v8"/></svg></span>
+        <span class="restore-icon win-glyph hidden" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M17 7 7 17"/><path d="M15 17H7V9"/></svg></span>
       </button>
       <button id="btnMolClose" class="win-icon close-icon" type="button" title="关闭" aria-label="关闭">
-        <span class="win-glyph" aria-hidden="true">×</span>
+        <span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span>
       </button>
     </div>
     <div class="mol-canvas" id="molCanvas"></div>
@@ -1800,8 +1918,26 @@ PAGE = """<!doctype html>
         </span>
       </span>
       <span class="mol-sep hidden" id="molPlayerSep"></span>
+      <span class="mol-sep"></span>
+      <button id="molPickClear" type="button" title="清除选中" aria-label="清除选中">清除选中</button>
       <button id="molProj">视角：正交</button>
       <button id="molReset">重置</button>
+    </div>
+    <div class="mol-pick-panel hidden" id="molPickPanel" role="dialog" aria-label="原子样式">
+      <p class="mol-pick-title" id="molPickTitle">原子样式</p>
+      <div class="mol-pick-row" id="molPickColorRow">
+        <span>颜色</span><input type="color" id="molPickColor" value="#ff0000">
+      </div>
+      <div class="mol-pick-row" id="molPickSizeRow">
+        <span>大小</span>
+        <input type="number" id="molPickSize" min="0.05" max="0.80" step="0.01" value="0.30" aria-label="大小">
+        <button class="mol-pick-num-btn" id="molPickSizeBtn" type="button" title="调节大小" aria-haspopup="true" aria-label="调节大小">▼</button>
+        <div class="mol-pick-pop" id="molPickSizePop"><input type="range" id="molPickSizeRange" min="0.05" max="0.80" step="0.01" value="0.30" aria-label="大小滑杆"></div>
+      </div>
+      <div class="hidden" id="molPickStyleBox"></div>
+      <div class="mol-pick-ops">
+        <button id="molPickReset" type="button">恢复默认</button>
+      </div>
     </div>
     <div class="mol-save hidden" id="molSaveBox">
       <div class="mol-save-win" role="dialog" aria-modal="true" aria-labelledby="molSaveTitle">
@@ -1838,21 +1974,42 @@ PAGE = """<!doctype html>
   <div class="mol-win">
     <div class="mol-head">
       <h2 id="quickName"></h2>
-      <button id="quickAction" class="win-icon hidden" type="button" title="下载" aria-label="下载">
-        <span class="win-glyph" aria-hidden="true">↓</span>
+      <button id="quickArchive" class="win-icon hidden" type="button" title="存档" aria-label="存档"><span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/></svg></span></button>
+      <button id="quickAction" class="win-icon hidden" type="button" title="下载到电脑" aria-label="下载到电脑">
+        <span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/></svg></span>
         <span class="action-text"></span>
       </button>
-      <button class="min-btn win-icon" type="button" title="最小化" aria-label="最小化"><span class="win-glyph" aria-hidden="true">—</span></button>
-      <button class="restore-btn win-icon" type="button" title="还原" aria-label="还原"><span class="win-glyph" aria-hidden="true">↺</span></button>
+      <button class="min-btn win-icon" type="button" title="最小化" aria-label="最小化"><span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></span></button>
+      <button class="restore-btn win-icon" type="button" title="还原" aria-label="还原"><span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 11a9 9 0 1 1 2.6 6.4"/><path d="M3 5v6h6"/></svg></span></button>
       <button id="btnQuickMax" class="max-btn win-icon" type="button" title="放大到整个页面" aria-label="放大到整个页面">
-        <span class="max-icon win-glyph" aria-hidden="true">⤢</span>
-        <span class="restore-icon win-glyph hidden" aria-hidden="true">⤡</span>
+        <span class="max-icon win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 17 17 7"/><path d="M9 7h8v8"/></svg></span>
+        <span class="restore-icon win-glyph hidden" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M17 7 7 17"/><path d="M15 17H7V9"/></svg></span>
       </button>
       <button id="btnQuickClose" class="win-icon close-icon" type="button" title="关闭" aria-label="关闭">
-        <span class="win-glyph" aria-hidden="true">×</span>
+        <span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span>
       </button>
     </div>
     <div id="quickBody"></div>
+    <div class="mol-tools quick-tools hidden" id="quickPlayer">
+      <span class="mol-player">
+        <button id="mediaPlay" class="tool-icon" type="button" title="播放" aria-label="播放">
+          <svg id="mediaPlayIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5l12 7-12 7z"/></svg>
+        </button>
+        <input type="range" id="mediaRange" min="0" max="0" value="0" step="0.1" aria-label="播放进度">
+        <span class="mol-count" id="mediaCount">0:00 / 0:00</span>
+        <span class="mol-dd" data-direction="up">
+          <button id="mediaSpeedBtn" class="mol-dd-btn" type="button" title="播放速度" aria-haspopup="listbox">1× ▲</button>
+          <ul class="mol-dd-menu" id="mediaSpeedMenu" role="listbox">
+            <li role="option" data-value="0.5">0.5×</li>
+            <li role="option" data-value="1" aria-selected="true">1×</li>
+            <li role="option" data-value="2">2×</li>
+          </ul>
+        </span>
+        <button id="mediaMute" class="tool-icon" type="button" title="静音" aria-label="静音">
+          <svg id="mediaMuteIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4M17 9l4 6M21 9l-4 6"/></svg>
+        </button>
+      </span>
+    </div>
   </div>
 </div>
 <div class="file-menu hidden" id="fileMenu"></div>
@@ -1861,10 +2018,14 @@ PAGE = """<!doctype html>
     <div class="confirm-head" id="confirmTitle">确认</div>
     <div class="confirm-body" id="confirmMessage"></div>
     <div class="confirm-foot">
+      <button class="btn-cancel hidden" id="confirmExtra" type="button">不保存</button>
       <button class="btn-cancel" id="confirmCancel" type="button">取消</button>
       <button class="btn-ok" id="confirmOk" type="button">确定</button>
     </div>
   </div>
+</div>
+<div class="license-overlay hidden" id="licenseOverlay" role="dialog" aria-label="MIT License" aria-modal="false">
+  <pre class="license-text" id="licenseText"></pre>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="/assets/3dmol-min.js"></script>
@@ -1924,7 +2085,9 @@ const I18N = {
   "修改时间": "Modified",
   "此目录为空": "This directory is empty",
   "许可": "License",
+  "查看许可": "View license",
   "MIT License · 源码与问题反馈：": "MIT License · Source and issues:",
+  "· 源码与问题反馈：": " · Source and issues:",
   "旋转": "Rotate",
   "Z轴 ▲": "Z axis ▲",
   "X 轴": "X axis",
@@ -1938,6 +2101,19 @@ const I18N = {
   "重置": "Reset",
   "左键拖动旋转 · 滚轮缩放 · 中键拖动平移": "Left-drag to rotate · scroll to zoom · middle-drag to pan",
   "保存图片": "Save image",
+  "保存图片到电脑": "Save image to computer",
+  "存档": "Save state",
+  "已存档": "State saved",
+  "已存档 ": "Saved state ",
+  "下载到电脑": "Download to computer",
+  "尚未打开结构": "No structure is open",
+  "不保存": "Don't save",
+  "文件已修改": "File modified",
+  "视图已调整": "3D view adjusted",
+  "是否保存修改？": "Save changes?",
+  "是否保存当前视图为图片？": "Save the current view as an image?",
+  "是否存档修改？": "Save changes to state?",
+  "是否存档当前视图？": "Save current view to state?",
   "图片格式": "Image format",
   "分辨率倍数": "Resolution scale",
   "文件名": "File name",
@@ -1984,6 +2160,15 @@ const I18N = {
   "该文件为二进制，无法在窗口中打开": "This binary file cannot be opened in the window",
   "暂停": "Pause",
   "播放": "Play",
+  "静音": "Mute",
+  "取消静音": "Unmute",
+  "PDF": "PDF",
+  "音频": "Audio",
+  "视频": "Video",
+  "表格": "Table",
+  "Markdown": "Markdown",
+  "空表格": "Empty table",
+  "仅显示前 2000 行": "Only the first 2000 rows are shown",
   "当前浏览器不支持导出 ": "This browser cannot export ",
   "，请改用 PNG": "; use PNG instead",
   "已导出 ": "Exported ",
@@ -2011,7 +2196,45 @@ const I18N = {
   "调节透明度": "Adjust opacity",
   "上一帧": "Previous frame",
   "下一帧": "Next frame",
-  "播放速度": "Playback speed"
+  "播放速度": "Playback speed",
+  "清除选中": "Clear selection",
+  "原子样式": "Atom style",
+  "样式设置": "Style settings",
+  "坐标轴设置": "Axis settings",
+  "键与雾": "Bond & fog",
+  "晶胞": "Cell",
+  "坐标轴": "Axes",
+  "轴颜色": "Axis colors",
+  "深度雾": "Depth cue",
+  "晶胞半径": "Cell radius",
+  "晶胞虚线": "Cell dashed",
+  "虚线段长": "Dash length",
+  "虚线间隙": "Gap length",
+  "晶胞颜色": "Cell color",
+  "轴长度": "Axis length",
+  "轴半径": "Axis radius",
+  "箭头比例": "Arrow ratio",
+  "箭头位置": "Arrow position",
+  "轴透明度": "Axis opacity",
+  "A 轴颜色": "A axis color",
+  "B 轴颜色": "B axis color",
+  "C 轴颜色": "C axis color",
+  "调节键粗": "Adjust bond radius",
+  "调节": "Adjust ",
+  "滑杆": " slider",
+  "调节大小": "Adjust size",
+  "键粗滑杆": "Bond radius slider",
+  "大小滑杆": "Size slider",
+  "颜色": "Color",
+  "大小": "Size",
+  "键粗": "Bond radius",
+  "测量": "Measurement",
+  "标注字号": "Label size",
+  "标注颜色": "Label color",
+  "虚线连线": "Dashed line",
+  "连线粗细": "Line width",
+  "连线颜色": "Line color",
+  "恢复默认": "Reset to default"
 };
 
 /* HTML 转义：文件名等不可信文本进入 innerHTML 前必须过一遍 */
@@ -2019,6 +2242,221 @@ function escHtml(s) {
   return String(s).replace(/[&<>"']/g, function (c) {
     return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
   });
+}
+
+/* ---- 浮窗预览：Markdown / 表格 / JSON / 媒体工具 ---- */
+const QUICK_MD_EXTS = ["md", "markdown"];
+const QUICK_TABLE_EXTS = ["csv", "tsv"];
+const QUICK_TABLE_LIMIT = 2000;
+let quickMedia = null;
+
+function quickExt(name) {
+  const s = String(name || "");
+  const i = s.lastIndexOf(".");
+  return i < 0 ? "" : s.slice(i + 1).toLowerCase();
+}
+
+function quickDockTag(data) {
+  if (data.kind === "pdf") return tx("PDF");
+  if (data.kind === "media") return tx(data.mediaType === "audio" ? "音频" : "视频");
+  if (data.kind === "image") return tx("图片");
+  const ext = quickExt(data.name);
+  if (QUICK_MD_EXTS.indexOf(ext) >= 0) return tx("Markdown");
+  if (QUICK_TABLE_EXTS.indexOf(ext) >= 0) return tx("表格");
+  if (ext === "json") return "JSON";
+  return tx("文本");
+}
+
+function mdInline(s) {
+  let t = escHtml(s);
+  t = t.replace(/`([^`]+)`/g, "<code>$1</code>");
+  t = t.replace(/\\*\\*([^*]+)\\*\\*/g, "<strong>$1</strong>");
+  t = t.replace(/__([^_]+)__/g, "<strong>$1</strong>");
+  t = t.replace(/\\*([^*]+)\\*/g, "<em>$1</em>");
+  t = t.replace(/_([^_]+)_/g, "<em>$1</em>");
+  t = t.replace(/\\[([^\\]]+)\\]\\(([^)\\s]+)\\)/g, function (m, label, href) {
+    if (!/^(https?:\\/\\/|mailto:|\\/|#|\\.\\/)/i.test(href)) return m;
+    return '<a href="' + href + '" target="_blank" rel="noopener noreferrer">' + label + "</a>";
+  });
+  return t;
+}
+
+function renderMarkdown(text) {
+  const lines = String(text || "").replace(/\\r\\n?/g, "\\n").split("\\n");
+  const out = [];
+  let list = "";
+  let code = false;
+  function closeList() {
+    if (list) { out.push("</" + list + ">"); list = ""; }
+  }
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (/^\\s*```/.test(line)) {
+      closeList();
+      if (code) { out.push("</code></pre>"); code = false; }
+      else { out.push("<pre><code>"); code = true; }
+      continue;
+    }
+    if (code) { out.push(escHtml(line) + "\\n"); continue; }
+    if (!line.trim()) { closeList(); continue; }
+    const h = line.match(/^(#{1,6})\\s+(.*)$/);
+    if (h) {
+      closeList();
+      const n = h[1].length;
+      out.push("<h" + n + ">" + mdInline(h[2]) + "</h" + n + ">");
+      continue;
+    }
+    const ul = line.match(/^\\s*[-*+]\\s+(.*)$/);
+    if (ul) {
+      if (list !== "ul") { closeList(); out.push("<ul>"); list = "ul"; }
+      out.push("<li>" + mdInline(ul[1]) + "</li>");
+      continue;
+    }
+    const ol = line.match(/^\\s*\\d+\\.\\s+(.*)$/);
+    if (ol) {
+      if (list !== "ol") { closeList(); out.push("<ol>"); list = "ol"; }
+      out.push("<li>" + mdInline(ol[1]) + "</li>");
+      continue;
+    }
+    const q = line.match(/^\\s*>\\s?(.*)$/);
+    if (q) { closeList(); out.push("<blockquote>" + mdInline(q[1]) + "</blockquote>"); continue; }
+    closeList();
+    out.push("<p>" + mdInline(line) + "</p>");
+  }
+  closeList();
+  if (code) out.push("</code></pre>");
+  return out.join("");
+}
+
+function parseDelimited(text, delim) {
+  const s = String(text || "").replace(/\\r\\n?/g, "\\n");
+  const rows = [];
+  let row = [], cell = "", quoted = false;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (quoted) {
+      if (c === '"') {
+        if (s[i + 1] === '"') { cell += '"'; i++; }
+        else quoted = false;
+      } else cell += c;
+      continue;
+    }
+    if (c === '"') { quoted = true; continue; }
+    if (c === delim) { row.push(cell); cell = ""; continue; }
+    if (c === "\\n") { row.push(cell); rows.push(row); row = []; cell = ""; continue; }
+    cell += c;
+  }
+  if (cell !== "" || row.length) { row.push(cell); rows.push(row); }
+  return rows;
+}
+
+function renderDataTable(text, delim) {
+  const rows = parseDelimited(text, delim);
+  if (!rows.length) return '<p class="data-note">' + escHtml(tx("空表格")) + "</p>";
+  const limit = Math.min(rows.length, QUICK_TABLE_LIMIT);
+  const parts = ['<table class="data-table"><thead><tr>'];
+  rows[0].forEach(function (cell) { parts.push("<th>" + escHtml(cell) + "</th>"); });
+  parts.push("</tr></thead><tbody>");
+  for (let i = 1; i < limit; i++) {
+    parts.push("<tr>");
+    rows[i].forEach(function (cell) { parts.push("<td>" + escHtml(cell) + "</td>"); });
+    parts.push("</tr>");
+  }
+  parts.push("</tbody></table>");
+  if (rows.length > limit) {
+    parts.push('<div class="data-note">' + escHtml(tx("仅显示前 2000 行")) + "</div>");
+  }
+  return parts.join("");
+}
+
+function renderJsonValue(value) {
+  if (value === null) return '<span class="json-null">null</span>';
+  if (typeof value === "string") return '<span class="json-str">"' + escHtml(value) + '"</span>';
+  if (typeof value === "number") return '<span class="json-num">' + escHtml(String(value)) + "</span>";
+  if (typeof value === "boolean") return '<span class="json-bool">' + value + "</span>";
+  if (Array.isArray(value)) {
+    if (!value.length) return "[]";
+    let out = '<details open><summary>[' + value.length + "]</summary>";
+    value.forEach(function (v, i) {
+      out += "<div>" + renderJsonValue(v) + (i < value.length - 1 ? "," : "") + "</div>";
+    });
+    return out + "</details>";
+  }
+  if (typeof value === "object") {
+    const keys = Object.keys(value);
+    if (!keys.length) return "{}";
+    let out = '<details open><summary>{' + keys.length + "}</summary>";
+    keys.forEach(function (k, i) {
+      out += '<div><span class="json-key">"' + escHtml(k) + '":</span> ' +
+        renderJsonValue(value[k]) + (i < keys.length - 1 ? "," : "") + "</div>";
+    });
+    return out + "</details>";
+  }
+  return escHtml(String(value));
+}
+
+function renderJsonTree(text) {
+  try {
+    return '<div class="json-view">' + renderJsonValue(JSON.parse(text)) + "</div>";
+  } catch (err) {
+    return '<pre class="json-view">' + escHtml(text) + "</pre>";
+  }
+}
+
+function mediaTime(sec) {
+  if (!isFinite(sec) || sec < 0) return "0:00";
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return m + ":" + String(s).padStart(2, "0");
+}
+
+function setMediaPlayIcon(playing) {
+  const icon = $("mediaPlayIcon");
+  if (icon) icon.innerHTML = playing
+    ? '<path d="M7 5h4v14H7zM13 5h4v14h-4z"/>'
+    : '<path d="M7 5l12 7-12 7z"/>';
+  const btn = $("mediaPlay");
+  if (btn) {
+    btn.title = tx(playing ? "暂停" : "播放");
+    btn.setAttribute("aria-label", btn.title);
+  }
+}
+
+function resetQuickMedia() {
+  $("quickPlayer").classList.add("hidden");
+  if (quickMedia) {
+    try { quickMedia.pause(); quickMedia.removeAttribute("src"); quickMedia.load(); } catch (err) { /* 忽略 */ }
+    quickMedia = null;
+  }
+  if ($("mediaSpeedBtn")) {
+    $("mediaSpeedBtn").textContent = "1× ▲";
+    setDDItem("mediaSpeedMenu", "1");
+  }
+  if ($("mediaMute")) {
+    $("mediaMute").title = tx("静音");
+    $("mediaMute").setAttribute("aria-label", $("mediaMute").title);
+  }
+}
+
+function bindQuickMedia(media) {
+  const range = $("mediaRange");
+  const count = $("mediaCount");
+  range.value = "0";
+  range.max = "0";
+  count.textContent = "0:00 / 0:00";
+  setMediaPlayIcon(false);
+  media.addEventListener("loadedmetadata", function () {
+    range.max = String(isFinite(media.duration) ? media.duration : 0);
+    range.value = String(media.currentTime || 0);
+    count.textContent = mediaTime(media.currentTime) + " / " + mediaTime(media.duration);
+  });
+  media.addEventListener("timeupdate", function () {
+    range.value = String(media.currentTime || 0);
+    count.textContent = mediaTime(media.currentTime) + " / " + mediaTime(media.duration);
+  });
+  media.addEventListener("play", function () { setMediaPlayIcon(true); });
+  media.addEventListener("pause", function () { setMediaPlayIcon(false); });
+  media.addEventListener("ended", function () { setMediaPlayIcon(false); });
 }
 
 /* 动态文案：先精确匹配，再按最长前缀匹配（用于“已保存 ”+文件名这类拼接） */
@@ -2036,17 +2474,32 @@ function tx(s) {
   const btn = document.getElementById("langToggle");
   if (!btn) return;
   const label = btn.querySelector(".lang-name");
+  const menu = document.getElementById("langMenu");
+  const item = document.getElementById("langMenuItem");
   const next = LANG === "en" ? "zh" : "en";
-  if (label) label.textContent = LANG === "en" ? "En" : "中文";
+  // 按钮显示当前语言，菜单只列出可切换到的另一种语言。
+  if (label) label.textContent = LANG === "en" ? "English" : "中文";
+  if (item) item.textContent = next === "en" ? "English" : "中文";
   btn.setAttribute("lang", LANG === "en" ? "en" : "zh-CN");
-  btn.title = LANG === "en" ? "切换到中文" : "Switch to English";
+  btn.title = next === "en" ? "Switch to English" : "切换到中文";
   btn.setAttribute("aria-label", btn.title);
-  btn.onclick = function () {
+  function go() {
     try { localStorage.setItem("mcta-lang", next); } catch (e) { /* 隐私模式忽略 */ }
     const url = new URL(location.href);
     url.searchParams.set("lang", next);
     location.href = url.toString();
+  }
+  btn.onclick = function () {
+    if (menu) menu.classList.toggle("open");
+    btn.setAttribute("aria-expanded", menu && menu.classList.contains("open") ? "true" : "false");
   };
+  if (item) item.onclick = function (ev) { ev.stopPropagation(); go(); };
+  document.addEventListener("click", function (ev) {
+    if (!menu || !btn) return;
+    if (menu.contains(ev.target) || btn.contains(ev.target)) return;
+    menu.classList.remove("open");
+    btn.setAttribute("aria-expanded", "false");
+  });
 })();
 
 (function applyLang() {
@@ -2058,6 +2511,7 @@ function tx(s) {
   while ((node = walker.nextNode())) {
     const parent = node.parentNode;
     if (!parent || parent.nodeName === "SCRIPT" || parent.nodeName === "STYLE") continue;
+    if (parent.closest && parent.closest(".lang-wrap")) continue;
     const raw = node.nodeValue;
     const key = raw ? raw.trim() : "";
     if (!key || !Object.prototype.hasOwnProperty.call(I18N, key)) continue;
@@ -2074,15 +2528,44 @@ function tx(s) {
   });
 })();
 
+// 每个浏览器窗口持有独立的会话 ID，后端按它分配独立的终端进程与 cwd。
+// window.name 在同一次页面加载（含刷新）中保持，新窗口/新标签则为空 → 新会话。
+function mctaSessionId() {
+  let sid = "";
+  try {
+    const named = String(window.name || "");
+    if (named.indexOf("mcta-") === 0) sid = named.slice(5);
+    if (!sid) sid = sessionStorage.getItem("mcta-sid") || "";
+  } catch (err) { /* 隐私模式忽略 */ }
+  const valid = function (v) { return /^[A-Za-z0-9_-]{1,64}$/.test(v || ""); };
+  if (!valid(sid)) {
+    try { sid = crypto.randomUUID(); } catch (err) { sid = ""; }
+    if (!valid(sid)) {
+      sid = "s" + Date.now().toString(36) + Math.random().toString(36).slice(2);
+    }
+  }
+  try {
+    window.name = "mcta-" + sid;
+    sessionStorage.setItem("mcta-sid", sid);
+  } catch (err) { /* 隐私模式忽略 */ }
+  return sid;
+}
+const SESSION_ID = mctaSessionId();
+
 const state = { root: "", cwd: "", viewing: null, user: null, term: null, es: null, cwdTimer: null, lastCwd: null, signature: "", watchTimer: null };
 // 每个结构/轨迹/密度窗口独立持有自己的 viewer 与状态。
 function freshMolCtx() {
   return { viewer: null, frames: 0, index: 0, timer: null, home: null,
            baseName: "", volume: null, isoShape: null, volumeGroups: null,
-           ortho: true, saveJob: null };
+           ortho: true, saveJob: null, cell: null, cellShapes: [], structureModel: null,
+           pickAtoms: [], measureShapes: [], measureLabels: [], styleAtom: null,
+           atomStyles: {}, archive: null, sourcePath: "",
+           pickMode: "atom", viewDirtyArmed: false };
 }
 let MC = freshMolCtx();
 const MOL_BASE_MS = 220;  // 1× 速度下每帧间隔
+const MOL_BOND_RADIUS = 0.06;  // 默认键半径（Å），空白处右键“样式设置”可调整
+let molBondRadius = MOL_BOND_RADIUS;
 let activeMask = null;
 let maskSeq = 0;
 const $ = function (id) {
@@ -2355,7 +2838,9 @@ function fmtSize(n) {
 }
 
 async function api(url, opts) {
-  const res = await fetch(url, opts || {});
+  // 所有请求都带上窗口会话 ID：后端据此使用该窗口自己的终端目录做路径放行。
+  const sep = url.indexOf("?") >= 0 ? "&" : "?";
+  const res = await fetch(url + sep + "sid=" + q(SESSION_ID), opts || {});
   let data = {};
   try { data = await res.json(); } catch (e) { /* 非 JSON */ }
   if (!res.ok) throw new Error(data.error || res.statusText);
@@ -2363,6 +2848,14 @@ async function api(url, opts) {
 }
 
 function q(path) { return encodeURIComponent(path); }
+
+// 图片/PDF/媒体/下载使用原生 <img>/<iframe>/window.open，不会经过 api()，
+// 必须显式带上窗口会话 ID：否则后端按默认终端（cwd=运行目录）放行，
+// 浏览到运行目录之外的目录（如 /mnt/d/test）时会被判为越界而 404。
+function withSid(url) {
+  const sep = url.indexOf("?") >= 0 ? "&" : "?";
+  return url + sep + "sid=" + q(SESSION_ID);
+}
 
 function renderCrumbs() {
   const box = $("crumbs");
@@ -2439,6 +2932,10 @@ async function watchDir() {
 }
 
 async function load(path, quiet) {
+  // 真正切换目录前，先处理未保存的文本修改与已调整的 3D 视图。
+  if (path !== state.cwd && dirtyMasks().length) {
+    if (!(await resolveUnsaved())) return false;
+  }
   try {
     const data = await api("/api/list?path=" + q(path));
     if (data.path !== state.cwd) closeMenu();
@@ -2476,7 +2973,7 @@ async function load(path, quiet) {
       const img = document.createElement("img");
       img.loading = "lazy";
       img.alt = entry.name;
-      img.src = "/raw?path=" + q(entry.path) + "&v=" + encodeURIComponent(entry.ts);
+      img.src = withSid("/raw?path=" + q(entry.path)) + "&v=" + encodeURIComponent(entry.ts);
       const cap = document.createElement("span");
       cap.textContent = entry.name;
       tile.appendChild(img);
@@ -2500,7 +2997,15 @@ async function load(path, quiet) {
       wrap.appendChild(label);
       const tag = document.createElement("span");
       tag.className = "tag";
-      tag.textContent = entry.dir ? tx("目录") : (entry.kind === "structure" ? "3D" : tx("文件"));
+      const ext = quickExt(entry.name);
+      const kindTag = entry.kind === "structure" ? "3D"
+        : entry.kind === "pdf" ? tx("PDF")
+        : entry.kind === "media" ? tx(entry.mediaType === "audio" ? "音频" : "视频")
+        : entry.kind === "image" ? tx("图片")
+        : QUICK_MD_EXTS.indexOf(ext) >= 0 ? tx("Markdown")
+        : QUICK_TABLE_EXTS.indexOf(ext) >= 0 ? tx("表格")
+        : ext === "json" ? "JSON" : tx("文件");
+      tag.textContent = entry.dir ? tx("目录") : kindTag;
       wrap.appendChild(tag);
       card.appendChild(wrap);
 
@@ -2531,57 +3036,153 @@ function setQuickAction(label, icon) {
   action.setAttribute("aria-label", text);
 }
 
+// 新建目录/新建文本/重命名弹窗：顶栏只保留“存档”“关闭”两个按钮。
+function setQuickDialogToolbar(onSave) {
+  const view = $("quickView");
+  const min = view.querySelector(".min-btn");
+  const restore = view.querySelector(".restore-btn");
+  if (min) min.classList.add("hidden");
+  if (restore) restore.classList.add("hidden");
+  $("btnQuickMax").classList.add("hidden");
+  const action = $("quickAction");
+  action.classList.add("hidden");
+  action.onclick = null;
+  const archive = $("quickArchive");
+  archive.classList.remove("hidden");
+  archive.disabled = false;
+  archive.onclick = onSave;
+}
+
+// 普通文件预览弹窗：恢复最小化/还原按钮。
+function resetQuickToolbar() {
+  const view = $("quickView");
+  const min = view.querySelector(".min-btn");
+  const restore = view.querySelector(".restore-btn");
+  if (min) min.classList.remove("hidden");
+  if (restore) restore.classList.remove("hidden");
+}
+
 function closeQuick() {
+  clearDirty($("quickView"));
   resetModalMax($("quickView"));
   $("quickView").classList.add("hidden");
   $("quickView").classList.remove("image-mode");
   $("quickView").classList.remove("preview");
   $("btnQuickMax").classList.remove("hidden");
+  resetQuickToolbar();
   $("quickBody").innerHTML = "";
+  resetQuickMedia();
   $("quickAction").onclick = null;
   $("quickAction").classList.add("hidden");
+  $("quickArchive").onclick = null;
+  $("quickArchive").classList.add("hidden");
   activeMask = null;
   if (!anyViewerOpen() && state.viewing) state.viewing = null;
 }
 
 function openQuick(path, data) {
   const mask = acquireMask("quickView", "view:" + path);
-  // 停靠图标上的类型标签：文本/图片；结构/轨迹/电荷密度由 openStructure 标为 3D。
-  mask.dataset.dockTag = data.kind === "image" ? tx("图片") : tx("文本");
+  clearDirty(mask);
+  resetQuickToolbar();
+  mask.dataset.dockTag = quickDockTag(data);
   state.viewing = path;
   $("quickView").classList.toggle("image-mode", data.kind === "image");
   $("quickView").classList.add("preview");
   $("quickName").textContent = data.name + " · " + fmtSize(data.size) + " · " + data.mtime;
   const body = $("quickBody");
   body.innerHTML = "";
+  resetQuickMedia();
   const action = $("quickAction");
   action.classList.remove("hidden");
   action.disabled = false;
-  if (data.kind === "image") {
+  const archive = $("quickArchive");
+  archive.classList.add("hidden");
+  archive.onclick = null;
+  const rawUrl = withSid(data.url || ("/raw?path=" + q(path)));
+  if (data.kind === "pdf") {
+    const frame = document.createElement("iframe");
+    frame.className = "pdf-frame";
+    frame.title = data.name;
+    frame.src = rawUrl + "#view=FitH";
+    body.appendChild(frame);
+    setQuickAction("下载到电脑", true);
+    action.onclick = function () { window.open(rawUrl, "_blank"); };
+  } else if (data.kind === "media") {
+    let media;
+    if (data.mediaType === "audio") {
+      const view = document.createElement("div");
+      view.className = "audio-view";
+      view.innerHTML = '<div class="audio-glyph"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V6l10-2v12M9 18a3 3 0 1 1-3-3c1.7 0 3 1.3 3 3zm10-2a3 3 0 1 1-3-3c1.7 0 3 1.3 3 3z"/></svg></div>' +
+        "<div><div>" + escHtml(data.name) + '</div><div class="data-note">' + escHtml(tx("音频")) + "</div></div>";
+      media = document.createElement("audio");
+      media.preload = "metadata";
+      media.src = rawUrl;
+      view.appendChild(media);
+      body.appendChild(view);
+    } else {
+      media = document.createElement("video");
+      media.className = "quick-media";
+      media.preload = "metadata";
+      media.playsInline = true;
+      media.src = rawUrl;
+      body.appendChild(media);
+    }
+    quickMedia = media;
+    $("quickPlayer").classList.remove("hidden");
+    bindQuickMedia(media);
+    setQuickAction("下载到电脑", true);
+    action.onclick = function () { window.open(rawUrl, "_blank"); };
+  } else if (data.kind === "image") {
     const box = document.createElement("div");
     box.className = "zoom-box";
     const img = document.createElement("img");
-    img.src = "/raw?path=" + q(path) + "&v=" + Date.now();
+    img.src = rawUrl + "&v=" + Date.now();
     img.alt = data.name;
     img.draggable = false;
     box.appendChild(img);
     body.appendChild(box);
     bindImageZoom(box, img);
-    setQuickAction("下载", true);
-    action.onclick = function () { window.open("/raw?path=" + q(path), "_blank"); };
+    setQuickAction("下载到电脑", true);
+    action.onclick = function () { window.open(rawUrl, "_blank"); };
   } else {
-    const area = document.createElement("textarea");
-    area.value = data.text;
-    area.spellcheck = false;
-    area.addEventListener("keydown", function (event) {
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
-        event.preventDefault();
-        saveQuick(path, data.name, area);
-      }
-    });
-    body.appendChild(area);
-    setQuickAction("保存", true);
-    action.onclick = function () { saveQuick(path, data.name, area); };
+    const ext = quickExt(data.name);
+    if (QUICK_MD_EXTS.indexOf(ext) >= 0) {
+      const view = document.createElement("div");
+      view.className = "md-view";
+      view.innerHTML = renderMarkdown(data.text || "");
+      body.appendChild(view);
+      setQuickAction("下载到电脑", true);
+      action.onclick = function () { window.open(rawUrl, "_blank"); };
+    } else if (QUICK_TABLE_EXTS.indexOf(ext) >= 0) {
+      const view = document.createElement("div");
+      view.innerHTML = renderDataTable(data.text || "", ext === "tsv" ? "\\t" : ",");
+      body.appendChild(view);
+      setQuickAction("下载到电脑", true);
+      action.onclick = function () { window.open(rawUrl, "_blank"); };
+    } else if (ext === "json") {
+      body.innerHTML = renderJsonTree(data.text || "");
+      setQuickAction("下载到电脑", true);
+      action.onclick = function () { window.open(rawUrl, "_blank"); };
+    } else {
+      const area = document.createElement("textarea");
+      area.value = data.text;
+      area.spellcheck = false;
+      area.addEventListener("input", function () {
+        markDirty(mask, { type: "text", path: path, name: data.name });
+      });
+      area.addEventListener("keydown", function (event) {
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
+          event.preventDefault();
+          saveQuick(path, data.name, area);
+        }
+      });
+      body.appendChild(area);
+      setQuickAction("下载到电脑", true);
+      action.onclick = function () { window.open(rawUrl, "_blank"); };
+      // 文本文件在下载按钮左边显示“存档”：保存修改到服务器
+      archive.classList.remove("hidden");
+      archive.onclick = function () { saveQuick(path, data.name, area); };
+    }
   }
   $("quickView").classList.remove("hidden");
   const area = body.querySelector("textarea");
@@ -2644,8 +3245,9 @@ function bindImageZoom(box, img) {
 }
 
 async function saveQuick(path, name, area) {
-  const action = $("quickAction");
-  action.disabled = true;
+  const action = $("quickArchive");
+  if (action) action.disabled = true;
+  let saved = false;
   try {
     const data = await api("/api/file", {
       method: "POST",
@@ -2653,22 +3255,25 @@ async function saveQuick(path, name, area) {
       body: JSON.stringify({path: path, text: area.value})
     });
     $("quickName").textContent = name + " · " + fmtSize(data.size) + " · " + data.mtime;
-    toast("已保存 " + data.path);
+    const mask = area.closest && area.closest(".mol-mask");
+    if (mask) clearDirty(mask);
+    toast("已存档 " + data.path);
+    saved = true;
   } catch (err) {
     toast(err.message, true);
   } finally {
-    action.disabled = false;
+    if (action) action.disabled = false;
   }
+  return saved;
 }
 
 function openRename(entry) {
   acquireMask("quickView", "rename:" + entry.path);
+  resetQuickMedia();
   $("quickView").classList.remove("image-mode");
   $("quickView").classList.remove("preview");
   state.viewing = entry.path;
   $("quickName").textContent = tx("重命名 · ") + entry.name;
-  // 重命名弹窗不需要放大按钮
-  $("btnQuickMax").classList.add("hidden");
   const body = $("quickBody");
   body.innerHTML = "";
   const input = document.createElement("input");
@@ -2676,11 +3281,7 @@ function openRename(entry) {
   input.value = entry.name;
   input.spellcheck = false;
   body.appendChild(input);
-  const action = $("quickAction");
-  action.classList.remove("hidden");
-  action.disabled = false;
-  setQuickAction("保存", true);
-  action.onclick = function () { doRename(entry, input); };
+  setQuickDialogToolbar(function () { doRename(entry, input); });
   input.addEventListener("keydown", function (event) {
     if (event.key === "Enter") {
       event.preventDefault();
@@ -2698,7 +3299,7 @@ async function doRename(entry, input) {
   const name = input.value.trim();
   if (!name) { toast("名称不能为空", true); return; }
   if (name === entry.name) { closeQuick(); return; }
-  const action = $("quickAction");
+  const action = $("quickArchive");
   action.disabled = true;
   try {
     const data = await api("/api/rename", {
@@ -2717,12 +3318,11 @@ async function doRename(entry, input) {
 
 function openNewText() {
   acquireMask("quickView");
+  resetQuickMedia();
   $("quickView").classList.remove("image-mode");
   $("quickView").classList.remove("preview");
   state.viewing = state.cwd || "/";
   $("quickName").textContent = tx("新建文本文件 · ") + (state.cwd || tx("运行目录"));
-  // 新建文本弹窗不需要放大按钮
-  $("btnQuickMax").classList.add("hidden");
   const body = $("quickBody");
   body.innerHTML = "";
   const input = document.createElement("input");
@@ -2731,11 +3331,7 @@ function openNewText() {
   input.spellcheck = false;
   input.placeholder = tx("输入文件名");
   body.appendChild(input);
-  const action = $("quickAction");
-  action.classList.remove("hidden");
-  action.disabled = false;
-  setQuickAction("保存", true);
-  action.onclick = function () { createText(input); };
+  setQuickDialogToolbar(function () { createText(input); });
   input.addEventListener("keydown", function (event) {
     if (event.key === "Enter") {
       event.preventDefault();
@@ -2749,11 +3345,11 @@ function openNewText() {
 
 function openNewDir() {
   acquireMask("quickView");
+  resetQuickMedia();
   $("quickView").classList.remove("image-mode");
   $("quickView").classList.remove("preview");
   state.viewing = state.cwd || "/";
   $("quickName").textContent = tx("新建目录 · ") + (state.cwd || tx("运行目录"));
-  $("btnQuickMax").classList.add("hidden");
   const body = $("quickBody");
   body.innerHTML = "";
   const input = document.createElement("input");
@@ -2762,11 +3358,7 @@ function openNewDir() {
   input.spellcheck = false;
   input.placeholder = tx("输入目录名");
   body.appendChild(input);
-  const action = $("quickAction");
-  action.classList.remove("hidden");
-  action.disabled = false;
-  setQuickAction("保存", true);
-  action.onclick = function () { createDir(input); };
+  setQuickDialogToolbar(function () { createDir(input); });
   input.addEventListener("keydown", function (event) {
     if (event.key === "Enter") { event.preventDefault(); createDir(input); }
   });
@@ -2778,7 +3370,7 @@ function openNewDir() {
 async function createText(input) {
   const name = input.value.trim();
   if (!name) { toast("请输入文件名", true); return; }
-  const action = $("quickAction");
+  const action = $("quickArchive");
   action.disabled = true;
   try {
     const data = await api("/api/new", {
@@ -2799,7 +3391,7 @@ async function createText(input) {
 async function createDir(input) {
   const name = input.value.trim();
   if (!name) { toast("请输入目录名", true); return; }
-  const action = $("quickAction");
+  const action = $("quickArchive");
   action.disabled = true;
   try {
     const data = await api("/api/newdir", {
@@ -2824,7 +3416,7 @@ function closeMenu() {
 }
 
 function downloadFile(path) {
-  window.open("/raw?path=" + q(path), "_blank");
+  window.open(withSid("/raw?path=" + q(path)), "_blank");
 }
 
 let confirmResolve = null;
@@ -2838,6 +3430,11 @@ function openConfirm(title, html, opts) {
     ok.textContent = tx(opts.okText || "确定");
     ok.classList.toggle("danger", !!opts.danger);
     $("confirmCancel").textContent = tx(opts.cancelText || "取消");
+    const extra = $("confirmExtra");
+    if (extra) {
+      extra.textContent = tx(opts.extraText || "不保存");
+      extra.classList.toggle("hidden", !opts.extraText);
+    }
     $("confirmMask").classList.remove("hidden");
   });
 }
@@ -2852,6 +3449,7 @@ function closeConfirm(result) {
 }
 $("confirmOk").onclick = function () { closeConfirm(true); };
 $("confirmCancel").onclick = function () { closeConfirm(false); };
+$("confirmExtra").onclick = function () { closeConfirm("extra"); };
 $("confirmMask").addEventListener("click", function (ev) {
   if (ev.target === this) closeConfirm(false);
 });
@@ -2859,6 +3457,90 @@ $("confirmMask").addEventListener("click", function (ev) {
 document.addEventListener("keydown", function (event) {
   if (event.key === "Escape" && confirmResolve) { closeConfirm(false); event.stopPropagation(); return; }
 }, true);
+
+/* ---- 未保存改动：文本编辑 / 3D 视图调整 ---- */
+function maskDirty(mask) { return !!(mask && mask.dataset.dirty === "1"); }
+function dirtyMasks() {
+  return Array.prototype.slice.call(document.querySelectorAll(".mol-mask"))
+    .filter(function (m) { return !m.classList.contains("hidden") && maskDirty(m); });
+}
+function markDirty(mask, info) {
+  if (!mask) return;
+  mask.dataset.dirty = "1";
+  if (info) mask._unsaved = info;
+}
+function clearDirty(mask) {
+  if (!mask) return;
+  delete mask.dataset.dirty;
+  delete mask._unsaved;
+}
+function maskOf(baseId) {
+  if (activeMask && activeMask.dataset.baseId === baseId && !activeMask.classList.contains("hidden")) return activeMask;
+  return document.querySelector('.mol-mask[data-base-id="' + baseId + '"]:not(.hidden)');
+}
+function molMarkViewDirty() {
+  if (!MC || !MC.viewDirtyArmed) return;
+  const mask = maskOf("molView");
+  if (mask) markDirty(mask, { type: "view" });
+}
+
+let molSaveResolve = null;
+function saveMolView() {
+  const mask = maskOf("molView");
+  if (!mask || !MC.viewer) return Promise.resolve(false);
+  openMolSave();
+  return new Promise(function (resolve) { molSaveResolve = resolve; });
+}
+
+// 逐个处理未保存窗口：返回 true 可继续关闭/切换，false 表示用户取消。
+async function resolveUnsaved(list) {
+  const masks = list || dirtyMasks();
+  for (let i = 0; i < masks.length; i++) {
+    const mask = masks[i];
+    if (!maskDirty(mask)) continue;
+    switchMask(mask);
+    const info = mask._unsaved || {};
+    if (mask.dataset.baseId === "molView") {
+      const answer = await openConfirm("视图已调整", tx("是否存档当前视图？"),
+        { okText: "存档", extraText: "不保存", cancelText: "取消" });
+      if (answer === false) return false;
+      if (answer === true && !(await molSaveArchive())) return false;
+    } else {
+      const answer = await openConfirm("文件已修改",
+        tx("文件已修改") + "：" + escHtml(info.name || "") + "，" + tx("是否存档修改？"),
+        { okText: "存档", extraText: "不保存", cancelText: "取消" });
+      if (answer === false) return false;
+      if (answer === true) {
+        const area = mask.querySelector("textarea");
+        if (area && !(await saveQuick(info.path || "", info.name || "", area))) return false;
+      }
+    }
+    clearDirty(mask);
+  }
+  return true;
+}
+
+async function closeQuickWithConfirm() {
+  const mask = maskOf("quickView");
+  if (!mask) { closeQuick(); return; }
+  if (!(await resolveUnsaved([mask]))) return;
+  switchMask(mask);
+  closeQuick();
+}
+
+async function closeStructureWithConfirm() {
+  const mask = maskOf("molView");
+  if (!mask) { closeStructure(); return; }
+  if (!(await resolveUnsaved([mask]))) return;
+  switchMask(mask);
+  closeStructure();
+}
+
+window.addEventListener("beforeunload", function (ev) {
+  if (!dirtyMasks().length) return;
+  ev.preventDefault();
+  ev.returnValue = "";
+});
 
 async function confirmDelete(entry) {
   const label = entry.dir ? "删除目录" : "删除文件";
@@ -2967,7 +3649,7 @@ function bindEntry(el, entry) {
 async function openFile(path, fromClick, anchor) {
   try {
     const data = await api("/api/file?path=" + q(path));
-    if (data.kind === "text" || data.kind === "image") {
+    if (["text", "image", "pdf", "media"].indexOf(data.kind) >= 0) {
       openQuick(path, data);
       return;
     }
@@ -2996,8 +3678,45 @@ function showMolFrame(index) {
   if (!MC.viewer || MC.frames < 1) return;
   MC.index = ((index % MC.frames) + MC.frames) % MC.frames;
   MC.viewer.setFrame(MC.index);
+  // 播放中跳过逐帧重建命中几何（会卡顿）；暂停后由 stopMolPlay 补注册。
+  // 单步/拖动切帧时 MC.timer 已清空，这里立即给当前帧注册拾取。
+  if (!MC.timer) molEnableFrameClickables();
   MC.viewer.render();
+  // 轨迹播放：保留选中的原子，并按当前帧重新取坐标后重画测量，
+  // 这样距离/角度会随帧实时变化；没有选中时无需重画。
+  if ((MC.pickAtoms || []).length) molRefreshPicksForFrame();
   molLabel();
+  molMarkViewDirty();
+}
+
+// 多帧轨迹切帧后重新给“当前帧”的原子注册点击回调。
+// 3Dmol 的 setFrame 会把 model.atoms 换成对应帧的原子对象，而 setClickable
+// 只给调用时的 this.atoms 打 clickable / intersectionShape 标记；不重新注册
+// 的话新帧原子射线命中不到，就只能在第一帧选中原子测距/测角。
+function molEnableFrameClickables() {
+  if (!MC.viewer || !MC.viewer.setClickable || MC.frames < 1) return;
+  try { MC.viewer.setClickable({}, true, molOnAtomClick); }
+  catch (err) { /* 注册失败不影响切帧，仅该帧无法拾取 */ }
+}
+
+// 轨迹切帧后刷新测量：用保存的 model/index 从当前帧重新取原子对象
+// （3Dmol 的 setFrame 会把该帧坐标写入 model.atoms，selectedAtoms 返回的就是更新后的引用），
+// 再据此重算元素名、连线与距离/角度。取不到时退化为原对象，保持选中不丢。
+function molRefreshPicksForFrame() {
+  if (!MC.viewer || !(MC.pickAtoms || []).length) return;
+  MC.pickAtoms = MC.pickAtoms.map(function (atom) {
+    let cur = atom;
+    try {
+      if (MC.viewer.selectedAtoms && Number.isInteger(atom.index)) {
+        const sel = { index: atom.index };
+        if (atom.model !== undefined) sel.model = atom.model;
+        const hits = MC.viewer.selectedAtoms(sel);
+        if (hits && hits.length) cur = hits[0];
+      }
+    } catch (err) { /* 取帧失败时沿用原原子 */ }
+    return cur;
+  });
+  molDrawMeasure();
 }
 
 function setMolPlayIcon(playing) {
@@ -3015,6 +3734,8 @@ function setMolPlayIcon(playing) {
 function stopMolPlay() {
   if (MC.timer) { clearInterval(MC.timer); MC.timer = null; }
   setMolPlayIcon(false);
+  // 暂停在任意帧后，当前帧原子需要重新注册才能被点中（测距/测角）。
+  molEnableFrameClickables();
 }
 
 function startMolPlay() {
@@ -3031,33 +3752,176 @@ function startMolPlay() {
 
 // 晶胞：3Dmol 的 GL 线在 WebGL 下固定 1px（linewidth 不生效），
 // 所以 12 条棱改用圆柱绘制，粗细由 cell.radius（Å）控制，线型由 cell.dashed 控制。
-// 默认值仅作兜底，实际取值来自 /api/info 的 viewer 字段（服务端读环境变量或 ~/.config/mcta/config）。
+// 以下样式只保存在页面状态中，可在空白处右键的“样式设置”弹窗中调整，即时生效。
 let molCellStyle = { radius: 0.015, dashed: true, dashLength: 0.25, gapLength: 0.25, color: "#0000FF" };
 let molDepthCue = 0;  // 0 = 关闭深度雾，1 = 最强
-// 轴箭头默认值与 3Dmol addUnitCell 内置默认一致：
-// 半径 0.1、不透明、红/绿/蓝三色，midpos 为负表示箭头位于末端前 |midpos| Å 处。
+// 轴箭头默认值：半径 0.06、不透明、红/绿/蓝三色，midpos 为负表示箭头位于末端前 |midpos| Å 处。
+// length 为轴长倍率：默认 0.3；改小缩短、改大延长，即时生效。
 let molAxisStyle = {
-  radius: 0.1, headRatio: 1.618, midpos: -1, opacity: 1,
+  radius: 0.06, headRatio: 1.618, midpos: -1, opacity: 1, length: 0.3,
   colors: ["#FF0000", "#00FF00", "#0000FF"]
 };
+// 测量标注样式：点击原子显示的元素名/距离/角度标签，以及相邻选中原子之间的连线。
+// 可在空白处右键“样式设置 → 测量”分组中即时调整。
+let molMeasureStyle = {
+  fontSize: 18, fontColor: "#1b8a3f",
+  lineRadius: 0.008, lineColor: "#e0553d",
+  lineDashed: true, lineDashLength: 0.08, lineGapLength: 0.06
+};
+// gizmo 可见圆：半径 = 轴长滑杆上限对应的绘制半径 + x/y/z 标签占用长度。
+// 画布半径取该值，保证任意旋转角度下最长轴的端点与标签都落在圆内，不被边缘裁切/遮挡。
+const MOL_AXIS_LEN_MAX = 0.4;                                   // = MOL_STYLE_FIELDS AxisLength.max
+const MOL_AXIS_R_SCALE = 160;                                   // 轴长 → 绘制半径映射
+const MOL_AXIS_R_MAX = MOL_AXIS_LEN_MAX * MOL_AXIS_R_SCALE;      // 64：最长轴绘制半径
+const MOL_AXIS_LABEL_OFFSET = 16;                               // 标签圆心外移轴端点的距离
+const MOL_AXIS_LABEL_LEN = MOL_AXIS_LABEL_OFFSET + 8;            // 24：标签外移 + 半字高
+const MOL_GIZMO_VISIBLE_R = MOL_AXIS_R_MAX + MOL_AXIS_LABEL_LEN; // 88：可见圆半径
+// CSS 边长 = 可见圆直径 + 4px 抗锯齿余量；后备像素至少 2×（高清屏按 DPR 提升）保证清晰。
+const MOL_GIZMO_SIZE = Math.ceil(MOL_GIZMO_VISIBLE_R * 2) + 4;   // 180
 
-function applyViewerStyle(cfg) {
-  if (!cfg) return;
-  const cell = cfg.cell || {};
-  const axis = cfg.axis || {};
-  if (typeof cfg.depthCue === "number") molDepthCue = cfg.depthCue;
-  if (typeof cell.radius === "number") molCellStyle.radius = cell.radius;
-  if (typeof cell.dashed === "boolean") molCellStyle.dashed = cell.dashed;
-  if (typeof cell.dashLength === "number") molCellStyle.dashLength = cell.dashLength;
-  if (typeof cell.gapLength === "number") molCellStyle.gapLength = cell.gapLength;
-  if (typeof cell.color === "string") molCellStyle.color = cell.color;
-  if (typeof axis.radius === "number") molAxisStyle.radius = axis.radius;
-  if (typeof axis.headRatio === "number") molAxisStyle.headRatio = axis.headRatio;
-  if (typeof axis.midpos === "number") molAxisStyle.midpos = axis.midpos;
-  if (typeof axis.opacity === "number") molAxisStyle.opacity = axis.opacity;
-  if (Array.isArray(axis.colors) && axis.colors.length === 3) {
-    molAxisStyle.colors = axis.colors;
-  }
+// “样式设置”弹窗字段：分组、标签、取值范围与实时生效函数。
+// 这些条目可在页面 UI 直接调整，改动即时生效，无需重启服务。
+const MOL_STYLE_GROUPS = [
+  { key: "bond", label: "键与雾", fields: [
+    { key: "BondRadius", id: "molPickBondRadius", label: "键粗", min: 0.02, max: 0.30, step: 0.01,
+      get: function () { return molBondRadius; },
+      set: function (v) { molBondRadius = v; molApplyBondRadius(); } },
+    { key: "DepthCue", label: "深度雾", min: 0, max: 1, step: 0.01,
+      get: function () { return molDepthCue; },
+      set: function (v) { molDepthCue = v; molApplyDepthCue(); } }
+  ] },
+  { key: "cell", label: "晶胞", fields: [
+    { key: "CellRadius", label: "晶胞半径", min: 0.005, max: 2, step: 0.005,
+      get: function () { return molCellStyle.radius; },
+      set: function (v) { molCellStyle.radius = v; molRedrawCell(); } },
+    { key: "CellDashed", label: "晶胞虚线", type: "bool",
+      get: function () { return molCellStyle.dashed; },
+      set: function (v) { molCellStyle.dashed = v; molRedrawCell(); } },
+    { key: "CellDashLength", label: "虚线段长", min: 0.01, max: 5, step: 0.01,
+      get: function () { return molCellStyle.dashLength; },
+      set: function (v) { molCellStyle.dashLength = v; molRedrawCell(); } },
+    { key: "CellGapLength", label: "虚线间隙", min: 0.01, max: 5, step: 0.01,
+      get: function () { return molCellStyle.gapLength; },
+      set: function (v) { molCellStyle.gapLength = v; molRedrawCell(); } },
+    { key: "CellColor", label: "晶胞颜色", type: "color",
+      get: function () { return molCellStyle.color; },
+      set: function (v) { molCellStyle.color = v; molRedrawCell(); } }
+  ] },
+  { key: "axis", label: "坐标轴", fields: [
+    { key: "AxisLength", label: "轴长度", min: 0.06, max: 0.4, step: 0.01,
+      get: function () { return molAxisStyle.length; },
+      set: function (v) { molAxisStyle.length = v; molRedrawAxes(); } },
+    { key: "AxisRadius", label: "轴半径", min: 0.05, max: 0.17, step: 0.005,
+      get: function () { return molAxisStyle.radius; },
+      set: function (v) { molAxisStyle.radius = v; molRedrawAxes(); } },
+    { key: "AxisHeadRatio", label: "箭头比例", min: 1.62, max: 3.8, step: 0.01,
+      get: function () { return molAxisStyle.headRatio; },
+      set: function (v) { molAxisStyle.headRatio = v; molRedrawAxes(); } },
+    { key: "AxisMidpos", label: "箭头位置", min: -5, max: 0.99, step: 0.01,
+      get: function () { return molAxisStyle.midpos; },
+      set: function (v) { molAxisStyle.midpos = v; molRedrawAxes(); } },
+    { key: "AxisOpacity", label: "轴透明度", min: 0.35, max: 1, step: 0.01,
+      get: function () { return molAxisStyle.opacity; },
+      set: function (v) { molAxisStyle.opacity = v; molRedrawAxes(); } }
+  ] },
+  { key: "axisColor", label: "轴颜色", fields: [
+    { key: "AxisColorA", label: "A 轴颜色", type: "color",
+      get: function () { return molAxisStyle.colors[0]; },
+      set: function (v) { molAxisStyle.colors[0] = v; molRedrawAxes(); } },
+    { key: "AxisColorB", label: "B 轴颜色", type: "color",
+      get: function () { return molAxisStyle.colors[1]; },
+      set: function (v) { molAxisStyle.colors[1] = v; molRedrawAxes(); } },
+    { key: "AxisColorC", label: "C 轴颜色", type: "color",
+      get: function () { return molAxisStyle.colors[2]; },
+      set: function (v) { molAxisStyle.colors[2] = v; molRedrawAxes(); } }
+  ] },
+  { key: "measure", label: "测量", fields: [
+    { key: "MeasureFontSize", label: "标注字号", min: 8, max: 40, step: 1,
+      get: function () { return molMeasureStyle.fontSize; },
+      set: function (v) { molMeasureStyle.fontSize = v; molRedrawMeasure(); } },
+    { key: "MeasureFontColor", label: "标注颜色", type: "color",
+      get: function () { return molMeasureStyle.fontColor; },
+      set: function (v) { molMeasureStyle.fontColor = v; molRedrawMeasure(); } },
+    { key: "MeasureLineDashed", label: "虚线连线", type: "bool",
+      get: function () { return molMeasureStyle.lineDashed; },
+      set: function (v) { molMeasureStyle.lineDashed = v; molRedrawMeasure(); } },
+    { key: "MeasureLineRadius", label: "连线粗细", min: 0.002, max: 0.05, step: 0.001,
+      get: function () { return molMeasureStyle.lineRadius; },
+      set: function (v) { molMeasureStyle.lineRadius = v; molRedrawMeasure(); } },
+    { key: "MeasureLineColor", label: "连线颜色", type: "color",
+      get: function () { return molMeasureStyle.lineColor; },
+      set: function (v) { molMeasureStyle.lineColor = v; molRedrawMeasure(); } }
+  ] }
+];
+const MOL_STYLE_FIELDS = MOL_STYLE_GROUPS.reduce(function (all, g) {
+  return all.concat(g.fields);
+}, []);
+MOL_STYLE_FIELDS.forEach(function (f) {
+  f.id = f.id || ("molSt" + f.key);
+  f.def = f.get();
+});
+
+function molHexColor(v) {
+  if (typeof v === "number") return "#" + ("000000" + v.toString(16)).slice(-6);
+  return String(v || "#000000").slice(0, 7);
+}
+
+// 默认原子样式方案（来源见下）：
+// · 颜色：参考 Materials Studio 的元素配色（MS 内置 CPK 色表，H 白 / C 灰 / N 蓝 / O 红 / S 黄 / Fe 橙），
+//   为浅色背景把 H 等极亮色略微压暗，避免白底上完全看不见；
+// · 半径：VESTA 的 atomic radii（金属/共价半径，单位 Å），球棍图按 VESTA 规则取 40%，
+//   夹在 0.10–0.60 Å；VESTA 手册：球棍图的球半径 = 实际原子半径 × 40%。
+const MOL_ATOM_COLORS = {
+  H:"#dfe4ea", He:"#b3e3f5", Li:"#a066d9", Be:"#7acb00", B:"#e3a0a0", C:"#828282",
+  N:"#3050f8", O:"#ff0d0d", F:"#7fbf50", Ne:"#80d1e3", Na:"#9154dd", Mg:"#5fbf00",
+  Al:"#9f8a8a", Si:"#d0a878", P:"#f08a1a", S:"#e6d400", Cl:"#2fbf5f", Ar:"#6ab7cf",
+  K:"#7f45c0", Ca:"#35b000", Ti:"#9aa2ab", V:"#8d93a0", Cr:"#7482b4", Mn:"#9a6fbe",
+  Fe:"#e06633", Co:"#c96a86", Ni:"#45a045", Cu:"#b87939", Zn:"#6b78a8", Ga:"#b08080",
+  Ge:"#6f8f8f", As:"#a873cf", Se:"#d98a00", Br:"#a33b3b", Kr:"#64abc4", Rb:"#7f3fba",
+  Sr:"#25c000", Y:"#80d8d8", Zr:"#80c8c8", Nb:"#6bb0bb", Mo:"#54aaaa", Tc:"#459a9a",
+  Ru:"#2d9090", Rh:"#227f8c", Pd:"#157089", Ag:"#a8b0b8", Cd:"#d0b585", In:"#a87b79",
+  Sn:"#7f9090", Sb:"#9f6bb8", Te:"#c07b00", I:"#8a008a", Xe:"#5aa0b8", Cs:"#6b3aa8",
+  Ba:"#20bd00", La:"#70c8ee", Ce:"#d8d8a8", Pr:"#b5d8a8", Nd:"#9fd8a8", Sm:"#8fd8a8",
+  Eu:"#7fd8a8", Gd:"#6fd8a8", Tb:"#5fd8a8", Dy:"#52d8a8", Ho:"#44d0a0", Er:"#38c890",
+  Tm:"#30bd78", Yb:"#28b060", Lu:"#22a858", Hf:"#5ab4e0", Ta:"#5aa0e0", W:"#3a90c8",
+  Re:"#3f80a8", Os:"#3c7096", Ir:"#2f6488", Pt:"#9fa6bb", Au:"#d0a62c", Hg:"#a6aec4",
+  Tl:"#a86b5e", Pb:"#707681", Bi:"#9f66b8", Po:"#a06200", At:"#8a6058", Rn:"#5a98aa",
+  Th:"#2ab0e0", U:"#1f9fe0", Np:"#1f8fd8", Pu:"#1f7fc8"
+};
+const MOL_ATOM_RADII = {
+  H:0.37, He:0.32, Li:1.52, Be:1.12, B:0.85, C:0.77, N:0.75, O:0.73, F:0.71, Ne:0.71,
+  Na:1.86, Mg:1.60, Al:1.43, Si:1.18, P:1.10, S:1.04, Cl:0.99, Ar:0.98, K:2.27, Ca:1.97,
+  Sc:1.62, Ti:1.47, V:1.36, Cr:1.28, Mn:1.27, Fe:1.24, Co:1.26, Ni:1.24, Cu:1.28, Zn:1.34,
+  Ga:1.41, Ge:1.37, As:1.21, Se:1.16, Br:1.14, Kr:1.03, Rb:2.48, Sr:2.15, Y:1.78, Zr:1.60,
+  Nb:1.46, Mo:1.39, Tc:1.36, Ru:1.34, Rh:1.34, Pd:1.37, Ag:1.44, Cd:1.51, In:1.67, Sn:1.50,
+  Sb:1.41, Te:1.37, I:1.33, Xe:1.08, Cs:2.65, Ba:2.17, La:1.87, Ce:1.82, Pr:1.82, Nd:1.81,
+  Sm:1.80, Eu:1.99, Gd:1.79, Tb:1.76, Dy:1.75, Ho:1.74, Er:1.73, Tm:1.72, Yb:1.94, Lu:1.72,
+  Hf:1.56, Ta:1.46, W:1.39, Re:1.37, Os:1.35, Ir:1.36, Pt:1.39, Au:1.44, Hg:1.51, Tl:1.70,
+  Pb:1.75, Bi:1.70, Po:1.40, At:1.50, Rn:1.50, Th:1.80, U:1.75, Np:1.75, Pu:1.75
+};
+// VESTA elements.ini 中的 atomic radius（金属/共价半径，Å）；球棍图按 40% 显示球半径。
+function molElemKey(elem) {
+  const s = String(elem || "").trim();
+  return s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : "";
+}
+function molDefaultColor(elem) {
+  return MOL_ATOM_COLORS[molElemKey(elem)] || "#9aa4b2";
+}
+function molDefaultRadius(elem) {
+  const r = MOL_ATOM_RADII[molElemKey(elem)];
+  return Math.min(0.6, Math.max(0.1, (typeof r === "number" ? r : 0.9) * 0.4));
+}
+
+function molApplyDefaultAtomStyle() {
+  if (!MC.viewer) return;
+  // 3Dmol 的 setStyle 会先清空整组原子样式，后续 addStyle 才是在此基础上叠加。
+  MC.viewer.setStyle({}, { stick: { radius: MOL_BOND_RADIUS },
+    sphere: { color: "#9aa4b2", radius: molDefaultRadius("") } });
+  Object.keys(MOL_ATOM_RADII).forEach(function (elem) {
+    MC.viewer.addStyle({ elem: elem }, {
+      sphere: { color: molDefaultColor(elem), radius: molDefaultRadius(elem) }
+    });
+  });
 }
 
 // 深度雾（Depth cue）强度 0–1：0 关闭；>0 时 fogStart 从 0.4 线性降到 0，
@@ -3099,17 +3963,235 @@ function molCellPoints(cell) {
 
 function drawMolCell(cell) {
   const pts = molCellPoints(cell);
+  const shapes = [];
   [[0, 1], [0, 2], [0, 4], [1, 3], [1, 5], [2, 3], [2, 6], [3, 7],
    [4, 5], [4, 6], [5, 7], [6, 7]].forEach(function (edge) {
     try {
-      MC.viewer.addCylinder({
+      const shape = MC.viewer.addCylinder({
         start: pts[edge[0]], end: pts[edge[1]], radius: molCellStyle.radius,
         color: molCellStyle.color, dashed: molCellStyle.dashed,
         dashLength: molCellStyle.dashLength, gapLength: molCellStyle.gapLength
       });
+      if (shape) shapes.push(shape);
     } catch (err) { /* 忽略画线失败 */ }
   });
+  return shapes;
 }
+
+// 左下角坐标轴指示器：只取主 viewer 的旋转四元数（getView 索引 4–7），
+// 不取平移/缩放，因此轴只跟随结构旋转，长度恒为固定像素值，不会穿过原子。
+function molQuatRotateVec(q, v) {
+  const x = q[0] || 0, y = q[1] || 0, z = q[2] || 0, w = (typeof q[3] === "number" ? q[3] : 1);
+  const tx = 2 * (y*v[2] - z*v[1]);
+  const ty = 2 * (z*v[0] - x*v[2]);
+  const tz = 2 * (x*v[1] - y*v[0]);
+  return {
+    x: v[0] + w*tx + (y*tz - z*ty),
+    y: v[1] + w*ty + (z*tx - x*tz),
+    z: v[2] + w*tz + (x*ty - y*tx)
+  };
+}
+
+// 三条单位轴经四元数旋转后投影到屏幕（x 右、y 上），返回相对中心的偏移与深度。
+function molGizmoAxisEnds(q, R) {
+  return [[1,0,0], [0,1,0], [0,0,1]].map(function (v) {
+    const r = molQuatRotateVec(q, v);
+    // 归一化旋转结果：即使 getView 四元数带数值误差而非严格单位化，也保证端点 3D 长度恒为 R，
+    // 从而 2D 投影恒 ≤ R、标签中心恒 ≤ R + 标签偏移，任何角度都不越出可见圆。
+    const n = Math.sqrt(r.x*r.x + r.y*r.y + r.z*r.z) || 1;
+    return { x: r.x/n*R, y: -r.y/n*R, z: r.z/n };
+  });
+}
+
+function molGizmoQuat() {
+  if (!MC.viewer || !MC.viewer.getView) return [0, 0, 0, 1];
+  try {
+    const v = MC.viewer.getView();
+    if (v && v.length >= 8) return [v[4], v[5], v[6], v[7]];
+  } catch (err) { /* 忽略 */ }
+  return [0, 0, 0, 1];
+}
+
+// 坐标轴指示器：CSS 尺寸与后备像素常量见上方 MOL_GIZMO_SIZE / molGizmoScale。
+let molGizmoPos = null;  // 用户拖动后的位置（相对画布左上角）；null = 默认左下角
+function molGizmoScale() {
+  const dpr = (typeof window !== "undefined" && window.devicePixelRatio) || 1;
+  return Math.max(2, Math.min(3, dpr));
+}
+
+function molEnsureGizmo() {
+  const host = $("molCanvas");
+  if (!host) return null;
+  let cv = host.querySelector(".mol-axis-gizmo");
+  if (cv) return cv;
+  cv = document.createElement("canvas");
+  cv.className = "mol-axis-gizmo";
+  cv.id = "molAxisGizmo";
+  const s = molGizmoScale();
+  cv.width = Math.round(MOL_GIZMO_SIZE * s);
+  cv.height = Math.round(MOL_GIZMO_SIZE * s);
+  cv.dataset.scale = String(s);
+  cv.style.width = MOL_GIZMO_SIZE + "px";
+  cv.style.height = MOL_GIZMO_SIZE + "px";
+  cv.setAttribute("role", "img");
+  cv.title = tx("坐标轴设置");
+
+  function place(x, y) {
+    const maxX = Math.max(0, (host.clientWidth || (MOL_GIZMO_SIZE + 24)) - MOL_GIZMO_SIZE);
+    const maxY = Math.max(0, (host.clientHeight || (MOL_GIZMO_SIZE + 24)) - MOL_GIZMO_SIZE);
+    const nx = Math.max(0, Math.min(maxX, x));
+    const ny = Math.max(0, Math.min(maxY, y));
+    cv.style.left = nx + "px";
+    cv.style.top = ny + "px";
+    cv.style.bottom = "auto";
+    host._gizmoPos = { left: nx, top: ny };
+    molGizmoPos = host._gizmoPos;
+  }
+  const saved = host._gizmoPos || molGizmoPos;
+  if (saved) place(saved.left, saved.top);
+  else {
+    // 默认停靠左下角；CSS 初值一致，place() 会改写为具体 left/top 像素
+    place(12, Math.max(0, (host.clientHeight || 0) - MOL_GIZMO_SIZE - 12));
+  }
+
+  let drag = null;
+  cv.addEventListener("pointerdown", function (ev) {
+    if (ev.button !== 0) return;  // 右键仍打开“坐标轴设置”
+    ev.preventDefault();
+    ev.stopPropagation();
+    drag = {
+      x: ev.clientX, y: ev.clientY,
+      left: parseFloat(cv.style.left) || 0, top: parseFloat(cv.style.top) || 0
+    };
+    cv.classList.add("dragging");
+    if (cv.setPointerCapture) { try { cv.setPointerCapture(ev.pointerId); } catch (err) {} }
+  });
+  cv.addEventListener("pointermove", function (ev) {
+    if (!drag) return;
+    ev.preventDefault();
+    place(drag.left + (ev.clientX - drag.x), drag.top + (ev.clientY - drag.y));
+  });
+  function endDrag() {
+    if (!drag) return;
+    drag = null;
+    cv.classList.remove("dragging");
+  }
+  cv.addEventListener("pointerup", endDrag);
+  cv.addEventListener("pointercancel", endDrag);
+  cv.addEventListener("contextmenu", function (ev) {
+    ev.preventDefault();
+    ev.stopPropagation();
+    molOpenStylePanel(ev, "axis");
+  });
+  host.appendChild(cv);
+  return cv;
+}
+
+// 画布尺寸变化后把指示器重新约束回可见区域。
+function molClampGizmo() {
+  const host = $("molCanvas");
+  const cv = host && host.querySelector(".mol-axis-gizmo");
+  if (!cv) return;
+  const maxX = Math.max(0, (host.clientWidth || (MOL_GIZMO_SIZE + 24)) - MOL_GIZMO_SIZE);
+  const maxY = Math.max(0, (host.clientHeight || (MOL_GIZMO_SIZE + 24)) - MOL_GIZMO_SIZE);
+  const x = Math.max(0, Math.min(maxX, parseFloat(cv.style.left) || 0));
+  const y = Math.max(0, Math.min(maxY, parseFloat(cv.style.top) || 0));
+  cv.style.left = x + "px";
+  cv.style.top = y + "px";
+  host._gizmoPos = { left: x, top: y };
+  molGizmoPos = host._gizmoPos;
+}
+
+function molHexRgba(hex, alpha) {
+  const h = String(hex || "#000000").replace("#", "");
+  const n = parseInt(h.length >= 6 ? h.slice(0, 6) : "000000", 16);
+  return "rgba(" + ((n>>16)&255) + "," + ((n>>8)&255) + "," + (n&255) + "," + alpha + ")";
+}
+
+function molDrawAxisGizmo() {
+  const cv = molEnsureGizmo();
+  if (!cv || !cv.getContext) return;
+  const ctx = cv.getContext("2d");
+  if (!ctx) return;
+  const s = Number(cv.dataset.scale) || molGizmoScale();
+  const W = MOL_GIZMO_SIZE, H = MOL_GIZMO_SIZE, cx = W/2, cy = H/2;
+  const R = Math.max(10, Math.min(MOL_AXIS_R_MAX, molAxisStyle.length * MOL_AXIS_R_SCALE));
+  const rawEnds = molGizmoAxisEnds(molGizmoQuat(), R);
+  // 保证任意旋转角度三条轴都可见：投影过短（轴几乎正对视线）时给一个最小可见长度，
+  // 完全退化时按互成 120° 的固定方向展开，避免三轴与标签叠在圆心互相遮挡。
+  const MIN_LEN = 11;
+  const ends = rawEnds.map(function (e, i) {
+    let x = e.x, y = e.y;
+    const len = Math.sqrt(x * x + y * y);
+    if (len < MIN_LEN) {
+      if (len < 1e-4) {
+        const a = (-90 + i * 120) * Math.PI / 180;
+        x = Math.cos(a) * MIN_LEN;
+        y = Math.sin(a) * MIN_LEN;
+      } else {
+        x = x / len * MIN_LEN;
+        y = y / len * MIN_LEN;
+      }
+    }
+    return { x: x, y: y, z: e.z };
+  });
+  // 逻辑坐标按 CSS 像素绘制，由变换放大到高清后备像素。
+  if (ctx.setTransform) ctx.setTransform(s, 0, 0, s, 0, 0);
+  else if (ctx.scale) { ctx.save(); ctx.scale(s, s); }
+  ctx.clearRect(0, 0, W, H);
+  const labels = ["x", "y", "z"];
+  const order = [0, 1, 2].sort(function (a, b) { return ends[a].z - ends[b].z; });
+  const lw = Math.max(1.5, Math.min(5, molAxisStyle.radius * 30));
+  const head = Math.max(6, Math.min(14, 6 * molAxisStyle.headRatio / 1.618));
+  // 1) 先画三条轴线（按深度从远到近），每条垫一层浅色描边，交叉处也能彼此分辨、不被盖住。
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  order.forEach(function (i) {
+    const e = ends[i];
+    // 远轴稍淡但始终清晰可见（最低 0.55），保证不被近轴完全盖住。
+    const depthFade = 0.7 + 0.3 * Math.max(0, Math.min(1, (e.z + 1) / 2));
+    const rgba = molHexRgba(molAxisStyle.colors[i],
+      Math.max(0.55, Math.min(1, molAxisStyle.opacity * depthFade)));
+    const ex = cx + e.x, ey = cy + e.y;
+    const ang = Math.atan2(e.y, e.x);
+    ctx.strokeStyle = "rgba(255,255,255,.92)";
+    ctx.lineWidth = lw + 2.6;
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(ex, ey); ctx.stroke();
+    ctx.strokeStyle = rgba; ctx.fillStyle = rgba; ctx.lineWidth = lw;
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(ex, ey); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(ex, ey);
+    ctx.lineTo(ex - head*Math.cos(ang - 0.42), ey - head*Math.sin(ang - 0.42));
+    ctx.moveTo(ex, ey);
+    ctx.lineTo(ex - head*Math.cos(ang + 0.42), ey - head*Math.sin(ang + 0.42));
+    ctx.stroke();
+  });
+  // 2) 三个标签最后统一绘制，并垫浅色描边，保证任何角度都不被轴线或其他标签遮挡。
+  const k = 1 + MOL_AXIS_LABEL_OFFSET / Math.max(R, 1);
+  ctx.font = "700 14px ui-sans-serif, system-ui, sans-serif";
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  order.forEach(function (i) {
+    const e = ends[i];
+    const lx = cx + e.x*k, ly = cy + e.y*k;
+    ctx.strokeStyle = "rgba(255,255,255,.95)"; ctx.lineWidth = 3.5;
+    if (ctx.strokeText) ctx.strokeText(labels[i], lx, ly);
+    ctx.fillStyle = molHexRgba(molAxisStyle.colors[i], Math.max(0.7, Math.min(1, molAxisStyle.opacity)));
+    ctx.fillText(labels[i], lx, ly);
+  });
+  if (!ctx.setTransform && ctx.restore) ctx.restore();
+}
+
+// 样式设置改动后即时重画晶胞棱；轴相关改动即时重画左下角指示器。
+function molRedrawCell() {
+  if (!MC.viewer || !MC.cell) return;
+  (MC.cellShapes || []).forEach(function (s) {
+    try { MC.viewer.removeShape(s); } catch (err) { /* 忽略 */ }
+  });
+  MC.cellShapes = drawMolCell(MC.cell);
+  MC.viewer.render();
+}
+
+function molRedrawAxes() { molDrawAxisGizmo(); }
 
 // 正交 / 透视投影切换
 function molSetProjection(ortho) {
@@ -3118,6 +4200,7 @@ function molSetProjection(ortho) {
   MC.viewer.setProjection(MC.ortho ? "orthographic" : "perspective");
   $("molProj").textContent = MC.ortho ? tx("视角：正交") : tx("视角：透视");
   MC.viewer.show();
+  molMarkViewDirty();
 }
 
 // 沿选定坐标轴按选定角度旋转；sign 为 1 顺时针、-1 逆时针（沿轴正向观察）
@@ -3127,6 +4210,456 @@ function molRotate(sign) {
   const angle = getMolAngle();
   MC.viewer.rotate(sign * angle, axis, 0);
   MC.viewer.render();
+  molMarkViewDirty();
+}
+
+// 原子拾取：左键选原子做距离/角度测量，右键打开单个原子的颜色/大小设置。
+// 晶胞存在时用最小镜像换算键长与键角，避免跨边界原子得到虚假的长键。
+function molInv3(m) {
+  const a=m[0][0], b=m[0][1], c=m[0][2];
+  const d=m[1][0], e=m[1][1], f=m[1][2];
+  const g=m[2][0], h=m[2][1], i=m[2][2];
+  const A=e*i-f*h, B=-(d*i-f*g), C=d*h-e*g;
+  const det=a*A+b*B+c*C;
+  if (Math.abs(det) < 1e-10) return null;
+  return [[A/det, (c*h-b*i)/det, (b*f-c*e)/det],
+          [B/det, (a*i-c*g)/det, -(a*f-c*d)/det],
+          [C/det, -(a*h-b*g)/det, (a*e-b*d)/det]];
+}
+
+function molWrapVec(v) {
+  const cell = MC.cell;
+  if (!cell || cell.length < 3) return { x: v.x, y: v.y, z: v.z };
+  const a = cell[0], b = cell[1], c = cell[2];
+  const m = [[a[0], b[0], c[0]], [a[1], b[1], c[1]], [a[2], b[2], c[2]]];
+  const inv = molInv3(m);
+  if (!inv) return { x: v.x, y: v.y, z: v.z };
+  const frac = [0, 0, 0];
+  for (let k = 0; k < 3; k++) frac[k] = inv[k][0]*v.x + inv[k][1]*v.y + inv[k][2]*v.z;
+  for (let k = 0; k < 3; k++) frac[k] -= Math.round(frac[k]);
+  return {
+    x: m[0][0]*frac[0] + m[0][1]*frac[1] + m[0][2]*frac[2],
+    y: m[1][0]*frac[0] + m[1][1]*frac[1] + m[1][2]*frac[2],
+    z: m[2][0]*frac[0] + m[2][1]*frac[1] + m[2][2]*frac[2]
+  };
+}
+
+function molVecSub(a, b) { return { x: a.x-b.x, y: a.y-b.y, z: a.z-b.z }; }
+function molVecAdd(a, b) { return { x: a.x+b.x, y: a.y+b.y, z: a.z+b.z }; }
+function molVecMid(a, b) { return { x: (a.x+b.x)/2, y: (a.y+b.y)/2, z: (a.z+b.z)/2 }; }
+function molVecLen(v) { return Math.sqrt(v.x*v.x + v.y*v.y + v.z*v.z); }
+function molAtomPos(a) { return { x: a.x, y: a.y, z: a.z }; }
+function molAtomKey(a) { return String(a && a.model) + ":" + String(a && a.index); }
+
+function molAngleDeg(a, b, c) {
+  const ba = molWrapVec(molVecSub(a, b));
+  const bc = molWrapVec(molVecSub(c, b));
+  const la = molVecLen(ba), lc = molVecLen(bc);
+  if (la < 1e-9 || lc < 1e-9) return 0;
+  const dot = (ba.x*bc.x + ba.y*bc.y + ba.z*bc.z) / (la*lc);
+  return Math.acos(Math.max(-1, Math.min(1, dot))) * 180 / Math.PI;
+}
+
+function molSelector(atom) {
+  const sel = { index: atom.index };
+  if (atom.model !== undefined) sel.model = atom.model;
+  if (MC.frames > 0) sel.frame = MC.index;
+  return sel;
+}
+
+function molClearGraphics() {
+  if (MC.viewer) {
+    for (let i = MC.measureLabels.length-1; i >= 0; i--) {
+      try { MC.viewer.removeLabel(MC.measureLabels[i]); } catch (err) { /* 忽略 */ }
+    }
+    for (let i = MC.measureShapes.length-1; i >= 0; i--) {
+      try { MC.viewer.removeShape(MC.measureShapes[i]); } catch (err) { /* 忽略 */ }
+    }
+  }
+  MC.measureLabels = [];
+  MC.measureShapes = [];
+}
+
+function molClearMeasure(skipRender) {
+  molClearGraphics();
+  MC.pickAtoms = [];
+  molSyncClearButton();
+  if (!skipRender && MC.viewer) MC.viewer.render();
+}
+
+function molAddPickLabel(pos, text) {
+  if (!MC.viewer) return;
+  try {
+    const label = MC.viewer.addLabel(text, {
+      position: pos, inFront: true, showBackground: false,
+      fontColor: molMeasureStyle.fontColor, fontSize: molMeasureStyle.fontSize,
+      borderThickness: 0
+    });
+    if (label) MC.measureLabels.push(label);
+  } catch (err) { /* 忽略标签失败 */ }
+}
+
+function molAddPickLine(start, end) {
+  if (!MC.viewer) return;
+  try {
+    const shape = MC.viewer.addCylinder({
+      start: start, end: end, radius: molMeasureStyle.lineRadius,
+      color: molMeasureStyle.lineColor,
+      dashed: molMeasureStyle.lineDashed,
+      dashLength: molMeasureStyle.lineDashLength, gapLength: molMeasureStyle.lineGapLength
+    });
+    if (shape) MC.measureShapes.push(shape);
+  } catch (err) { /* 忽略连线失败 */ }
+}
+
+// 测量样式改动后即时重绘（保留选中原子，不清空）。
+function molRedrawMeasure() {
+  molDrawMeasure();
+}
+
+function molSyncClearButton() {
+  const clear = $("molPickClear");
+  if (clear) clear.disabled = (MC.pickAtoms || []).length === 0;
+}
+
+function molDrawMeasure() {
+  molClearGraphics();
+  const atoms = MC.pickAtoms;
+  if (!MC.viewer || !atoms.length) { molSyncClearButton(); return; }
+  // 元素名标在原子上方；选中的原子持续累加，直到点“清除选中”才全部消失。
+  atoms.forEach(function (atom) {
+    const p = molAtomPos(atom);
+    const elem = String((atom && (atom.elem || atom.atom)) || "");
+    molAddPickLabel({ x: p.x, y: p.y + 0.18, z: p.z }, elem);
+  });
+  // 相邻选中原子之间画细虚线并标距离。
+  for (let i = 0; i + 1 < atoms.length; i++) {
+    const start = molAtomPos(atoms[i]);
+    const vec = molWrapVec(molVecSub(atoms[i+1], atoms[i]));
+    const end = molVecAdd(start, vec);
+    molAddPickLine(start, end);
+    molAddPickLabel(molVecMid(start, end), molVecLen(vec).toFixed(3) + " Å");
+  }
+  // 每三个相邻选中原子以中间原子为顶点标角度。
+  for (let i = 0; i + 2 < atoms.length; i++) {
+    const b = molAtomPos(atoms[i+1]);
+    const ba = molWrapVec(molVecSub(atoms[i], atoms[i+1]));
+    const bc = molWrapVec(molVecSub(atoms[i+2], atoms[i+1]));
+    const la = molVecLen(ba), lc = molVecLen(bc);
+    const bis = { x: ba.x/la + bc.x/lc, y: ba.y/la + bc.y/lc, z: ba.z/la + bc.z/lc };
+    const lb = molVecLen(bis);
+    if (lb < 1e-6) { bis.x = 0; bis.y = 1; bis.z = 0; }
+    else { bis.x /= lb; bis.y /= lb; bis.z /= lb; }
+    molAddPickLabel(molVecAdd(b, { x: bis.x*0.55, y: bis.y*0.55, z: bis.z*0.55 }),
+      molAngleDeg(atoms[i], atoms[i+1], atoms[i+2]).toFixed(1) + "°");
+  }
+  molSyncClearButton();
+  MC.viewer.render();
+}
+
+function molColorHex(atom) {
+  const sphere = atom && atom.style && atom.style.sphere;
+  const color = sphere && sphere.color;
+  if (typeof color === "number") return "#" + ("000000" + color.toString(16)).slice(-6);
+  if (typeof color === "string" && color.charAt(0) === "#") return color.slice(0, 7);
+  return molDefaultColor(atom && atom.elem);
+}
+
+function molClosePickPops() {
+  const panel = $("molPickPanel");
+  if (!panel) return;
+  panel.querySelectorAll(".mol-pick-pop.show").forEach(function (p) { p.classList.remove("show"); });
+  panel.querySelectorAll(".mol-pick-num-btn.active").forEach(function (b) { b.classList.remove("active"); });
+}
+
+// 3Dmol 的 targetedObjects 返回的是射线命中对象，真正的原子在 .clickable 上；
+// 回调与测试夹具里传入的则直接是原子本身，这里统一取出可用原子。
+function molResolveAtom(hit) {
+  if (!hit) return null;
+  const inner = hit.clickable;
+  if (inner && typeof inner === "object" && typeof inner.index === "number") return inner;
+  return typeof hit.index === "number" ? hit : null;
+}
+
+function molHidePickPanel() {
+  const panel = $("molPickPanel");
+  if (panel) panel.classList.add("hidden");
+  molClosePickPops();
+  MC.styleAtom = null;
+  MC.pickMode = "atom";
+}
+
+function molNumValue(id, fallback, lo, hi) {
+  const el = $(id);
+  const v = Number(el && el.value);
+  return isFinite(v) ? Math.min(hi, Math.max(lo, v)) : fallback;
+}
+
+function molSyncNumButton(id, value) {
+  const range = $(id + "Range");
+  if (range) range.value = String(value);
+}
+
+function molSetNumInputs(id, value) {
+  const num = $(id);
+  if (num) num.value = String(value);
+  molSyncNumButton(id, value);
+}
+
+function molToggleNumPop(id, btn) {
+  const pop = $(id + "Pop");
+  const wasOpen = !!pop && pop.classList.contains("show");
+  molClosePickPops();
+  if (pop && !wasOpen) {
+    pop.classList.add("show");
+    if (btn) btn.classList.add("active");
+  }
+}
+
+function molPositionPickPanel(ev, panel) {
+  const win = $("molView") && $("molView").querySelector(".mol-win");
+  if (!win) return;
+  const rect = win.getBoundingClientRect();
+  const cx = ev && typeof ev.clientX === "number" ? ev.clientX : rect.left + rect.width/2;
+  const cy = ev && typeof ev.clientY === "number" ? ev.clientY : rect.top + rect.height/2;
+  const w = panel.offsetWidth || 248;
+  const h = panel.offsetHeight || 210;
+  panel.style.left = Math.max(8, Math.min(cx - rect.left + 8, rect.width - w - 8)) + "px";
+  // 顶部预留 132px，保证第一行数字框的小三角滑杆能在按钮上方完整弹出。
+  panel.style.top = Math.max(132, Math.min(cy - rect.top + 8, rect.height - h - 8)) + "px";
+}
+
+// 按字段类型生成一行控件；数值框右侧的小三角按钮上方弹出滑杆。
+function molMakeStyleRow(f) {
+  const row = document.createElement("div");
+  row.className = "mol-pick-row";
+  const label = document.createElement("span");
+  label.textContent = tx(f.label);
+  row.appendChild(label);
+  const input = document.createElement("input");
+  input.id = f.id;
+  input.setAttribute("aria-label", tx(f.label));
+  if (f.type === "bool") {
+    input.type = "checkbox";
+    input.checked = !!f.get();
+    input.onchange = function () { f.set(this.checked); molMarkViewDirty(); };
+    row.appendChild(input);
+    return row;
+  }
+  if (f.type === "color") {
+    input.type = "color";
+    input.value = molHexColor(f.get());
+    input.oninput = function () { f.set(this.value); molMarkViewDirty(); };
+    row.appendChild(input);
+    return row;
+  }
+  input.type = "number";
+  input.min = String(f.min);
+  input.max = String(f.max);
+  input.step = String(f.step);
+  input.value = String(f.get());
+  input.oninput = function () { molApplyStyleNumber(f, this.value, false); };
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "mol-pick-num-btn";
+  btn.id = f.id + "Btn";
+  btn.textContent = "▼";
+  btn.title = tx("调节") + tx(f.label);
+  btn.setAttribute("aria-haspopup", "true");
+  btn.onclick = function () { molToggleNumPop(f.id, this); };
+  const pop = document.createElement("div");
+  pop.className = "mol-pick-pop";
+  pop.id = f.id + "Pop";
+  const range = document.createElement("input");
+  range.type = "range";
+  range.id = f.id + "Range";
+  range.min = String(f.min);
+  range.max = String(f.max);
+  range.step = String(f.step);
+  range.value = String(f.get());
+  range.setAttribute("aria-label", tx(f.label) + tx("滑杆"));
+  range.oninput = function () { molApplyStyleNumber(f, this.value, true); };
+  pop.appendChild(range);
+  row.appendChild(input);
+  row.appendChild(btn);
+  row.appendChild(pop);
+  return row;
+}
+
+function molApplyStyleNumber(f, raw, fromRange) {
+  let v = Number(raw);
+  if (!isFinite(v)) v = f.get();
+  v = Math.min(f.max, Math.max(f.min, v));
+  const num = $(f.id);
+  if (fromRange && num) num.value = String(v);
+  molSyncNumButton(f.id, v);
+  f.set(v);
+  molMarkViewDirty();
+}
+
+function molBuildStylePanel(mode) {
+  mode = mode === "axis" ? "axis" : "global";
+  const box = $("molPickStyleBox");
+  if (!box || box.dataset.mode === mode) return;
+  box.dataset.mode = mode;
+  box.innerHTML = "";
+  // 空白右键：键与雾 + 晶胞 + 测量；坐标轴区域右键：坐标轴 + 轴颜色。
+  const groups = MOL_STYLE_GROUPS.filter(function (g) {
+    return mode === "axis"
+      ? (g.key === "axis" || g.key === "axisColor")
+      : (g.key === "bond" || g.key === "cell" || g.key === "measure");
+  });
+  const tabs = document.createElement("div");
+  tabs.className = "mol-pick-tabs";
+  groups.forEach(function (g, gi) {
+    const tab = document.createElement("button");
+    tab.type = "button";
+    tab.textContent = tx(g.label);
+    if (gi === 0) tab.classList.add("active");
+    tab.onclick = function () {
+      tabs.querySelectorAll("button").forEach(function (b) { b.classList.remove("active"); });
+      tab.classList.add("active");
+      groups.forEach(function (gg) {
+        const el = $("molPickGroup-" + gg.key);
+        if (el) el.classList.toggle("hidden", gg.key !== g.key);
+      });
+    };
+    tabs.appendChild(tab);
+  });
+  box.appendChild(tabs);
+  groups.forEach(function (g, gi) {
+    const group = document.createElement("div");
+    group.className = "mol-pick-group" + (gi ? " hidden" : "");
+    group.id = "molPickGroup-" + g.key;
+    g.fields.forEach(function (f) { group.appendChild(molMakeStyleRow(f)); });
+    box.appendChild(group);
+  });
+}
+
+function molSyncStyleFields() {
+  MOL_STYLE_FIELDS.forEach(function (f) {
+    const el = $(f.id);
+    if (!el) return;
+    const v = f.get();
+    if (f.type === "bool") el.checked = !!v;
+    else if (f.type === "color") el.value = molHexColor(v);
+    else molSetNumInputs(f.id, v);
+  });
+}
+
+function molOpenPickPanel(atom, ev) {
+  atom = molResolveAtom(atom);
+  if (!atom) { molOpenStylePanel(ev); return; }
+  MC.styleAtom = atom;
+  MC.pickMode = "atom";
+  const panel = $("molPickPanel");
+  if (!panel) return;
+  const title = $("molPickTitle");
+  if (title) title.textContent = tx("原子样式");
+  panel.setAttribute("aria-label", tx("原子样式"));
+  const colorRow = $("molPickColorRow"), sizeRow = $("molPickSizeRow"), styleBox = $("molPickStyleBox");
+  if (colorRow) colorRow.classList.remove("hidden");
+  if (sizeRow) sizeRow.classList.remove("hidden");
+  if (styleBox) styleBox.classList.add("hidden");
+  const color = $("molPickColor");
+  const sphere = atom && atom.style && atom.style.sphere;
+  const sizeValue = sphere && typeof sphere.radius === "number" ? sphere.radius : (sphere && sphere.scale);
+  if (color) color.value = molColorHex(atom);
+  molSetNumInputs("molPickSize",
+    Math.min(0.8, Math.max(0.05, Number(sizeValue) || molDefaultRadius(atom && atom.elem))));
+  panel.classList.remove("hidden");
+  molPositionPickPanel(ev, panel);
+}
+
+function molOpenStylePanel(ev, mode) {
+  MC.styleAtom = null;
+  MC.pickMode = "global";
+  const isAxis = mode === "axis";
+  const panelTitle = isAxis ? "坐标轴设置" : "样式设置";
+  const panel = $("molPickPanel");
+  if (!panel) return;
+  const title = $("molPickTitle");
+  if (title) title.textContent = tx(panelTitle);
+  panel.setAttribute("aria-label", tx(panelTitle));
+  const colorRow = $("molPickColorRow"), sizeRow = $("molPickSizeRow"), styleBox = $("molPickStyleBox");
+  if (colorRow) colorRow.classList.add("hidden");
+  if (sizeRow) sizeRow.classList.add("hidden");
+  if (styleBox) styleBox.classList.remove("hidden");
+  molBuildStylePanel(isAxis ? "axis" : "global");
+  molSyncStyleFields();
+  panel.classList.remove("hidden");
+  molPositionPickPanel(ev, panel);
+}
+
+function molApplyAtomStyle() {
+  const atom = molResolveAtom(MC.styleAtom);
+  if (!atom || !MC.viewer) return;
+  const colorEl = $("molPickColor");
+  const radius = molNumValue("molPickSize", molDefaultRadius(atom.elem), 0.05, 0.8);
+  const color = colorEl ? colorEl.value : molDefaultColor(atom.elem);
+  molSyncNumButton("molPickSize", radius);
+  MC.viewer.addStyle(molSelector(atom), { sphere: { color: color, radius: radius } });
+  MC.viewer.render();
+  MC.atomStyles[molAtomKey(atom)] = { model: atom.model, index: atom.index, elem: atom.elem, color: color, radius: radius };
+  molMarkViewDirty();
+}
+
+function molResetAtomStyle() {
+  const atom = molResolveAtom(MC.styleAtom);
+  if (!atom || !MC.viewer) return;
+  const color = molDefaultColor(atom.elem);
+  const radius = molDefaultRadius(atom.elem);
+  MC.viewer.addStyle(molSelector(atom), {
+    sphere: { color: color, radius: radius }
+  });
+  const colorEl = $("molPickColor");
+  if (colorEl) colorEl.value = color;
+  molSetNumInputs("molPickSize", radius);
+  delete MC.atomStyles[molAtomKey(atom)];
+  MC.viewer.render();
+  molMarkViewDirty();
+}
+
+// 键型固定为 3Dmol 原生 stick，“样式设置”只调整键粗。
+function molApplyBondRadius() {
+  if (!MC.viewer) return;
+  MC.viewer.addStyle({}, { stick: { radius: molBondRadius } });
+  MC.viewer.render();
+  molMarkViewDirty();
+}
+
+function molResetPickSettings() {
+  if (MC.pickMode === "global") {
+    MOL_STYLE_FIELDS.forEach(function (f) { f.set(f.def); });
+    molSyncStyleFields();
+    return;
+  }
+  molResetAtomStyle();
+}
+
+function molOnContextMenu(ev) {
+  ev.preventDefault();
+  if (!MC.viewer) return;
+  let atom = null;
+  try {
+    const xy = MC.viewer.mouseXY(ev.pageX, ev.pageY);
+    const hits = MC.viewer.targetedObjects(xy.x, xy.y, MC.viewer.clickables) || [];
+    if (hits.length) atom = molResolveAtom(hits[0]);
+  } catch (err) { /* 拾取失败时按空白处处理 */ }
+  if (atom) molOpenPickPanel(atom, ev);
+  else molOpenStylePanel(ev);
+}
+
+function molOnAtomClick(atom, viewer, ev) {
+  const button = ev && typeof ev.button === "number" ? ev.button : 1;
+  if (button === 2) { molOpenPickPanel(atom, ev); return; }
+  if (button !== 0) return;
+  molHidePickPanel();
+  const key = molAtomKey(atom);
+  const at = MC.pickAtoms.findIndex(function (a) { return molAtomKey(a) === key; });
+  if (at >= 0) MC.pickAtoms.splice(at, 1);
+  else MC.pickAtoms.push(atom);
+  molDrawMeasure();
 }
 
 function getDDValue(menuId) {
@@ -3206,6 +4739,27 @@ bindDD("molSpeedBtn", "molSpeedMenu", function (li) { return li.textContent + " 
 bindDD("molDensityKindBtn", "molDensityKindMenu", null, function (val) {
   switchMolDensityGroup(Number(val) || 0);
 });
+bindDD("mediaSpeedBtn", "mediaSpeedMenu", function (li) { return li.textContent + " ▲"; }, function (val) {
+  if (quickMedia) quickMedia.playbackRate = Number(val) || 1;
+});
+$("mediaPlay").onclick = function () {
+  if (!quickMedia) return;
+  if (quickMedia.paused) {
+    const p = quickMedia.play();
+    if (p && p.catch) p.catch(function () {});
+  } else quickMedia.pause();
+};
+$("mediaRange").oninput = function () {
+  if (!quickMedia) return;
+  const d = isFinite(quickMedia.duration) ? quickMedia.duration : 0;
+  quickMedia.currentTime = Math.max(0, Math.min(d, Number(this.value) || 0));
+};
+$("mediaMute").onclick = function () {
+  if (!quickMedia) return;
+  quickMedia.muted = !quickMedia.muted;
+  this.title = tx(quickMedia.muted ? "取消静音" : "静音");
+  this.setAttribute("aria-label", this.title);
+};
 
 function molZoom(inward) {
   if (!MC.viewer) return;
@@ -3214,13 +4768,45 @@ function molZoom(inward) {
   MC.viewer.render();
 }
 
+// “重置”回到未打开任何 _mcta.json 存档时的初始状态：
+// 视图/相机、投影、帧、全局样式、逐原子样式、选中与测量、坐标轴指示器位置全部复位。
 function resetMolView() {
   if (!MC.viewer) return;
   stopMolPlay();
+
+  // 1) 全局样式字段恢复到页面初始值（MOL_STYLE_FIELDS 加载时已把 def 记为初始值）
+  MOL_STYLE_FIELDS.forEach(function (f) { f.set(f.def); });
+  molSyncStyleFields();
+
+  // 2) 逐原子颜色/大小恢复默认
+  MC.atomStyles = {};
+  molApplyDefaultAtomStyle();
+
+  // 3) 清除选中与测量标注
+  molClearMeasure(true);
+  MC.pickAtoms = [];
+  molSyncClearButton();
+  molHidePickPanel();
+
+  // 4) 坐标轴指示器回到默认左下角
+  molGizmoPos = null;
+  const host = $("molCanvas");
+  if (host) {
+    host._gizmoPos = null;
+    const cv = host.querySelector(".mol-axis-gizmo");
+    if (cv) {
+      cv.style.left = "12px";
+      cv.style.top = Math.max(0, (host.clientHeight || 0) - MOL_GIZMO_SIZE - 12) + "px";
+      cv.style.bottom = "auto";
+    }
+  }
+
+  // 5) 投影 / 帧 / 相机视图复位到无存档时的 home
+  molSetProjection(true);
   if (MC.frames > 1) {
     MC.index = 0;
     MC.viewer.setFrame(0);
-    molLabel();
+    $("molRange").value = "0";
   }
   if (MC.home) {
     MC.viewer.setView(MC.home.view);
@@ -3229,7 +4815,11 @@ function resetMolView() {
       MC.viewer.camera.lookAt(MC.viewer.lookingAt);
     }
   }
+
+  MC.archive = null;
   MC.viewer.render();
+  molLabel();
+  molDrawAxisGizmo();
 }
 
 // 把当前画面导出为图片：PNG 保留透明背景，JPEG/WebP 先垫白底。
@@ -3322,6 +4912,11 @@ function openMolSave() {
 function closeMolSave() {
   $("molSaveBox").classList.add("hidden");
   MC.saveJob = null;
+  if (molSaveResolve) {
+    const done = molSaveResolve;
+    molSaveResolve = null;
+    done(false);
+  }
 }
 
 function confirmMolSave() {
@@ -3329,8 +4924,187 @@ function confirmMolSave() {
   const job = molSaveOptions();
   const typed = $("molSaveName").value.trim();
   const name = /\\.[^.\\/]+$/.test(typed) ? typed : (typed || "structure") + "." + job.ext;
-  closeMolSave();
+  $("molSaveBox").classList.add("hidden");
+  MC.saveJob = null;
+  if (molSaveResolve) {
+    const done = molSaveResolve;
+    molSaveResolve = null;
+    done(true);
+  }
   saveMolImage(job.factor, job.format, name);
+}
+
+// ---- 3D 视图存档：旋转/平移/缩放、投影、帧、样式与原子标注 ----
+// 存档文件名 = 结构文件名去掉扩展名 + "_mcta.json"，与结构同目录。
+function molArchivePath(structPath) {
+  const cleaned = String(structPath || "").replace(/\\\\/g, "/");
+  const slash = cleaned.lastIndexOf("/");
+  const dir = slash >= 0 ? cleaned.slice(0, slash + 1) : "";
+  const name = slash >= 0 ? cleaned.slice(slash + 1) : cleaned;
+  const dot = name.lastIndexOf(".");
+  const stem = dot > 0 ? name.slice(0, dot) : name;
+  return dir + stem + "_mcta.json";
+}
+
+// 从当前 viewer 采集视图状态。getView() 为 [平移x,y,z, 缩放z, 四元数x,y,z,w]。
+function molCaptureArchive() {
+  const viewer = MC.viewer;
+  if (!viewer) return null;
+  const view = viewer.getView ? Array.prototype.slice.call(viewer.getView()) : null;
+  const look = viewer.lookingAt
+    ? [viewer.lookingAt.x, viewer.lookingAt.y, viewer.lookingAt.z] : null;
+  const atoms = Object.keys(MC.atomStyles).map(function (key) {
+    const s = MC.atomStyles[key];
+    return { model: s.model, index: s.index, color: s.color, radius: s.radius };
+  });
+  const picks = (MC.pickAtoms || []).map(function (a) {
+    return { model: a.model, index: a.index };
+  });
+  return {
+    format: "mcta-view",
+    version: 1,
+    source: MC.baseName || "",
+    saved: new Date().toISOString(),
+    view: { matrix: view, lookingAt: look, ortho: !!MC.ortho, frame: MC.index || 0 },
+    style: {
+      bondRadius: molBondRadius,
+      depthCue: molDepthCue,
+      cell: {
+        radius: molCellStyle.radius, dashed: molCellStyle.dashed,
+        dashLength: molCellStyle.dashLength, gapLength: molCellStyle.gapLength,
+        color: molCellStyle.color
+      },
+      axis: {
+        radius: molAxisStyle.radius, headRatio: molAxisStyle.headRatio,
+        midpos: molAxisStyle.midpos, opacity: molAxisStyle.opacity,
+        length: molAxisStyle.length, colors: molAxisStyle.colors.slice()
+      },
+      measure: {
+        fontSize: molMeasureStyle.fontSize, fontColor: molMeasureStyle.fontColor,
+        lineRadius: molMeasureStyle.lineRadius, lineColor: molMeasureStyle.lineColor,
+        lineDashed: molMeasureStyle.lineDashed,
+        lineDashLength: molMeasureStyle.lineDashLength, lineGapLength: molMeasureStyle.lineGapLength
+      },
+      gizmoPos: molGizmoPos ? { left: molGizmoPos.left, top: molGizmoPos.top } : null
+    },
+    atoms: atoms,
+    picks: picks
+  };
+}
+
+async function molSaveArchive(anchor) {
+  if (!MC.viewer) { toast(tx("尚未打开结构"), true, anchor); return false; }
+  const path = molArchivePath(MC.sourcePath || state.viewing || MC.baseName || "structure");
+  const stateObj = molCaptureArchive();
+  try {
+    await api("/api/file", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({path: path, text: JSON.stringify(stateObj, null, 2)})
+    });
+    MC.archive = stateObj;
+    const mask = maskOf("molView");
+    if (mask) clearDirty(mask);
+    toast(tx("已存档") + " " + path, false, anchor);
+    return true;
+  } catch (err) {
+    toast(err.message, true, anchor);
+    return false;
+  }
+}
+
+// 读取存档（读取失败/不存在时静默按默认显示）。
+async function molLoadArchive(path) {
+  if (!path) return null;
+  try {
+    const data = await api("/api/file?path=" + q(path));
+    if (data && data.kind === "text" && typeof data.text === "string") {
+      const arc = JSON.parse(data.text);
+      if (arc && arc.format === "mcta-view" && arc.view) return arc;
+    }
+  } catch (err) { /* 无存档或格式无效：忽略 */ }
+  return null;
+}
+
+// 把存档中的操作应用到当前已加载的结构上。
+function molApplyArchive(arc) {
+  if (!arc || !MC.viewer) return;
+  const style = arc.style || {};
+  if (typeof style.bondRadius === "number") molBondRadius = style.bondRadius;
+  if (typeof style.depthCue === "number") molDepthCue = style.depthCue;
+  const cell = style.cell || {};
+  if (typeof cell.radius === "number") molCellStyle.radius = cell.radius;
+  if (typeof cell.dashed === "boolean") molCellStyle.dashed = cell.dashed;
+  if (typeof cell.dashLength === "number") molCellStyle.dashLength = cell.dashLength;
+  if (typeof cell.gapLength === "number") molCellStyle.gapLength = cell.gapLength;
+  if (typeof cell.color === "string") molCellStyle.color = cell.color;
+  const axis = style.axis || {};
+  ["radius", "headRatio", "midpos", "opacity", "length"].forEach(function (k) {
+    if (typeof axis[k] === "number") molAxisStyle[k] = axis[k];
+  });
+  if (Array.isArray(axis.colors) && axis.colors.length === 3) molAxisStyle.colors = axis.colors.slice();
+  const measure = style.measure || {};
+  if (typeof measure.fontSize === "number") molMeasureStyle.fontSize = measure.fontSize;
+  if (typeof measure.fontColor === "string") molMeasureStyle.fontColor = measure.fontColor;
+  if (typeof measure.lineRadius === "number") molMeasureStyle.lineRadius = measure.lineRadius;
+  if (typeof measure.lineColor === "string") molMeasureStyle.lineColor = measure.lineColor;
+  if (typeof measure.lineDashed === "boolean") molMeasureStyle.lineDashed = measure.lineDashed;
+  if (typeof measure.lineDashLength === "number") molMeasureStyle.lineDashLength = measure.lineDashLength;
+  if (typeof measure.lineGapLength === "number") molMeasureStyle.lineGapLength = measure.lineGapLength;
+  if (style.gizmoPos && typeof style.gizmoPos.left === "number") {
+    molGizmoPos = { left: style.gizmoPos.left, top: style.gizmoPos.top };
+  }
+  // 恢复全局样式到 viewer
+  molApplyDepthCue();
+  molApplyBondRadius();
+  if (MC.cell) molRedrawCell();
+  molDrawAxisGizmo();
+  molSyncStyleFields();
+  // 恢复逐原子颜色/大小覆盖
+  MC.atomStyles = {};
+  (arc.atoms || []).forEach(function (o) {
+    if (!Number.isInteger(o.index)) return;
+    const sel = { index: o.index };
+    if (o.model !== undefined) sel.model = o.model;
+    const color = typeof o.color === "string" ? o.color : molDefaultColor("");
+    const radius = typeof o.radius === "number" ? o.radius : molDefaultRadius("");
+    MC.viewer.addStyle(sel, { sphere: { color: color, radius: radius } });
+    MC.atomStyles[molAtomKey(sel)] = {
+      model: o.model, index: o.index, color: color, radius: radius
+    };
+  });
+  // 恢复投影与帧
+  const view = arc.view || {};
+  if (typeof view.ortho === "boolean") molSetProjection(view.ortho);
+  if (MC.frames > 0 && Number.isInteger(view.frame)) {
+    MC.index = Math.max(0, Math.min(MC.frames - 1, view.frame));
+    MC.viewer.setFrame(MC.index);
+    $("molRange").value = String(MC.index);
+    molLabel();
+  }
+  // 恢复旋转/平移/缩放
+  if (Array.isArray(view.matrix) && view.matrix.length === 8 && MC.viewer.setView) {
+    MC.viewer.setView(view.matrix);
+  }
+  if (Array.isArray(view.lookingAt) && view.lookingAt.length === 3 && MC.viewer.lookingAt) {
+    MC.viewer.lookingAt.x = view.lookingAt[0];
+    MC.viewer.lookingAt.y = view.lookingAt[1];
+    MC.viewer.lookingAt.z = view.lookingAt[2];
+    if (MC.viewer.camera && MC.viewer.camera.lookAt) MC.viewer.camera.lookAt(MC.viewer.lookingAt);
+  }
+  // 恢复标注（选中的原子 → 元素名/距离/角度）
+  MC.pickAtoms = [];
+  (arc.picks || []).forEach(function (p) {
+    if (!Number.isInteger(p.index)) return;
+    let sel = { index: p.index };
+    if (p.model !== undefined) sel.model = p.model;
+    let atoms = [];
+    try { atoms = MC.viewer.selectedAtoms ? MC.viewer.selectedAtoms(sel) : []; } catch (err) { atoms = []; }
+    if (atoms && atoms.length) MC.pickAtoms.push(atoms[0]);
+  });
+  molDrawMeasure();
+  MC.viewer.render();
+  molDrawAxisGizmo();
 }
 
 function updateMolIsosurface() {
@@ -3407,7 +5181,9 @@ function setMolPlayerVisible(on) {
 }
 
 function closeStructure() {
+  clearDirty($("molView"));
   stopMolPlay();
+  molHidePickPanel();
   if (MC.saveJob) closeMolSave();
   resetModalMax($("molView"));
   MC.frames = 0;
@@ -3445,63 +5221,88 @@ async function openStructure(path, anchor) {
     return;
   }
   try {
+    const host = $("molCanvas");
     const data = await api("/api/structure?path=" + q(path) + "&frames=1");
     state.viewing = path;
+    MC.sourcePath = path;
     const many = (data.nframes || 1) > 1;
     $("molName").textContent = data.name + " · " + data.formula + " · " + fmtSize(data.size) + " · " + data.mtime;
     stopMolPlay();
     MC.frames = many ? data.nframes : 0;
     MC.index = 0;
+    MC.cell = data.cell || null;
+    MC.atomStyles = {};
+    MC.archive = null;
+    molClearMeasure(true);
+    molHidePickPanel();
     $("molView").classList.remove("hidden");
     if (MC.viewer) {
       try { MC.viewer.clear(); } catch (err) { /* 忽略 */ }
       MC.viewer = null;
     }
-    $("molCanvas").innerHTML = "";
+    host.innerHTML = "";
     await new Promise(function (resolve) { requestAnimationFrame(resolve); });
     // upscale:false：让画布后备像素 = CSS 尺寸 × 真实 devicePixelRatio，
     // 与屏幕物理像素 1:1 对应；3Dmol 默认的 upscale 会强制按 2 倍渲染，
     // 在 125%/150% 缩放屏上被非整数缩小，边缘会发虚。
     MC.viewer = $3Dmol.createViewer($("molCanvas"),
       { backgroundAlpha: 0, antialias: true, upscale: false, orthographic: true });
-    // 按 MCTA_DEPTH_CUE 设置深度雾（0 关闭，1 最强）
+    // 视图变化（拖拽/按钮旋转/复位）时同步重画左下角坐标轴指示器。
+    if (MC.viewer.setViewChangeCallback) {
+      MC.viewer.setViewChangeCallback(function () { molDrawAxisGizmo(); });
+    }
+    // 深度雾强度由“样式设置”弹窗控制（0 关闭，1 最强）
     molApplyDepthCue();
     molSetProjection(true);
     if (many) {
       // 多帧轨迹：把全部帧放进同一个 model，setFrame 才能逐帧切换
       MC.viewer.addModelsAsFrames(data.xyz, "xyz");
-      MC.viewer.setStyle({}, { stick: { radius: 0.12 }, sphere: { scale: 0.28 } });
-      if (data.cell) drawMolCell(data.cell);
+      molApplyDefaultAtomStyle();
+      if (data.cell) MC.cellShapes = drawMolCell(data.cell);
       MC.viewer.setFrame(0);
       $("molRange").max = String(MC.frames - 1);
       setMolPlayerVisible(true);
       molLabel();
     } else {
       const model = MC.viewer.addModel(data.cif, "cif");
-      MC.viewer.setStyle({}, { stick: { radius: 0.12 }, sphere: { scale: 0.28 } });
-      if (data.cell) {
-        // 只保留 a/b/c 轴箭头，晶胞棱交给 drawMolCell（可调粗细与线型）
-        MC.viewer.addUnitCell(model, {
-          box: { hidden: true },
-          astyle: molAxisSpec(molAxisStyle.colors[0]),
-          bstyle: molAxisSpec(molAxisStyle.colors[1]),
-          cstyle: molAxisSpec(molAxisStyle.colors[2])
-        });
-        drawMolCell(data.cell);
-      }
+      MC.structureModel = model;
+      molApplyDefaultAtomStyle();
+      if (data.cell) MC.cellShapes = drawMolCell(data.cell);
       setMolPlayerVisible(false);
     }
+    // 沿用用户设定的键粗（键型固定为原生 stick）
+    molApplyBondRadius();
     MC.viewer.zoomTo();
+    MC.viewer.setClickable({}, true, molOnAtomClick);
     configureMolDensity(data);
-    MC.viewer.render();
-    MC.baseName = data.name || "structure";
+    // 记录“未应用任何存档”的初始相机，供“重置”回到无 json 的初始状态。
+    // 必须在读取 _mcta.json 之前捕获，否则 home 会变成存档里的视图。
     MC.home = {
       view: MC.viewer.getView(),
       look: MC.viewer.lookingAt ? MC.viewer.lookingAt.clone() : null
     };
+    MC.baseName = data.name || "structure";
+    // 打开结构时先看同目录有无 <文件名>_mcta.json 存档；有则恢复其中记录的操作。
+    const arc = await molLoadArchive(molArchivePath(path));
+    if (arc) {
+      MC.archive = arc;
+      molApplyArchive(arc);
+    } else {
+      MC.viewer.render();
+      molDrawAxisGizmo();
+    }
+    // 加载阶段的样式/投影调用不算“视图调整”；此处开始记录用户改动。
+    MC.viewDirtyArmed = true;
+    if (!host._mctaViewDirty) {
+      host._mctaViewDirty = true;
+      host.addEventListener("pointerdown", function (ev) {
+        if (ev.button !== 0) return;
+        if (ev.target && ev.target.closest && ev.target.closest(".mol-axis-gizmo")) return;
+        molMarkViewDirty();  // 左键拖动旋转
+      }, true);
+    }
     // 滚轮方向与 3Dmol 默认相反：向前滚缩小、向后滚放大。
     // 在容器上以捕获阶段拦截并阻止冒泡，屏蔽 3Dmol 绑定在画布上的滚轮处理。
-    const host = $("molCanvas");
     if (!host._mctaWheel) {
       host._mctaWheel = true;
       host.addEventListener("wheel", function (ev) {
@@ -3514,7 +5315,13 @@ async function openStructure(path, anchor) {
         cam.z += (ev.deltaY < 0 ? 1 : -1) * span * tick / 400;
         cam.z = MC.viewer.adjustZoomToLimits(cam.z);
         MC.viewer.show();
+        molMarkViewDirty();
       }, { passive: false, capture: true });
+    }
+    // 右键：命中原子打开原子样式，空白处打开样式设置；屏蔽浏览器默认菜单。
+    if (!host._mctaContextMenu) {
+      host._mctaContextMenu = true;
+      host.addEventListener("contextmenu", molOnContextMenu);
     }
   } catch (err) {
     toast(err.message, true, anchor);
@@ -3569,7 +5376,7 @@ function sendTermInput(text) {
   return api("/api/term/input", {
     method: "POST",
     headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({data: b64encode(text)})
+    body: JSON.stringify({data: b64encode(text), sid: SESSION_ID})
   });
 }
 
@@ -3644,7 +5451,7 @@ function navigateToPath(raw) {
   if (!box || !canvas) return;
   const ctx = canvas.getContext("2d");
   let raf = null, active = false, visible = true, last = 0, step = null;
-  let paused = false, resizeTimer = null;
+  let paused = false, resizeTimer = null, lastTick = 0;
 
   function setup() {
     const dpr = window.devicePixelRatio || 1;
@@ -3677,6 +5484,8 @@ function navigateToPath(raw) {
     const x = Math.min(window.innerWidth - 1, Math.max(0, r.left + r.width / 2));
     const y = Math.min(window.innerHeight - 1, Math.max(0, r.top + r.height / 2));
     const top = document.elementFromPoint(x, y);
+    // LICENSE 浮层只是覆盖显示，不视为遮挡终端，字符雨继续运行。
+    if (top && top.closest && top.closest("#licenseOverlay")) return false;
     return !!top && !box.contains(top);
   }
 
@@ -3689,16 +5498,23 @@ function navigateToPath(raw) {
 
   function frame(ts) {
     if (!active) return;
-    if (!last || ts - last >= 60) { last = ts; step(); }
+    if (!last || ts - last >= 60) {
+      last = ts;
+      try { step(); lastTick = Date.now(); }
+      catch (err) { stop(); lastTick = 0; } // 绘制异常交给看门狗重建
+    }
     raf = requestAnimationFrame(frame);
   }
 
   function start() {
     if (active || !canRun()) return;
+    let next;
+    try { next = setup(); } catch (err) { return; }
+    step = next;
     active = true;
     canvas.style.opacity = "";
-    step = setup();
     last = 0;
+    lastTick = Date.now();
     raf = requestAnimationFrame(frame);
   }
 
@@ -3707,6 +5523,21 @@ function navigateToPath(raw) {
     canvas.style.opacity = "0";
     if (raf) { cancelAnimationFrame(raf); raf = null; }
   }
+
+  // 卡死自恢复：RAF 停摆、绘制抛错、暂停标记残留时强制重建。
+  function kick() {
+    stop();
+    lastTick = 0;
+    start();
+  }
+  setInterval(function () {
+    const now = Date.now();
+    if (!canRun()) {
+      if (paused && !resizeTimer) paused = false; // 暂停定时器丢失时解除卡住的暂停
+      return;
+    }
+    if (!active || !lastTick || now - lastTick > 1500) kick();
+  }, 1000);
 
   function syncRain() { if (canRun()) start(); else stop(); }
   ["pointerdown", "click", "scroll"].forEach(function (evt) {
@@ -3751,6 +5582,10 @@ function navigateToPath(raw) {
   start();
   window.__mctaRainPause = function (ms) { pauseRain(ms); };
   window.__mctaRainResize = function () { pauseRain(180); };
+  window.__mctaRainKick = kick;
+  window.__mctaRainState = function () {
+    return { active: active, paused: paused, lastTick: lastTick, canRun: canRun() };
+  };
 })();
 
 function legacyCopyText(text) {
@@ -3831,7 +5666,7 @@ function startTerminal() {
     api("/api/term/input", {
       method: "POST",
       headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({data: b64encode(data)})
+      body: JSON.stringify({data: b64encode(data), sid: SESSION_ID})
     }).catch(function (err) { toast(err.message, true); });
     if (data.indexOf("\\r") >= 0 || data.indexOf("\\n") >= 0) {
       clearTimeout(cwdKick);
@@ -3843,11 +5678,11 @@ function startTerminal() {
     api("/api/term/resize", {
       method: "POST",
       headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({cols: ev.cols, rows: ev.rows})
+      body: JSON.stringify({cols: ev.cols, rows: ev.rows, sid: SESSION_ID})
     }).catch(function () { /* 忽略 */ });
   });
 
-  const es = new EventSource("/api/term/stream?cols=" + size.cols + "&rows=" + size.rows);
+  const es = new EventSource("/api/term/stream?cols=" + size.cols + "&rows=" + size.rows + "&sid=" + q(SESSION_ID));
   state.es = es;
   es.onmessage = function (event) {
     if (!event.data) return;
@@ -4029,7 +5864,7 @@ function startTerminal() {
         b.title = label;
         b.setAttribute("aria-label", label);
       });
-      // 最大化按钮与文件浮窗同款：⤢/⤡ 双图标切换
+      // 最大化按钮与文件浮窗同款：⬀/⬃ 双图标切换
       const maxBtn = tools.querySelector('button[data-term-act="max"]');
       if (maxBtn) setModalMaxButton(maxBtn, maximized);
     }
@@ -4212,7 +6047,6 @@ function applyInfo(info) {
   $("rootLabel").textContent = tx("运行目录");
   $("authText").textContent = info.user;
   $("termState").textContent = tx("连接中…") + " · " + info.user;
-  applyViewerStyle(info.viewer);
 }
 
 // 弹窗最大化：占满整个页面，再点一次回到原始大小
@@ -4524,9 +6358,16 @@ function observeModal(mask) {
   if (mask) { initModalFloating(mask); observeModal(mask); }
 });
 
-$("btnMolClose").onclick = closeStructure;
+$("btnMolClose").onclick = closeStructureWithConfirm;
 $("molProj").onclick = function () { molSetProjection(!MC.ortho); };
-$("molSave").onclick = openMolSave;
+// ↑ 下载按钮：将当前结构文件下载到电脑；保存图片到电脑是左侧独立按钮。
+$("molSave").onclick = function () {
+  const p = MC.sourcePath || state.viewing || "";
+  if (p) downloadFile(p);
+  else toast(tx("尚未打开结构"), true, this);
+};
+$("molSaveImage").onclick = openMolSave;
+$("molArchive").onclick = function () { molSaveArchive(this); };
 $("molSaveOk").onclick = confirmMolSave;
 $("molSaveCancel").onclick = closeMolSave;
 $("molFormat").onchange = syncMolSaveName;
@@ -4551,6 +6392,17 @@ function scheduleMolDensityUpdate() {
 }
 
 $("molReset").onclick = resetMolView;
+$("molPickClear").onclick = function () { molClearMeasure(); };
+$("molPickColor").oninput = molApplyAtomStyle;
+$("molPickSize").oninput = function () { molApplyAtomStyle(); };
+$("molPickSizeRange").oninput = function () {
+  const num = $("molPickSize");
+  if (num) num.value = this.value;
+  molApplyAtomStyle();
+};
+$("molPickSizeBtn").onclick = function () { molToggleNumPop("molPickSize", this); };
+$("molPickReset").onclick = molResetPickSettings;
+molSyncClearButton();
 $("molIsoRange").oninput = function () {
   $("molIsoValue").value = this.value;
   $("molIsoValLabel").textContent = Number(this.value).toPrecision(4);
@@ -4615,22 +6467,36 @@ $("molPrev").onclick = function () { stopMolPlay(); showMolFrame(MC.index - 1); 
 $("molNext").onclick = function () { stopMolPlay(); showMolFrame(MC.index + 1); };
 $("molRange").oninput = function () { stopMolPlay(); showMolFrame(Number(this.value)); };
 /* 空白点击不关闭弹窗（按需求移除），仅 ESC 或关闭按钮退出 */
-$("btnQuickClose").onclick = closeQuick;
+$("btnQuickClose").onclick = closeQuickWithConfirm;
 $("btnNewText").onclick = openNewText;
 $("btnNewDir").onclick = openNewDir;
 document.addEventListener("click", closeMenu);
+document.addEventListener("click", function (ev) {
+  const panel = $("molPickPanel");
+  if (!panel || panel.classList.contains("hidden")) { molClosePickPops(); return; }
+  if (panel.contains(ev.target)) {
+    if (!ev.target.closest(".mol-pick-pop") && !ev.target.closest(".mol-pick-num-btn")) molClosePickPops();
+    return;
+  }
+  molClosePickPops();
+  const win = panel.closest(".mol-win");
+  if (win && win.contains(ev.target)) molHidePickPanel();
+});
 document.addEventListener("keydown", function (event) {
   if (event.key !== "Escape") return;
   if (!$("molSaveBox").classList.contains("hidden")) { closeMolSave(); return; }
   if (!$("fileMenu").classList.contains("hidden")) { closeMenu(); return; }
   const hasDensityPanel = document.querySelector(".mol-density-panel.show");
   if (hasDensityPanel) { closeMolDensityPanels(); return; }
+  const pickPanel = $("molPickPanel");
+  if (pickPanel && !pickPanel.classList.contains("hidden")) { molHidePickPanel(); return; }
   const openMask = activeMask && !activeMask.classList.contains("hidden")
     ? activeMask : document.querySelector(".mol-mask:not(.hidden)");
-  if (openMask && openMask.dataset.baseId === "quickView") { closeQuick(); return; }
-  if (openMask && openMask.dataset.baseId === "molView") closeStructure();
+  if (openMask && openMask.dataset.baseId === "quickView") { closeQuickWithConfirm(); return; }
+  if (openMask && openMask.dataset.baseId === "molView") closeStructureWithConfirm();
 });
 window.addEventListener("resize", function () {
+  molClampGizmo();
   if (!MC.viewer) return;
   MC.viewer.resize();
   MC.viewer.render();
@@ -4675,6 +6541,90 @@ window.addEventListener("resize", function () {
   } catch (err) {
     toast(err.message, true);
   }
+})();
+
+/* ---------- MIT License：打字机浮层 ---------- */
+(function initLicense() {
+  const LICENSE_LINES = [
+    "MIT License",
+    "",
+    "Copyright (c) 2026 Kan",
+    "",
+    "Permission is hereby granted, free of charge, to any person obtaining a copy",
+    "of this software and associated documentation files (the \\"Software\\"), to deal",
+    "in the Software without restriction, including without limitation the rights",
+    "to use, copy, modify, merge, publish, distribute, sublicense, and/or sell",
+    "copies of the Software, and to permit persons to whom the Software is",
+    "furnished to do so, subject to the following conditions:",
+    "",
+    "The above copyright notice and this permission notice shall be included in all",
+    "copies or substantial portions of the Software.",
+    "",
+    "THE SOFTWARE IS PROVIDED \\"AS IS\\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR",
+    "IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,",
+    "FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE",
+    "AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER",
+    "LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,",
+    "OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE",
+    "SOFTWARE."
+  ];
+  const LICENSE_TEXT = LICENSE_LINES.join("\\n");
+  const overlay = $("licenseOverlay");
+  const out = $("licenseText");
+  if (!overlay || !out) return;
+  let timer = null;
+
+  function hide() {
+    if (timer) { clearInterval(timer); timer = null; }
+    overlay.classList.add("hidden");
+  }
+  function show(ev) {
+    if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+    if (timer) { clearInterval(timer); timer = null; }
+    // 先把全部行放进 DOM 并隐藏，首行从一开始就在全文显示时的最终位置。
+    out.textContent = "";
+    const frag = document.createDocumentFragment();
+    LICENSE_LINES.forEach(function (line) {
+      const span = document.createElement("span");
+      span.className = "license-line";
+      span.textContent = line;
+      frag.appendChild(span);
+    });
+    out.appendChild(frag);
+    const rows = out.querySelectorAll(".license-line");
+    out.scrollTop = 0;
+    overlay.classList.remove("hidden");
+    let i = 0;
+    function reveal() {
+      if (i >= rows.length) { clearInterval(timer); timer = null; return; }
+      const row = rows[i];
+      row.classList.add("shown");
+      // 仅当屏幕放不下时，才向上移动到刚显示的行。
+      const bottom = row.offsetTop + row.offsetHeight;
+      if (bottom > out.scrollTop + out.clientHeight) out.scrollTop = bottom - out.clientHeight;
+      else if (row.offsetTop < out.scrollTop) out.scrollTop = row.offsetTop;
+      i += 1;
+    }
+    reveal();
+    if (i < rows.length) timer = setInterval(reveal, 80);
+  }
+  ["sideMit", "footMit"].forEach(function (id) {
+    const el = $(id);
+    if (!el) return;
+    el.addEventListener("click", show);
+    el.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") show(e);
+    });
+  });
+  overlay.addEventListener("click", hide);
+  document.addEventListener("click", function (ev) {
+    if (overlay.classList.contains("hidden")) return;
+    if (ev.target.closest && ev.target.closest(".license-link")) return;
+    hide();
+  });
+  document.addEventListener("keydown", function (ev) {
+    if (ev.key === "Escape" && !overlay.classList.contains("hidden")) hide();
+  });
 })();
 </script>
 </html>
@@ -5043,7 +6993,6 @@ def main(argv=None):
     parser = argparse.ArgumentParser(
         prog="mt.server",
         description="本地文件服务：浏览目录、编辑文本、查看图片，并提供 SSH 级终端。",
-        epilog=_viewer_help(),
         formatter_class=argparse.RawDescriptionHelpFormatter,
         add_help=False,
     )

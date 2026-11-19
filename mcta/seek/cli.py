@@ -102,7 +102,7 @@ def offline_demo(with_job_template: bool = False, fmts=None) -> None:
         if "error" in w:
             print(f"[{mp_id}] 写文件失败: {w['error']}")
             continue
-        print(f"[{mp_id}] {info["formula"]:<6} {info['n_sites']:>2} 原子  "
+        print(f"[{mp_id}] {info['formula']:<6} {info['n_sites']:>2} 原子  "
               f"{info['spacegroup']:<8} {info.get('dimensionality', '?'):<4}  "
               f"磁性={''.join(info['magnetic_elements']) or '-'}")
         print(f"          文件: {', '.join(w['files'].keys())}  ->  {w['export_dir']}")
@@ -190,7 +190,7 @@ def _llm_unavailable_hint(d: dict) -> str:
                 "（或 pip install openai）。")
     if err and err != "no_key":
         return f"LLM 客户端创建失败：{err}"
-    return (f"LLM 模式不可用：引擎 {d["provider"]}（{d['model']}）未配置密钥。"
+    return (f"LLM 模式不可用：引擎 {d['provider']}（{d['model']}）未配置密钥。"
             "\n  设置 MT_SEEK_API_KEY（所有引擎共用这一把密钥）；"
             "\n  只跑一次可临时用 -p 指定引擎；本地模型用 -p ollama（无需密钥）。"
             "\n  不打算用自然语言模式的话，改用 -c / -f / -I。")
@@ -279,7 +279,7 @@ def main(argv=None) -> int:
             if client is None:
                 print(_llm_unavailable_hint(llm.describe()), file=sys.stderr)
                 return 1
-            print(f"LLM 引擎：{llm.describe()["provider"]}  "
+            print(f"LLM 引擎：{llm.describe()['provider']}  "
                   f"model={config.LLM_MODEL}")
         r = curate.run(task=args.curat, where=args.where, do_dedup=args.dedup,
                        diverse_k=args.diver, outliers=args.outliers,
@@ -302,7 +302,7 @@ def main(argv=None) -> int:
             print(_llm_unavailable_hint(llm.describe()), file=sys.stderr)
             return 1
         d = llm.describe()
-        print(f"LLM 引擎：{d["provider"]}  model={d['model']}  {d['base_url']}")
+        print(f"LLM 引擎：{d['provider']}  model={d['model']}  {d['base_url']}")
         print(agent.run_with_llm(client, args.tasks))
         return 0
 

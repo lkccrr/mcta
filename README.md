@@ -128,4 +128,3 @@ mt.server -S            # stop the service on port 9068
 mt.server --status      # list every port where mt.server is running
 mt.server -S --all      # stop all of them
 ```
-
