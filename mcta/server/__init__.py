@@ -5454,11 +5454,12 @@ function navigateToPath(raw) {
   let paused = false, resizeTimer = null, lastTick = 0;
 
   function setup() {
-    const dpr = window.devicePixelRatio || 1;
+    // 高分屏画布像素翻倍是卡顿来源之一，上限压到 1.5。
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
     const w = canvas.clientWidth;
     const h = canvas.clientHeight;
-    canvas.width = w * dpr;
-    canvas.height = h * dpr;
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     const chars = "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789=<>+-*/|\\#@$%&";
     const fontSize = 13;
@@ -5478,22 +5479,14 @@ function navigateToPath(raw) {
     };
   }
 
-  function isRainCovered() {
-    const r = box.getBoundingClientRect();
-    if (r.width < 2 || r.height < 2) return true;
-    const x = Math.min(window.innerWidth - 1, Math.max(0, r.left + r.width / 2));
-    const y = Math.min(window.innerHeight - 1, Math.max(0, r.top + r.height / 2));
-    const top = document.elementFromPoint(x, y);
-    // LICENSE 浮层只是覆盖显示，不视为遮挡终端，字符雨继续运行。
-    if (top && top.closest && top.closest("#licenseOverlay")) return false;
-    return !!top && !box.contains(top);
-  }
-
   function canRun() {
     // 字符雨只在侧栏终端显示；浮窗（含最小化停靠）不呈现。
+    // 不再用 elementFromPoint 做遮挡检测：它会强制同步布局，在滚动/浮层堆叠时
+    // 反复触发布局抖动，是卡顿主因。可见性改由 IntersectionObserver + 浮窗状态
+    // + document.hidden + 交互暂停统一表达，覆盖/LICENSE 浮层下照常运行。
     const wrap = box.closest(".term-wrap");
     if (wrap && wrap.classList.contains("floating")) return false;
-    return !paused && !document.hidden && visible && !isRainCovered();
+    return !paused && !document.hidden && visible;
   }
 
   function frame(ts) {
@@ -5501,7 +5494,7 @@ function navigateToPath(raw) {
     if (!last || ts - last >= 60) {
       last = ts;
       try { step(); lastTick = Date.now(); }
-      catch (err) { stop(); lastTick = 0; } // 绘制异常交给看门狗重建
+      catch (err) { stop(); lastTick = 0; return; } // 绘制异常后停止，不再往下排队 RAF
     }
     raf = requestAnimationFrame(frame);
   }
@@ -5540,8 +5533,14 @@ function navigateToPath(raw) {
   }, 1000);
 
   function syncRain() { if (canRun()) start(); else stop(); }
+  // 全局 pointer/scroll 高频事件节流：避免每次事件都 setState 造成抖动。
+  let rainSyncTimer = null;
+  function scheduleSync() {
+    if (rainSyncTimer) return;
+    rainSyncTimer = setTimeout(function () { rainSyncTimer = null; syncRain(); }, 120);
+  }
   ["pointerdown", "click", "scroll"].forEach(function (evt) {
-    document.addEventListener(evt, function () { setTimeout(syncRain, 0); }, true);
+    document.addEventListener(evt, scheduleSync, true);
   });
   document.addEventListener("visibilitychange", function () {
     if (document.hidden) stop(); else start();

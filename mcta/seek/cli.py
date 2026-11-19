@@ -92,7 +92,7 @@ def demo_structures() -> list:
 
 
 def offline_demo(with_job_template: bool = False, fmts=None) -> None:
-    print("== MicroCrystalSeeker 离线自检（不联网，结构为内置示例）==")
+    print("== mt.seek 离线自检（不联网，结构为内置示例）==")
     entries = []
     for mp_id, st in demo_structures():
         sd = st.as_dict()
@@ -123,7 +123,7 @@ def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(
         prog="mt.seek",
         add_help=False,
-        description="MicroCrystalSeeker — 从 Materials Project 检索结构并导出结构文件包"
+        description="mt.seek — 从 Materials Project 检索结构并导出结构文件包"
                     "（不执行计算，计算在服务器上完成）",
         epilog=_epilog(),
         formatter_class=argparse.RawDescriptionHelpFormatter,

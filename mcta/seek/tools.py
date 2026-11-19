@@ -362,7 +362,7 @@ def get_structure(mp_id: str) -> dict:
 
 # ---------------------------------------------------------------- 写结构文件
 JOB_TEMPLATES = {
-    "INCAR.template": """# MicroCrystalSeeker 模板 — 按体系自行调整后重命名为 INCAR
+    "INCAR.template": """# mt.seek 模板 — 按体系自行调整后重命名为 INCAR
 SYSTEM = __SYSTEM__
 ENCUT  = 520
 PREC   = Accurate

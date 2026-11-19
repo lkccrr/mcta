@@ -417,7 +417,7 @@ def format_report(res: dict, info: dict) -> str:
         return f"失败：{res['error']}"
     b = res.get("bundle") or {}
     comp = " ".join(f"{k}{v}" for k, v in info["counts"].items())
-    lines = ["== MicroCrystalSeeker SQS 报告 ==",
+    lines = ["== mt.seek SQS 报告 ==",
              f"晶胞：      {info['formula_in']}（{info['n_cell']} 原子，"
              f"{Path(info.get('path', '')).name}）",
              f"随机化位点：{info['host']} 位（原胞 {info['n_host_cell']} 个）"

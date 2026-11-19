@@ -15,7 +15,7 @@ from mcta.seek import config, state
 from mcta.seek.tools import (get_structure, make_bundle, pad,
                                       search_mp, write_structure_files)
 
-SYSTEM_PROMPT = """你是「MicroCrystalSeeker」，材料结构检索助手。工具：\
+SYSTEM_PROMPT = """你是「mt.seek」，材料结构检索助手。工具：\
 search_mp / get_structure / write_structure_files / make_bundle。
 
 铁律：
@@ -237,7 +237,7 @@ def format_report(result: dict) -> str:
             if "error" in it:
                 lines.append(f"  - {it['mp_id']}: {it['error']}")
         return "\n".join(lines)
-    lines = ["== MicroCrystalSeeker 导出报告 =="]
+    lines = ["== mt.seek 导出报告 =="]
     lines.append(pad("mp_id", 12) + pad("化学式", 16) + pad("原子数", 8)
                  + pad("空间群", 12) + pad("维度", 6) + pad("磁性元素", 10))
     ok = 0
