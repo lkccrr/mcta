@@ -6,7 +6,7 @@
 硬规则（写死在提示词与代码里）：
   1. 本智能体不执行任何计算，禁止尝试本地运行 VASP/提交作业；
   2. 每个 mp_id 必须实际落盘文件后才允许进入清单；
-  3. 最后一步必须给出包裹路径与结构清单，便于直接 scp 上传。
+  3. 最后一步必须给出导出包目录与结构清单（就地生成，无需上传/打包）。
 """
 import json
 import re
@@ -21,11 +21,11 @@ search_mp / get_structure / write_structure_files / make_bundle。
 铁律：
 1. 你只负责检索结构与生成结构文件，**绝不执行计算**（不运行 VASP、不提交作业）；
 2. 流程固定为：search_mp 找候选 → get_structure 取结构 → write_structure_files 落盘
-   → make_bundle 打包；用户直接给 mp_id 时跳过第一步；
+   → make_bundle 汇总成导出包目录；用户直接给 mp_id 时跳过第一步；
 3. 含磁性元素（Fe/Co/Ni/Mn/Cr/V/稀土等）的结构，必须在结果中标注
    "服务器端建议 FM/AFM/NM 多初态"，不要自行决定磁序；
 4. 工具返回 error 时先分析原因再重试，同一错误最多重试 2 次；
-5. 最终回复必须包含：包裹目录、tar.gz 路径、结构数量、以及每个结构的
+5. 最终回复必须包含：导出包目录、结构数量、以及每个结构的
    mp_id / 化学式 / 原子数 / 空间群 / 维度（3D/2D/1D） / 磁性元素；
 6. 若用户未指定输出格式，默认 cif + poscar + json。
 现在开始处理用户任务。"""
@@ -48,16 +48,17 @@ def _tool_schemas():
                 "mp_id": {"type": "string"}}, "required": ["mp_id"]}}},
         {"type": "function", "function": {
             "name": "write_structure_files",
-            "description": "把结构写成 CIF/POSCAR/JSON/XYZ 文件，可选同时生成服务器作业模板",
+            "description": "把结构写成 CIF/POSCAR/JSON/XYZ 文件，可选同时生成服务器作业模板"
+                           "（赝势目录可用时含 POTCAR）",
             "parameters": {"type": "object", "properties": {
                 "mp_id": {"type": "string"},
                 "formats": {"type": "array", "items": {"type": "string"}},
                 "with_job_template": {"type": "boolean",
-                                      "description": "是否附带 INCAR/KPOINTS/slurm 模板"}},
+                                      "description": "是否附带 INCAR/KPOINTS/slurm 模板（赝势目录可用时含 POTCAR）"}},
                 "required": ["mp_id"]}}},
         {"type": "function", "function": {
             "name": "make_bundle",
-            "description": "把已导出的结构目录打包成可 scp 上传的 tar.gz（含 manifest.csv）",
+            "description": "把已导出的结构目录汇总成导出包（含 README.md/manifest.csv/mt.seek.db）；就地生成，不打压缩包、不上传",
             "parameters": {"type": "object", "properties": {
                 "name": {"type": "string", "description": "包裹名，如 ti-c-batch"},
                 "mp_ids": {"type": "array", "items": {"type": "string"}}},
@@ -264,9 +265,19 @@ def format_report(result: dict) -> str:
         if result.get("search_cached"):
             lines.append("提示：检索结果来自本地缓存（12 小时内有效），"
                          "-Q/--refsh 可强制刷新")
-        lines.append(f"包裹目录：{b['bundle_dir']}")
-        lines.append(f"压缩包：  {b['tar_gz']}")
+        notes = []
+        for it in result["items"]:
+            if "error" in it:
+                continue
+            note = it.get("potcar", "")
+            if note and note != "ok" and note not in notes:
+                notes.append(note)
+        if notes:
+            lines.append("POTCAR：" + "；".join(notes))
+        lines.append(f"导出目录：{b['bundle_dir']}")
         lines.append(f"清单：    {b['manifest']}")
-        lines.append("\n上传服务器：")
-        lines.append(f"  scp \"{b['tar_gz']}\" user@server:~/calc/")
+        lines.append(f"数据库：  {b['db']}")
+        lines.append("\n包内结构：README.md / manifest.csv / mt.seek.db / <编号>/"
+                     "（各编号目录放该 id 的 CIF / POSCAR / JSON，"
+                     "作业模板若生成也直接放编号目录）。已在服务器就地生成，无需上传或解压。")
     return "\n".join(lines)

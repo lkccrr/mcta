@@ -1,7 +1,7 @@
 """本地数据集策展：去重 → 筛选 → sklearn 多样性/异常 → LLM 计划 → 补下载。
 
 与 tools/agent 的分工：tools 负责「从 MP 拿到结构并落盘」，curate 只处理
-**已经在本地的 exports/**；唯一会联网的动作是显式要求的补下载（top_up）。
+**已经在本地导出包 <name>/ 里的结构**；唯一会联网的动作是显式要求的补下载（top_up）。
 
 四类操作：
   * dedup      结构级去重（StructureMatcher，同式不同相才算不同结构）
@@ -54,7 +54,7 @@ def _truthy(v) -> bool:
 
 
 def load_dataset() -> list:
-    """汇总 exports/*/manifest.csv，按 mp_id 去重并标准化字段。"""
+    """汇总工作根下各导出包 <name>/manifest.csv，按 mp_id 去重并标准化字段。"""
     rows = {}
     if not config.EXPORT_ROOT.exists():
         return []
@@ -88,7 +88,7 @@ def load_dataset() -> list:
                         "ehull": _num(r.get("e_above_hull_eV")),
                         "gap": _num(r.get("band_gap_eV")),
                         "batch": batch,
-                        "_dir": str(manifest.parent / "structures" / r["mp_id"]),
+                        "_dir": str(manifest.parent / r["mp_id"]),
                     }
         except Exception:  # noqa: BLE001
             continue
@@ -408,7 +408,7 @@ def _meta_of(r: dict) -> dict:
 
 
 def export_curated(rows: list, name: str = None, extra_entries=()) -> dict:
-    """把策展结果打包成新的 exports/<name>，结构与 manifest 一并可 scp。"""
+    """把策展结果导出成新的 <name>/ 目录（结构就地放编号目录）。"""
     from .tools import _safe_name, make_bundle
     if not rows and not extra_entries:
         return {"error": "策展结果为空，未导出"}
@@ -607,8 +607,7 @@ def run(task: str = None, where: str = None, do_dedup: bool = False,
         lines.append(f"导出失败：{bundle['error']}")
     else:
         lines.append(f"策展包：{bundle['bundle_dir']}")
-        lines.append(f"压缩包：{bundle['tar_gz']}")
-        lines.append(f"共 {bundle['n_structures']} 个结构，可直接 scp 上传")
+        lines.append(f"共 {bundle['n_structures']} 个结构（就在服务器的工作根目录下，无需上传）")
 
     return {"report": "\n".join(lines), "n": len(rows), "steps": steps,
             "duplicates": dup_groups, "bundle": bundle,

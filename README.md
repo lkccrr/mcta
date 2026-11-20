@@ -67,7 +67,7 @@ mt.ph3 w --br --symfc                # English original, then Chinese translatio
 ```
 ***
 <b style="color:blue;"><i>mt.seek</i></b> / <b style="color:blue;"><i>mt.sqs</i></b> / <b style="color:blue;"><i>mt.skl</i></b>: structure retrieval, SQS generation, and data-driven analysis
-* `mt.seek`: Materials Project retrieval and curation. Retrieves structures, writes CIF / POSCAR / JSON bundles with optional calculation templates, and filters or deduplicates local datasets; no calculations run locally. Set the API key once (free account at https://next-gen.materialsproject.org).
+* `mt.seek`: Materials Project retrieval and curation, run directly on the server. Retrieves structures and writes one export directory `<name>/` in the working root — containing `README.md`, `manifest.csv`, `mt.seek.db` and one `<id>/` directory per structure (CIF / POSCAR / JSON, plus INCAR / KPOINTS / job script when requested; POTCAR is concatenated into the POSCAR directory with `mt.sh po` when a pseudopotential directory is configured). No tarball, no upload; internal cache/state stay hidden in `.mt.seek/`. Also filters or deduplicates local datasets; no calculations run locally. Set the API key once (free account at https://next-gen.materialsproject.org).
 * `mt.sqs`: special quasirandom structures from a custom unit cell. Reads POSCAR / CONTCAR / CIF / JSON, expands a supercell, and randomises one sublattice toward a target composition using `sqsgenerator`; no network access is required.
 * `mt.skl`: data-driven analysis of exported structures with scikit-learn. Runs two regression tasks (`ehull` stability and `band_gap`) with a random forest and 5-fold cross-validation, writing results to `<home>/ml/`; `--home DIR` sets the working root (default: current directory).
 ```bash
@@ -80,9 +80,9 @@ mt.seek -r -D 8 -o my-pick          # deduplicate + pick 8 diverse structures
 mt.sqs -c cell.vasp -a "Cu:0.5,Au:0.5" -x 4,4,4 -n cuau-sqs
 mt.sqs -c LaAlO3.cif --host La -a "La:0.5,Sr:0.5" -x 2,2,2    # A-site only
 mt.sqs -c cell.vasp -a Cu,Au --iterations 1000 --number 5 -R  # dry-run: no disk write
-mt.skl                              # analyse exports/*/manifest.csv
+mt.skl                              # analyse <name>/manifest.csv from each export bundle
 ```
-`mt.seek` bundles land in `exports/<name>/` plus `exports/<name>.tar.gz`; `-I` accepts MP IDs, `-t` accepts natural-language tasks, and `-T` downloads more structures. `mt.sqs` bundles contain `sqs.json` and `sqs_summary.csv`. `mt.seek -h` lists all options, LLM engines, and `MT_SEEK_*` environment variables; short options are case-sensitive; `mt.sqs -h` lists every flag and default.
+`mt.seek` exports land in `<name>/` directly under the working root (no `exports/`, no `.tar.gz`, no upload): each bundle holds `README.md`, `manifest.csv`, `mt.seek.db`, and one `<id>/` directory per structure containing that id's CIF / POSCAR / JSON (INCAR / KPOINTS / job script are written into the same `<id>/` when requested; POTCAR is generated there by `mt.sh po` only when a pseudopotential directory such as `PBE_PATH` is set and exists). `-I` accepts MP IDs, `-t` accepts natural-language tasks, and `-T` downloads more structures. `mt.sqs` bundles additionally contain `sqs.json` and `sqs_summary.csv`. `mt.seek -h` lists all options, LLM engines, and `MT_SEEK_*` environment variables; short options are case-sensitive; `mt.sqs -h` lists every flag and default.
 > Structure data comes from the Materials Project: A. Jain et al., *APL Materials* 1, 011002 (2013).
 ***
 <b style="color:blue;"><i>mt.mc</i></b>: Monte Carlo simulation of phase transitions in 2D/3D magnetic materials

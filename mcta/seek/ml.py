@@ -1,7 +1,7 @@
 """机器学习层：用 scikit-learn 对已导出的结构清单做数据驱动分析。
 
 设计约束（与整体定位一致）：
-  * **离线**：只吃 exports/*/manifest.csv 里已有的数据，不联网、不调 MP；
+  * **离线**：只吃工作根下各导出包 <name>/manifest.csv 里已有的数据，不联网、不调 MP；
   * **轻量**：组成特征直接用 pymatgen 的元素性质加权统计，不引入 matminer；
   * 两个回归任务：ehull（稳定性）与 band_gap（电子结构），随机森林 + 5 折交叉验证；
   * 产物落在 <home>/ml/：特征表、预测表、模型文件（joblib）、分析报告，
@@ -24,7 +24,7 @@ STRUCT_FEATURE_NAMES = ["n_sites", "volume_per_atom", "mean_a", "mean_b",
 
 # ---------------------------------------------------------------- 数据收集
 def collect_rows() -> list:
-    """扫描 exports/*/manifest.csv，按 mp_id 去重（后出现的覆盖先出现的）。"""
+    """扫描工作根下各导出包 <name>/manifest.csv，按 mp_id 去重（后出现的覆盖先出现的）。"""
     from . import config
     rows = {}
     if not config.EXPORT_ROOT.exists():
@@ -153,7 +153,7 @@ def run_ml() -> dict:
 
         lines = [
             "== mt.seek 机器学习分析（随机森林 + 5 折交叉验证）==",
-            f"样本：{len(rows)} 条（来自 exports/ 各批清单，按 mp_id 去重）",
+            f"样本：{len(rows)} 条（来自各导出包清单，按 mp_id 去重）",
             f"特征：{len(feature_names)} 维（元素性质加权统计 + 结构几何）",
             "",
         ]

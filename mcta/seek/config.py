@@ -6,8 +6,8 @@ from pathlib import Path
 def _resolve_workroot() -> Path:
     """工作根目录：MT_SEEK_HOME 优先，否则用当前目录。
 
-    默认取当前目录而不是包所在目录 —— 安装成命令行工具后，包位于
-    site-packages，绝不能把 exports/cache 写进那里。
+    导出包直接落在这个根目录下（<包名>/），不再套 exports/ 中间层；
+    内部缓存与状态放隐藏的 .mt.seek/，不污染工作目录。
     """
     env = os.environ.get("MT_SEEK_HOME")
     if env:
@@ -16,18 +16,22 @@ def _resolve_workroot() -> Path:
 
 
 WORKROOT = _resolve_workroot()
-EXPORT_ROOT = WORKROOT / "exports"          # 每次任务一个子目录，可直接 scp 到服务器
-STRUCT_CACHE = WORKROOT / "cache"           # MP 结构原始缓存（json）
-DB_PATH = WORKROOT / "mt.seek.db"          # 事件与任务状态（SQLite）
+# 导出包根 = 工作根：每个任务直接生成 <包名>/，内部仍用 EXPORT_ROOT 这个名字
+# 复用扫描逻辑（curate/ml 扫 */manifest.csv）。
+EXPORT_ROOT = WORKROOT
+STATE_DIR = WORKROOT / ".mt.seek"           # 隐藏的内部状态（缓存/搜索/中间文件）
+STRUCT_CACHE = STATE_DIR / "cache"          # MP 结构原始缓存（json）与写文件中间目录
+DB_PATH = STATE_DIR / "mt.seek.db"          # 事件与任务状态（SQLite）；打包时复制进包
 
 
 def set_home(path) -> Path:
     """运行时切换工作根目录（供 --home 使用）。"""
-    global WORKROOT, EXPORT_ROOT, STRUCT_CACHE, DB_PATH, MP_API_KEY
+    global WORKROOT, EXPORT_ROOT, STATE_DIR, STRUCT_CACHE, DB_PATH, MP_API_KEY
     WORKROOT = Path(path).expanduser().resolve()
-    EXPORT_ROOT = WORKROOT / "exports"
-    STRUCT_CACHE = WORKROOT / "cache"
-    DB_PATH = WORKROOT / "mt.seek.db"
+    EXPORT_ROOT = WORKROOT
+    STATE_DIR = WORKROOT / ".mt.seek"
+    STRUCT_CACHE = STATE_DIR / "cache"
+    DB_PATH = STATE_DIR / "mt.seek.db"
     # MP_API_KEY 在模块导入时解析；切换根目录后必须重读该目录的 mt.seek.conf，
     # 否则 --home 指定的配置永远不会生效。
     MP_API_KEY = os.environ.get("MP_API_KEY", "") or _read_conf_file("MP_API_KEY")
@@ -146,8 +150,8 @@ MAGNETIC_ELEMENTS = {
 
 
 def ensure_dirs() -> None:
-    for p in (EXPORT_ROOT, STRUCT_CACHE):
-        p.mkdir(parents=True, exist_ok=True)
+    # 内部状态目录（缓存/搜索/db）统一收进隐藏的 .mt.seek/，导出包不落这里。
+    STRUCT_CACHE.mkdir(parents=True, exist_ok=True)
 
 
 def export_dir_for(name: str) -> Path:

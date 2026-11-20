@@ -81,7 +81,7 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument('-R', "--dryrn", action="store_true",
                     help="只搜索、不写盘、不打包，把候选 objective 打印出来预览")
     ap.add_argument("--home", type=str, metavar="DIR",
-                    help="工作根目录（exports/cache/db 落在此处），默认当前目录")
+                    help="工作根目录（导出包 <name>/ 与隐藏状态 .mt.seek/ 落在此处），默认当前目录")
     return ap
 
 

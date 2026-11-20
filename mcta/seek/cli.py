@@ -30,7 +30,7 @@ def _epilog() -> str:
         ("mt.seek -c Ti-C -k 3", "按化学体系检索近稳定相"),
         ("mt.seek -f MoS2 -k 5", "按化学式精确检索"),
         ("mt.seek -I mp-149 mp-2658", "直接指定结构，不检索（逗号分隔也行）"),
-        ("mt.seek -c Mn-P-S --job-template", "附带 INCAR/KPOINTS/slurm 模板"),
+        ("mt.seek -c Mn-P-S --job-template", "附带 INCAR/KPOINTS/slurm 模板（赝势可用时含 POTCAR）"),
         ("mt.seek -Q -c Ti-C", "忽略检索缓存（12h），强制重新查询"),
         ("mt.seek -t \"找 Cr-I 的二维磁性候选\"", "自然语言模式（需 LLM 密钥）"),
         ("mt.seek -t \"...\" -p deepseek", "指定 LLM 引擎（默认 openai）"),
@@ -94,6 +94,7 @@ def demo_structures() -> list:
 def offline_demo(with_job_template: bool = False, fmts=None) -> None:
     print("== mt.seek 离线自检（不联网，结构为内置示例）==")
     entries = []
+    potcar_notes = []
     for mp_id, st in demo_structures():
         sd = st.as_dict()
         info = describe_structure(sd)
@@ -106,6 +107,9 @@ def offline_demo(with_job_template: bool = False, fmts=None) -> None:
               f"{info['spacegroup']:<8} {info.get('dimensionality', '?'):<4}  "
               f"磁性={''.join(info['magnetic_elements']) or '-'}")
         print(f"          文件: {', '.join(w['files'].keys())}  ->  {w['export_dir']}")
+        note = w.get("potcar", "")
+        if note and note != "ok" and note not in potcar_notes:
+            potcar_notes.append(note)
         entries.append({"mp_id": mp_id, "export_dir": w["export_dir"], "meta": info})
         assert (w["export_dir"]), "导出目录为空"
 
@@ -113,18 +117,20 @@ def offline_demo(with_job_template: bool = False, fmts=None) -> None:
     if "error" in b:
         print("打包失败:", b["error"])
         return
-    print(f"\n包裹目录: {b['bundle_dir']}")
-    print(f"压缩包:   {b['tar_gz']}")
+    print(f"\n导出目录: {b['bundle_dir']}")
     print(f"清单:     {b['manifest']}")
-    print("\n自检通过：检索之外的写文件/打包链路可用。")
+    print(f"数据库:   {b['db']}")
+    if potcar_notes:
+        print("POTCAR：" + "；".join(potcar_notes))
+    print("\n自检通过：检索之外的写文件/汇总链路可用（就地生成，不打包、不上传）。")
 
 
 def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(
         prog="mt.seek",
         add_help=False,
-        description="mt.seek — 从 Materials Project 检索结构并导出结构文件包"
-                    "（不执行计算，计算在服务器上完成）",
+        description="mt.seek — 从 Materials Project 检索结构，在服务器上就地导出结构文件包"
+                    "（不执行计算；不打包、不上传）",
         epilog=_epilog(),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -145,7 +151,7 @@ def build_parser() -> argparse.ArgumentParser:
                     help="结构文件格式，逗号分隔：cif,poscar,json,xyz"
                          "（poscar 也可写 vasp）")
     ap.add_argument("--job-template", action="store_true",
-                    help="同时生成 INCAR/KPOINTS/slurm 模板，供服务器使用")
+                    help="同时生成 INCAR/KPOINTS/slurm 模板；赝势目录可用时自动拼接 POTCAR")
     ap.add_argument('-t', "--tasks", type=str, help="自然语言任务（LLM 模式）")
     ap.add_argument('-p', "--provs", type=str, default=None,
                     choices=sorted(config.LLM_PROVIDERS),
@@ -174,7 +180,7 @@ def build_parser() -> argparse.ArgumentParser:
     cur.add_argument('-R', "--dryrn", action="store_true",
                      help="只预览不导出")
     ap.add_argument("--home", type=str, metavar="DIR",
-                    help="工作根目录（exports/cache/db 落在此处），默认当前目录")
+                    help="工作根目录（导出包直接落在此处，内部缓存/状态收进其下的 .mt.seek/），默认当前目录")
     return ap
 
 

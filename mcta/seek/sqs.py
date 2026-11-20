@@ -11,7 +11,7 @@ mcsqs 可执行文件或 icet 包，两者都得另外装，因此这里直接�
   1. 读自定义晶胞（POSCAR / CIF / JSON 等 pymatgen 能读的格式）；
   2. 决定哪些位点参与随机化（子晶格）以及各元素占几个；
   3. 组装 sqsgenerator 配置、跑优化、把结果转回 pymatgen 结构；
-  4. 落盘并打包（复用 tools.write_structure_files / make_bundle）。
+  4. 落盘并汇总成导出包目录（复用 tools.write_structure_files / make_bundle）。
 """
 import json
 import math
@@ -407,7 +407,7 @@ def _summary_csv(info: dict, candidates: list, formats=None) -> str:
         tag = c.get("_tag", _tag(i))
         lines.append(f"{tag},{c['objective']:.6f},"
                      f"{c['structure'].composition.reduced_formula},"
-                     f"{len(c['structure'])},structures/{tag}/{filename}")
+                     f"{len(c['structure'])},{tag}/{filename}")
     return "\n".join(lines) + "\n"
 
 
@@ -443,11 +443,12 @@ def format_report(res: dict, info: dict) -> str:
     if res.get("dry_run"):
         lines += ["", "（-R 预览：只搜索、未写盘、未打包）"]
         return "\n".join(lines)
-    lines += ["", f"包裹目录：{b['bundle_dir']}",
-              f"压缩包：  {b['tar_gz']}",
+    lines += ["", f"导出目录：{b['bundle_dir']}",
               f"清单：    {b['manifest']}",
+              f"数据库：  {b['db']}",
               f"SQS 信息：{res['sqs_json']}",
-              "", "上传服务器：", f"  scp \"{b['tar_gz']}\" user@server:~/calc/",
+              "", "包内 <编号>/ 目录放该 id 的 CIF / POSCAR / JSON，"
+                  "作业模板若生成也直接放编号目录；已在服务器就地生成，无需上传或解压。",
               "", "提示：SQS 不唯一，objective 越小越接近理想随机固溶体；",
               "      弛豫时建议固定体积（ISIF=2），弛豫后再算一次 SRO 确认无序度未退化。"]
     return "\n".join(lines)

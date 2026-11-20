@@ -84,7 +84,7 @@
     font-weight: 900;
     letter-spacing: 1px;
   }
-  .brand .logo { font-size: 25px; }
+  .brand .logo { font-size: 25px; display: inline-block; }
   h1.wordmark { font-size: 38px; letter-spacing: 1.2px; margin: 16px 0 6px; }
   .wordmark span {
     display: inline-block; cursor: pointer; user-select: none;
@@ -127,11 +127,11 @@
   }
   .lang-switch {
     display: inline-flex; align-items: center; gap: 6px;
-    margin: 14px 8px 0; padding: 6px 13px; height: 26px; box-sizing: border-box;
+    margin: 0; padding: 6px 13px; height: 26px; box-sizing: border-box;
     border: 0; border-radius: 999px;
     background: var(--bg); color: var(--accent);
     font: inherit; font-size: 11.5px; font-weight: 700; line-height: 1;
-    cursor: pointer;
+    cursor: pointer; width: 100%; justify-content: center;
     box-shadow: 2px 2px 5px var(--sd), -2px -2px 5px var(--sl);
   }
   .lang-switch:hover { color: var(--accent); }
@@ -140,7 +140,7 @@
   }
   .lang-globe { font-size: 13px; line-height: 1; }
   .lang-caret { font-size: 8px; line-height: 1; opacity: .75; }
-  .lang-wrap { position: relative; display: inline-flex; }
+  .lang-wrap { position: relative; display: inline-flex; width: var(--lang-btn-w, 88px); margin: 14px 8px 0; }
   .lang-menu {
     position: absolute; top: calc(100% + 6px); left: 0; width: 100%; min-width: 0;
     flex-direction: column; gap: 0; padding: 0; display: none; z-index: 210;
@@ -831,16 +831,16 @@ mt.seek -r -D 8 -o my-pick</pre>
       <p style="margin:0 0 10px">读入原胞，按目标成分随机化指定子晶格，输出结构文件与成分统计。</p>
       <pre>mt.sqs -c cell.vasp -a "Cu:0.5,Au:0.5" -x 4,4,4 -n cuau-sqs</pre>
       <ul class="plain">
-        <li><code>-a</code> 按 <code>元素:占比</code> 描述目标成分，多个元素用逗号分隔。</li>
+        <li><code>-a</code> 按 “元素:占比” 描述目标成分，多个元素用逗号分隔。</li>
         <li><code>-x 4,4,4</code> 指定超胞尺寸，<code>-n</code> 指定输出名称。</li>
       </ul>
 
       <h2 class="sec-title">mt.skl · 描述符分析</h2>
-      <p style="margin:0 0 10px">读取 <code>exports/*/manifest.csv</code>，用随机森林做 <code>ehull</code> 与 <code>band_gap</code> 回归和 5 折交叉验证，结果写入 <code>ml/</code>。</p>
+      <p style="margin:0 0 10px">读取工作根下各导出包 <code>&lt;name&gt;/manifest.csv</code>，用随机森林做 <code>ehull</code> 与 <code>band_gap</code> 回归和 5 折交叉验证，结果写入 <code>ml/</code>。</p>
       <pre>mt.skl
 mt.skl --home proj</pre>
       <ul class="plain">
-        <li>在工作根目录下扫描 <code>exports/*/manifest.csv</code>（由 <code>mt.seek</code> 导出），<code>--home</code> 可改根目录。</li>
+        <li>在工作根目录下扫描 <code>&lt;name&gt;/manifest.csv</code>（由 <code>mt.seek</code> / <code>mt.sqs</code> 就地导出），<code>--home</code> 可改根目录。</li>
         <li>输出特征重要性与基础评分，适合在建模前做一轮粗筛。</li>
       </ul>
 
@@ -922,7 +922,7 @@ mt.server -S</pre>
         <li>不需要登录：服务以当前用户身份运行，文件浏览、编辑与下载限定在运行 <code>mt.server</code> 时所在的目录内（终端仍是完整的 shell，可自行切换目录）。同一端口再次启动会先停止旧服务，残留的 PID 记录会自动清理。</li>
         <li>默认在后台运行；启动它的终端关闭或退出后，服务会自动停止。需要一直运行时，用 <code>-f</code> 在终端里直接运行，或放进 <code>tmux</code> / <code>screen</code> 中。</li>
         <li>左侧栏里是真实的 PTY shell，和 SSH 登录一致，也从同一目录起步；终端切换目录时文件列表会同步跟随（起始目录外显示绝对路径），目录每 2 秒自动刷新。</li>
-        <li>目录中的图片按数量排列：1 张占内容区宽度 80%，2 张平分一行，3 张及以上每行 3 张；支持 PNG、JPG/JPEG、GIF、WebP、BMP、ICO、SVG，TIF/TIFF 无法预览，按普通文件下载。</li>
+        <li>目录中的图片按数量排列：1 张居中显示，尺寸与 2 张时每张相同；2 张平分一行，3 张及以上按视口宽度排布；支持 PNG、JPG/JPEG、GIF、WebP、BMP、ICO、SVG，TIF/TIFF 无法预览，按普通文件下载。</li>
         <li>结构文件与轨迹可直接在浏览器里查看（3Dmol.js）：默认正交投影，可一键切到透视；支持沿 x/y/z 轴按固定角度旋转、按比例缩放、重置视图，以及 1×–8×（默认 4×）分辨率导出 PNG / JPEG / WebP 图片。多帧轨迹可播放、逐帧拖动并选择 0.5×–4× 速度，最多读取 300 帧。</li>
         <li>默认只监听回环地址；命令以当前用户权限执行，请勿把带 token 的链接或端口暴露到外网。</li>
       </ul>
@@ -1113,18 +1113,21 @@ mt.server -S</pre>
       "，这是唯一需要联网的命令。": ", the only command that needs the network.",
       "mt.sqs · 准随机固溶体": "mt.sqs · Special quasirandom structures",
       "读入原胞，按目标成分随机化指定子晶格，输出结构文件与成分统计。": "Read a unit cell, randomize the chosen sublattice to a target composition, and output structure files with composition statistics.",
+      "按 “元素:占比” 描述目标成分，多个元素用逗号分隔。": "describes the target composition as \"element:fraction\" ; separate multiple elements with commas.",
       "按": "describes the target composition as",
-      "元素:占比": "element:fraction",
+      "“元素:占比”": "\"element:fraction\"",
       "描述目标成分，多个元素用逗号分隔。": "; separate multiple elements with commas.",
       "指定超胞尺寸，": "sets the supercell size, ",
       "指定输出名称。": "sets the output name.",
       "mt.skl · 描述符分析": "mt.skl · Descriptor analysis",
       "读取": "Read",
+      "读取工作根下各导出包": "Reads each bundle manifest under the working root",
       "，用随机森林做": ", and use a random forest to regress",
       "与": "and",
       "回归和 5 折交叉验证，结果写入": "with 5-fold cross-validation; results go to",
       "在工作根目录下扫描": "Scans",
       "（由": "(exported by",
+      "就地导出），": "in place), and",
       "导出），": "), and",
       "可改根目录。": "changes the root directory.",
       "输出特征重要性与基础评分，适合在建模前做一轮粗筛。": "Prints feature importance and baseline scores, a useful pre-modelling screen.",
@@ -1178,11 +1181,13 @@ mt.server -S</pre>
       "在终端里直接运行，或放进": "to run it in the terminal, or put it in",
       "中。": "instead.",
       "左侧栏里是真实的 PTY shell，和 SSH 登录一致，也从同一目录起步；终端切换目录时文件列表会同步跟随（起始目录外显示绝对路径），目录每 2 秒自动刷新。": "The sidebar is a real PTY shell, identical to an SSH login, starting in the same directory; when the terminal changes directory the file list follows (absolute paths outside the start directory), and directories refresh every 2 seconds.",
-      "目录中的图片按数量排列：1 张占内容区宽度 80%，2 张平分一行，3 张及以上每行 3 张；支持 PNG、JPG/JPEG、GIF、WebP、BMP、ICO、SVG，TIF/TIFF 无法预览，按普通文件下载。": "Images in a directory are laid out by count: one takes 80% of the content width, two share a row, three or more use three per row; PNG, JPG/JPEG, GIF, WebP, BMP, ICO and SVG are supported, while TIF/TIFF cannot be previewed and download as regular files.",
+      "目录中的图片按数量排列：1 张居中显示，尺寸与 2 张时每张相同；2 张平分一行，3 张及以上按视口宽度排布；支持 PNG、JPG/JPEG、GIF、WebP、BMP、ICO、SVG，TIF/TIFF 无法预览，按普通文件下载。": "Images in a directory are laid out by count: a single image is centered at the same thumbnail size as each of two; two share a row; three or more flow by viewport width; PNG, JPG/JPEG, GIF, WebP, BMP, ICO and SVG are supported, while TIF/TIFF cannot be previewed and download as regular files.",
       "结构文件与轨迹可直接在浏览器里查看（3Dmol.js）：默认正交投影，可一键切到透视；支持沿 x/y/z 轴按固定角度旋转、按比例缩放、重置视图，以及 1×–8×（默认 4×）分辨率导出 PNG / JPEG / WebP 图片。多帧轨迹可播放、逐帧拖动并选择 0.5×–4× 速度，最多读取 300 帧。": "Structure files and trajectories can be viewed directly in the browser (3Dmol.js): orthographic projection by default with one-click perspective; rotate around x/y/z by fixed angles, scale, reset the view, and export PNG / JPEG / WebP at 1×–8× resolution (default 4×). Multi-frame trajectories can be played, scrubbed frame by frame and played at 0.5×–4× speed, reading up to 300 frames.",
       "默认只监听回环地址；命令以当前用户权限执行，请勿把带 token 的链接或端口暴露到外网。": "Listens on loopback only by default; commands run with the current user's privileges, so never expose a token-bearing link or port to the internet.",
       "命令参数清单": "Command options",
-      "展开查看每个命令的完整参数；与虚拟终端中 <code>mt 命令 -h</code> 的输出一致。": "Expand to see the complete options for each command; identical to <code>mt command -h</code> in the demo terminal."
+      "展开查看每个命令的完整参数；与虚拟终端中 <code>mt 命令 -h</code> 的输出一致。": "Expand to see the complete options for each command; identical to <code>mt command -h</code> in the demo terminal.",
+      "展开查看每个命令的完整参数；与虚拟终端中": "Expand to see the complete options for each command; identical to",
+      "的输出一致。": "in the demo terminal."
     };
     /* I18N_EN_END */
 
@@ -1233,6 +1238,20 @@ mt.server -S</pre>
     if (urlLang()) saveLang(lang);
     window.MCTA_LANG = lang;
     document.documentElement.lang = lang === "en" ? "en" : "zh-CN";
+
+    /* 语言按钮与下拉项宽度跟随侧栏 McTa 动画字符，略宽 10px */
+    (function syncLangWidth() {
+      function apply() {
+        var logo = document.querySelector('.brand .logo');
+        var wrap = document.getElementById('langWrap');
+        if (!logo || !wrap || !logo.offsetWidth) return;
+        wrap.style.setProperty('--lang-btn-w', (Math.ceil(logo.offsetWidth) + 10) + 'px');
+      }
+      window.__mctaSyncLangWidth = apply;
+      apply();
+      window.addEventListener('resize', apply);
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(apply);
+    })();
 
     /* 语言切换：按钮显示当前语言，下拉只列出可切换到的另一种语言 */
     var langBtn = document.getElementById("langToggle");
@@ -1396,6 +1415,7 @@ mt.server -S</pre>
     let rainLastTick = 0;
     let rainPaused = false;
     let rainResize = null;
+    let rainDisabled = false;
 
     function setupRain() {
       if (!rainCtx) return;
@@ -1435,6 +1455,8 @@ mt.server -S</pre>
       // + document.hidden + 交互暂停统一表达，覆盖/LICENSE 浮层下照常运行。
       const wrap = box.closest('.term-wrap');
       if (wrap && wrap.classList.contains('floating')) return false;
+      // 用户执行过一次命令后永久关闭；点击目录自动 cd 不算。
+      if (rainDisabled) return false;
       return !!rainCtx && !rainPaused && !document.hidden && rainVisible;
     }
 
@@ -1475,6 +1497,7 @@ mt.server -S</pre>
     }
     setInterval(function () {
       const now = Date.now();
+      if (rainDisabled) { stopRain(); return; }
       if (!canRain()) {
         if (rainPaused && !rainResize) rainPaused = false;
         return;
@@ -1516,6 +1539,15 @@ mt.server -S</pre>
       }, wait);
     }
     function pauseRainForResize() { pauseRain(180); }
+    // 用户真正输入命令并回车后关闭字符雨；点击页面目录自动切换目录不会调用这里。
+    function disableRain() {
+      if (rainDisabled) return;
+      rainDisabled = true;
+      clearTimeout(rainResize);
+      rainResize = null;
+      rainPaused = false;
+      stopRain();
+    }
     window.addEventListener('resize', pauseRainForResize);
     if ('ResizeObserver' in window) {
       let roFirst = true;
@@ -1532,8 +1564,9 @@ mt.server -S</pre>
     box.addEventListener('input', function () { pauseRain(500); }, true);
     startRain();
     window.__mctaRainKick = kickRain;
+    window.__mctaRainDisable = disableRain;
     window.__mctaRainState = function () {
-      return { active: rainActive, paused: rainPaused, lastTick: rainLastTick, canRun: canRain() };
+      return { active: rainActive, paused: rainPaused, disabled: rainDisabled, lastTick: rainLastTick, canRun: canRain() };
     };
 
     /* ---- 终端逻辑 ---- */
@@ -1736,7 +1769,7 @@ mt.server -S</pre>
   -k --topks       取前 k 个，默认 3
   -Q --refsh       忽略缓存，强制重新查询 MP
   -F --formt       结构格式：cif,poscar,json,xyz
-  --job-template   同时生成 INCAR/KPOINTS/slurm 模板
+  --job-template   同时生成 INCAR/KPOINTS/slurm 模板（赝势目录可用时含 POTCAR）
   -t --tasks       自然语言任务（LLM 模式）
   -p --provs       LLM 引擎，默认 openai
   -L --lists       列出历史导出包
@@ -1744,6 +1777,8 @@ mt.server -S</pre>
 `,
 
   skl: `mt.skl — 用 scikit-learn 分析结构清单
+
+  扫描工作根下 <name>/manifest.csv（mt.seek 就地导出），随机森林回归 ehull 与带隙，结果写入 <home>/ml/。
 
   -h -H --help     显示帮助
   -v -V --version  显示版本
@@ -2009,7 +2044,7 @@ mt.server -S</pre>
   -k --topks       检索取前 k 个（默认 3）
   -Q --refsh       忽略本地检索缓存，强制重新查询 Materials Project
   -F --formt       structure formats: cif,poscar,json,xyz
-  --job-template   同时生成 INCAR/KPOINTS/slurm 模板，供服务器使用
+  --job-template   INCAR/KPOINTS/slurm templates; POTCAR via mt.sh po when a pseudopotential dir is set
   -t --tasks       自然语言任务（LLM 模式）
   -p --provs       LLM 引擎（默认 openai；本地用 ollama/vllm）
   -L --lists       列出历史导出包
@@ -2017,6 +2052,9 @@ mt.server -S</pre>
 `,
 
   skl: `mt.skl — analyse a structure manifest with scikit-learn
+
+  Scans <name>/manifest.csv bundles written in place by mt.seek under the working root;
+  random-forest regression for ehull and band gap, output under <home>/ml/.
 
   -h -H --help     show help
   -v -V --version  show version
@@ -2027,17 +2065,17 @@ mt.server -S</pre>
 
   -h -H --help     show help
   -v -V --version  show version
-  -c --cells       自定义晶胞文件（POSCAR / CONTCAR / CIF / JSON 等 pymatgen 能读的格式）
-  --host           要参与随机化的元素位点。晶胞只有一种元素时可省略（自动选）；多种元素时必须显式给，否则容易把 O/S 这类亚晶格错误地随机化。
-  -a --alloy       该位点上的合金成分： Cu:0.5,Au:0.5 按分数写 Cu,Au 直接等分（自动按目标原子个数折算） Cu:27,Au:27 直接按个数...
-  -x --supcl       扩胞倍数，如 3,3,3 或 3 或 2x2x1（默认 3,3,3）
-  --iterations     SQS 搜索迭代次数（默认 100000；下限 1000，上限 50000000）
-  --number         导出 K 个互不相同的候选，按 objective 从小到大（默认 1）
+  -c --cells       input cell file (POSCAR / CONTCAR / CIF / JSON or any format pymatgen can read)
+  --host           sites to randomize. Omit for a single-element cell (auto-detected); for multi-element cells specify explicitly, otherwise sublattices such as O/S may be randomized by mistake.
+  -a --alloy       alloy composition as "element:fraction", e.g. Cu:0.5,Au:0.5; Cu,Au splits equally (scaled to the target atom count), Cu:27,Au:27 sets counts directly...
+  -x --supcl       supercell size, e.g. 3,3,3 or 3 or 2x2x1 (default 3,3,3)
+  --iterations     SQS search iterations (default 100000; min 1000, max 50000000)
+  --number         export K distinct candidates, sorted by objective (default 1)
   -s --seeds       random seed
   -n --names       export package name
   -F --formt       structure formats: cif,poscar,json,xyz
-  --job-template   同时生成 INCAR / KPOINTS / slurm 模板
-  -R --dryrn       只搜索、不写盘、不打包，把候选 objective 打印出来预览
+  --job-template   also generate INCAR / KPOINTS / slurm templates (POTCAR when a pseudopotential directory is available)
+  -R --dryrn       search only: print candidate objectives without writing or packing anything
   --home           working root, default current directory
 `,
 
@@ -2105,7 +2143,7 @@ mt.server -S</pre>
     (function () {
       const host = document.getElementById("paramRef");
       if (!host) return;
-      const order = ["band", "dos", "phband", "phdos", "ph", "ph3", "seek", "skl", "sqs", "mc", "sh", "server"];
+      const order = ["band", "dos", "phband", "phdos", "ph", "ph3", "seek", "sqs", "skl", "mc", "sh", "server"];
       const frag = document.createDocumentFragment();
       order.forEach(function (key) {
         const text = HELP[key];
@@ -2131,13 +2169,15 @@ mt.server -S</pre>
 
     const FS = {
       '/home/demo': ['mcta/'],
-      '/home/demo/mcta': ['README.md', 'index.html', 'mcta/', 'pyproject.toml'],
+      '/home/demo/mcta': ['LICENSE', 'README.md', 'index.html', 'mcta/', 'pyproject.toml'],
       '/home/demo/mcta/mcta': ['__init__.py', '__main__.py', 'bandplot/', 'flags.py', 'mc/', 'seek/', 'server/', 'sh/', 'skl/', 'sqs/'],
       '/home/demo/mcta/mcta/server': ['3Dmol.LICENSE.txt', '3dmol-min.js', '__init__.py', '__main__.py', 'xterm.css', 'xterm.js'],
-      '/home/demo/mcta/mcta/bandplot': ['dos.py', 'mass.py', 'ph.py', 'ph3.py', 'ph3doc.py', 'phdoc.py', 'phdos.py', 'plots.py', 'pplots.py', 'projected.py', 'readdata.py', 'vaspread.py', 'wrapper.py'],
-      '/home/demo/mcta/mcta/mc': ['engine.py', 'geometry/', 'parallel.py', 'plots.py', 'wrapper.py'],
+      '/home/demo/mcta/mcta/bandplot': ['dos.py', 'mass.py', 'ph.py', 'ph3.py', 'ph3doc.py', 'phdoc.py', 'phdos.py', 'phono3py_docs.json', 'phonopy_docs.json', 'plots.py', 'pplots.py', 'projected.py', 'readdata.py', 'vaspread.py', 'wrapper.py'],
+      '/home/demo/mcta/mcta/mc': ['engine.py', 'geometry/', 'parallel.py', 'plots.py', 'wrapper.py', 'xy_engine.py'],
+      '/home/demo/mcta/mcta/mc/geometry': ['__init__.py', 'bilayer_aa.py', 'bilayer_ab.py', 'bilayer_ab_u_3.py', 'from_structure.py', 'simple_cubic.py', 'square.py', 'triangular.py', 'xy_geometry.py'],
       '/home/demo/mcta/mcta/seek': ['agent.py', 'cli.py', 'config.py', 'curate.py', 'llm.py', 'ml.py', 'sqs.py', 'state.py', 'tools.py'],
       '/home/demo/mcta/mcta/sh': ['cli.py', 'scripts/'],
+      '/home/demo/mcta/mcta/sh/scripts': ['ck.sh', 'cp.sh', 'en.sh', 'ex.sh', 'gr.sh', 'ig.sh', 'il.sh', 'kb.sh', 'kg.sh', 'make_supercell.py', 'md.sh', 'mv.sh', 'po.sh', 'pr.sh', 're.sh', 'sh.sh', 'su.sh', 'sy.sh', 'symmetry_info.py', 'x.sh', 'xy.sh', 'y.sh', 'z2.sh', 'z2_convert.py'],
       '/home/demo/mcta/mcta/skl': ['__init__.py', 'cli.py'],
       '/home/demo/mcta/mcta/sqs': ['__init__.py', 'cli.py']
     };
@@ -2476,7 +2516,11 @@ mt.server -S</pre>
       if (e.key === 'Enter') {
         const value = input.value;
         input.value = '';
-        if (value.trim()) hist.push(value);
+        if (value.trim()) {
+          hist.push(value);
+          // 用户主动输入并回车执行命令后关闭字符雨；点击目录自动 cd 不会走到这里。
+          disableRain();
+        }
         pos = hist.length;
         run(value);
       } else if (e.key === 'ArrowUp') {
@@ -2490,6 +2534,104 @@ mt.server -S</pre>
         pos = Math.min(hist.length, pos + 1);
         input.value = pos === hist.length ? '' : hist[pos];
       }
+    });
+
+    /* ---- Tab 补全：命令 / 参数 / 路径 ---- */
+    const TAB_COMMANDS = (function () {
+      const names = ['mt', 'help', 'clear', 'exit', 'logout'];
+      Object.keys(HELP).forEach(function (k) { names.push('mt.' + k); });
+      Object.keys(MAN_BRIEF).forEach(function (n) { if (names.indexOf(n) < 0) names.push(n); });
+      ['pwd', 'ls', 'll', 'dir', 'head', 'tail', 'whoami', 'hostname', 'id', 'date',
+       'nproc', 'uname', 'uptime', 'df', 'free', 'ps', 'top', 'which', 'python',
+       'python3', 'pip', 'pip3', 'git', 'man', 'history', 'env', 'printenv', 'sudo',
+       'rm', 'mv', 'cp', 'mkdir', 'touch', 'chmod', 'ssh', 'grep', 'find'
+      ].forEach(function (n) { if (names.indexOf(n) < 0) names.push(n); });
+      return names;
+    })();
+    const TAB_PATH_CMDS = /^(cd|ls|ll|dir|cat|grep|man|head|tail)$/;
+
+    function tabOptions(key) {
+      const opts = [];
+      (HELP[key] || '').split('\n').forEach(function (line) {
+        const m = line.match(/^\s{2,}(-{1,2}[\w-]+(?:\s+-{1,2}[\w-]+)*)/);
+        if (!m) return;
+        m[1].split(/\s+/).forEach(function (o) {
+          if (o.charAt(0) === '-' && opts.indexOf(o) < 0) opts.push(o);
+        });
+      });
+      return opts;
+    }
+
+    function tabPathCandidates(token) {
+      const slash = token.lastIndexOf('/');
+      const dirPart = slash >= 0 ? token.slice(0, slash + 1) : '';
+      const base = slash >= 0 ? token.slice(slash + 1) : token;
+      const list = FS[absPath(dirPart || '.')];
+      if (!list) return [];
+      return list.filter(function (n) { return n.indexOf(base) === 0; })
+                 .map(function (n) { return dirPart + n; });
+    }
+
+    function tabCommonPrefix(arr) {
+      let p = arr[0] || '';
+      for (let i = 1; i < arr.length && p; i++) {
+        let j = 0;
+        while (j < p.length && j < arr[i].length && p[j] === arr[i][j]) j++;
+        p = p.slice(0, j);
+      }
+      return p;
+    }
+
+    input.addEventListener('keydown', function (e) {
+      if (e.key !== 'Tab' || e.ctrlKey || e.altKey || e.metaKey) return;
+      const value = input.value;
+      const caret = typeof input.selectionStart === 'number' ? input.selectionStart : value.length;
+      const before = value.slice(0, caret);
+      const m = before.match(/(^|\s)([^\s]*)$/);
+      const token = m ? m[2] : '';
+      const start = caret - token.length;
+      const words = before.trim() ? before.trim().split(/\s+/) : [];
+      const first = words[0] || '';
+      const isArg = words.length > (token ? 1 : 0);
+      let cands = [];
+
+      if (token.charAt(0) === '-') {
+        let key = first.replace(/^mt\./, '');
+        if (first === 'mt' && words.length > 2) key = words[1].replace(/^mt\./, '');
+        cands = HELP[key] ? tabOptions(key) : ['-h', '-H', '--help', '-v', '-V', '--version'];
+      } else if (!isArg) {
+        cands = TAB_COMMANDS;
+      } else if (first === 'mt') {
+        const typed = words.length - (token ? 1 : 0);
+        cands = typed <= 1 ? Object.keys(HELP)
+              : (HELP[words[1]] ? tabOptions(words[1]) : ['-h', '-H', '--help']);
+      } else if (first.indexOf('mt.') === 0) {
+        cands = tabOptions(first.slice(3));
+      } else if (TAB_PATH_CMDS.test(first) || token.charAt(0) === '/' ||
+                 token.indexOf('/') >= 0 || token.indexOf('~') === 0 ||
+                 token.indexOf('.') === 0) {
+        cands = tabPathCandidates(token);
+      }
+      cands = cands.filter(function (c) { return c.indexOf(token) === 0; });
+      if (!cands.length) return;
+      e.preventDefault();
+
+      if (cands.length === 1) {
+        const ins = cands[0];
+        const tail = ins.charAt(ins.length - 1) === '/' ? '' : ' ';
+        input.value = value.slice(0, start) + ins + tail + value.slice(caret);
+        const p = start + ins.length + tail.length;
+        if (input.setSelectionRange) input.setSelectionRange(p, p);
+        return;
+      }
+      const prefix = tabCommonPrefix(cands);
+      if (prefix.length > token.length && !(token === '' && prefix === '-')) {
+        input.value = value.slice(0, start) + prefix + value.slice(caret);
+        if (input.setSelectionRange) input.setSelectionRange(start + prefix.length, start + prefix.length);
+        return;
+      }
+      print(shortPath(cwd) + ' $ ' + value, 'dim');
+      print(cands.join('  '), 'dim');
     });
 
     /* ---- 浮动窗口：拖动、缩放、停靠、最小化 ---- */
@@ -2929,7 +3071,8 @@ mt.server -S</pre>
     }
 
     print(IS_EN ? 'McTa virtual terminal · static demo' : 'McTa 虚拟终端 · 静态演示', 'dim');
-    print(IS_EN ? 'Type mt -h for options, or try ls, pwd, cd, cat README.md' : '输入 mt -h 查看参数，或试试 ls、pwd、cd、cat README.md', 'dim');
+    print(IS_EN ? 'Type mt -h for options, or try ls, pwd, cd, cat README.md; Tab completes commands, options and paths'
+                : '输入 mt -h 查看参数，或试试 ls、pwd、cd、cat README.md；Tab 可补全命令、参数与路径', 'dim');
   })();
 
   (function () {

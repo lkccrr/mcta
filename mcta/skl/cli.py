@@ -1,7 +1,7 @@
 """命令行入口：安装后即为 `mt.skl` 可执行文件。
 
 pip install "mcta[seek]" 之后直接：
-    mt.skl                   对 exports/ 下全部清单做随机森林预测（ehull + 带隙）
+    mt.skl                   对工作根下各导出包清单做随机森林预测（ehull + 带隙）
 """
 import argparse
 import sys
@@ -22,9 +22,10 @@ def build_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 用法：
-    mt.skl                   扫描 exports/*/manifest.csv，跑默认分析
+    mt.skl                   扫描工作根下 <name>/manifest.csv，跑默认分析
     mt.skl -h                查看完整参数
 
+清单由 mt.seek / mt.sqs 就地导出到工作根下的 <name>/ 目录；
 算法本体仍在 mcta.seek.ml；mt.seek 自身已不再直接依赖 scikit-learn。
         """.strip(),
     )
@@ -32,7 +33,7 @@ def build_parser() -> argparse.ArgumentParser:
                     help='show this help message and exit')
     ap.add_argument('-v', '-V', "--version", action="version", version=_version())
     ap.add_argument("--home", type=str, metavar="DIR",
-                    help="工作根目录（exports/ 与 ml/ 落在此处），默认当前目录")
+                    help="工作根目录（导出包 <name>/ 与 ml/ 落在此处），默认当前目录")
     return ap
 
 

@@ -1,13 +1,14 @@
-"""工具层：检索 → 取结构 → 写结构文件 → 打包上传。
+"""工具层：检索 → 取结构 → 写结构文件 → 汇总成导出包目录。
 
 设计约束（与定位一致）：
-  * 这里**不执行任何计算**，只产出可上传服务器的文件；
+  * 这里**不执行任何计算**，只在服务器上就地产出计算输入文件（不打包、不上传）；
   * 每个工具返回 dict，错误放 {"error": ...}，绝不向智能体抛异常；
   * 所有写文件操作幂等：同名文件覆盖，metadata 落 SQLite 便于回放。
 """
 import atexit
 import csv
 import json
+import os
 import re
 import shutil
 import time
@@ -91,7 +92,7 @@ def _safe_name(text: str) -> str:
     """把任意输入压成单层、安全的目录名。
 
     首尾的点一律剥掉，因此 "." 与 ".." 不可能作为结果返回（两者会把
-    导出目录指向 exports 的上一级），剩下的字符不含路径分隔符。
+    导出目录指向工作根本身），剩下的字符不含路径分隔符。
     """
     name = re.sub(r"[^A-Za-z0-9._-]+", "-", str(text or "")).strip(".-")
     stem, dot, tail = name.partition(".")
@@ -103,8 +104,8 @@ def _safe_name(text: str) -> str:
 def _checked_export_dir(name: str) -> Path:
     """返回 EXPORT_ROOT/<name>，并确认它确实是 EXPORT_ROOT 的直接子目录。
 
-    这是 rmtree 之前的最后一道闸：任何能跳出 exports/ 的名字都被拒绝，
-    避免把工作根目录（cache、db、历史导出）当成待清理的目标。
+    这是 rmtree 之前的最后一道闸：任何能跳出工作根目录的名字都被拒绝，
+    避免把工作根本身、隐藏状态目录 .mt.seek/ 或别的导出包当成待清理目标。
     """
     root = config.export_dir_for(name)
     if root.resolve().parent != config.EXPORT_ROOT.resolve():
@@ -284,7 +285,7 @@ _SEARCH_TTL = 12 * 3600        # 检索结果缓存有效期（MP 数据库按�
 
 def _search_cache_path(chemsys, formula, max_ehull) -> Path:
     key = f"{chemsys or ''}_{formula or ''}_{max_ehull}"
-    return config.WORKROOT / "cache" / "search" / f"{_safe_name(key)}.json"
+    return config.STRUCT_CACHE / "search" / f"{_safe_name(key)}.json"
 
 
 def _load_search_cache(path: Path):
@@ -362,7 +363,7 @@ def get_structure(mp_id: str) -> dict:
 
 # ---------------------------------------------------------------- 写结构文件
 JOB_TEMPLATES = {
-    "INCAR.template": """# mt.seek 模板 — 按体系自行调整后重命名为 INCAR
+    "INCAR": """# mt.seek 模板 — 按体系自行调整
 SYSTEM = __SYSTEM__
 ENCUT  = 520
 PREC   = Accurate
@@ -380,13 +381,13 @@ LCHARG = .FALSE.
 # ISPIN  = 2
 # MAGMOM = __MAGMOM__
 """,
-    "KPOINTS.template": """K-Points (auto)
+    "KPOINTS": """K-Points (auto)
 0
 Gamma
 __KX__ __KY__ __KZ__
 0 0 0
 """,
-    "submit.slurm.template": """#!/bin/bash
+    "submit.slurm": """#!/bin/bash
 #SBATCH -J __NAME__
 #SBATCH -p __PARTITION__
 #SBATCH -N 1
@@ -413,6 +414,33 @@ def pad(text, width: int) -> str:
     """按显示宽度左对齐补空格（str.ljust 对中文会错位）。"""
     text = str(text)
     return text + " " * max(0, width - _disp_width(text))
+
+
+def _make_potcar(out: Path) -> str:
+    """在 POSCAR 同目录调用 mt.sh po 拼接 POTCAR。
+
+    先检查赝势目录是否给定且存在（与 po.sh 的查找优先级一致），再在 out
+    目录里执行 `mt.sh po`；po.sh 会按 POSCAR 顺序拼好 POTCAR 并写在同目录。
+    返回空串表示成功，否则返回给用户看的跳过/失败说明（不阻断导出）。
+    """
+    if config.get_pseudopotential_path() is None:
+        return ("未配置赝势目录或目录不存在，跳过 POTCAR"
+                "（设置 PBE_PATH / LDA_PATH / GGA_PATH 后自动生成）")
+    if not (out / "POSCAR").is_file():
+        return "本次未生成 POSCAR，跳过 POTCAR"
+    try:
+        from mcta.sh.cli import main as sh_main
+        cwd = Path.cwd()
+        os.chdir(out)
+        try:
+            rc = sh_main(["po"])
+        finally:
+            os.chdir(cwd)
+    except Exception as e:  # noqa: BLE001
+        return f"调用 mt.sh po 失败：{type(e).__name__}: {e}"
+    if rc != 0:
+        return f"mt.sh po 退出码 {rc}，POTCAR 可能不完整"
+    return ""
 
 
 def write_structure_files(mp_id: str, structure_dict: dict = None,
@@ -452,7 +480,18 @@ def write_structure_files(mp_id: str, structure_dict: dict = None,
             stale = out / fname
             if fmt not in requested and stale.exists():
                 stale.unlink()
-        if not with_job_template:
+        # 作业文件（INCAR/KPOINTS/submit.slurm/POTCAR）直接写在编号目录根。
+        # POTCAR 无论是否重生成都先清掉旧的：赝势不可用时不能把上次的留在包里。
+        job_names = list(JOB_TEMPLATES) + ["POTCAR"]
+        if with_job_template:
+            stale = out / "POTCAR"
+            if stale.exists():
+                stale.unlink()
+        else:
+            for name in job_names:
+                stale = out / name
+                if stale.exists():
+                    stale.unlink()
             shutil.rmtree(out / "job_template", ignore_errors=True)
 
         written = {}
@@ -479,9 +518,10 @@ def write_structure_files(mp_id: str, structure_dict: dict = None,
             p.write_text("\n".join(lines) + "\n", encoding="utf-8")
             written["xyz"] = str(p)
 
+        potcar_status = ""
         if with_job_template:
-            tdir = out / "job_template"
-            tdir.mkdir(exist_ok=True)
+            # 作业文件直接落进编号目录（不再单独建 job_template/ 子目录），
+            # 便于在服务器上 cd 到编号目录即可提交。
             d = {"SYSTEM": f"{mp_id} {info['formula']}",
                  "NAME": f"{mp_id}", "PARTITION": "normal",
                  "MAGMOM": " ".join(["5.0"] * info["n_sites"]),
@@ -489,13 +529,23 @@ def write_structure_files(mp_id: str, structure_dict: dict = None,
             for fname, text in JOB_TEMPLATES.items():
                 for k, v in d.items():
                     text = text.replace(f"__{k}__", str(v))
-                (tdir / fname).write_text(text, encoding="utf-8")
-            written["job_template"] = str(tdir)
+                (out / fname).write_text(text, encoding="utf-8")
+                written[fname] = str(out / fname)
+            # POTCAR：赝势目录可用时调 mt.sh po，在 POSCAR 同目录拼接生成。
+            potcar_status = _make_potcar(out)
+            potcar = out / "POTCAR"
+            if potcar.is_file() and potcar.stat().st_size > 0:
+                written["POTCAR"] = str(potcar)
+                if not potcar_status:
+                    potcar_status = "ok"
 
         state.register_structure(mp_id, info.get("formula", "?"), str(out),
                                  "exported", {"files": list(written), **info})
-        return {"mp_id": mp_id, "export_dir": str(out), "files": written,
-                "meta": info}
+        result = {"mp_id": mp_id, "export_dir": str(out), "files": written,
+                  "meta": info}
+        if with_job_template:
+            result["potcar"] = potcar_status or "未生成"
+        return result
     except Exception as e:  # noqa: BLE001
         return {"error": f"{type(e).__name__}: {e}"}
 
@@ -508,12 +558,14 @@ MANIFEST_FIELDS = ["mp_id", "formula", "n_sites", "spacegroup", "dimensionality"
 
 def make_bundle(name: str, entries: list, source: str = "Materials Project",
                 extra_files: dict = None) -> dict:
-    """把若干结构目录收拢成一个可直接 scp 的包裹（目录 + tar.gz + manifest）。
+    """把若干结构目录汇总成一个导出包目录。
+
+    直接在服务器上运行，不再打包、不再 scp：产物只有 WORKROOT/<name>/，
+    结构直接放在包根的 <编号>/ 下，另含 README.md / manifest.csv / mt.seek.db。
 
     entries: [{"mp_id":..., "export_dir":..., "meta": {...}, "e_above_hull_eV":..., ...}]
     source: 清单 README 里写的结构来源（SQS 模式下换成自定义晶胞的说明）
-    extra_files: {文件名: 文本}，写在包裹根目录（如 sqs.json / sqs_summary.csv），
-                 必须在打包前落盘，否则进不了 tar.gz
+    extra_files: {文件名: 文本}，写在包根目录（如 sqs.json / sqs_summary.csv）
     """
     try:
         if not entries:
@@ -526,14 +578,13 @@ def make_bundle(name: str, entries: list, source: str = "Materials Project",
             return {"error": str(e)}
         if root.exists():
             shutil.rmtree(root)
-        (root / "structures").mkdir(parents=True)
-        (root / "results").mkdir(exist_ok=True)   # 服务器端回传结果的落点（约定）
+        root.mkdir(parents=True)
 
         rows = []
         for e in entries:
             mp_id = _safe_name(e["mp_id"])
             src = Path(e["export_dir"])
-            dst = root / "structures" / mp_id
+            dst = root / mp_id
             if dst.exists():
                 shutil.rmtree(dst)
             shutil.copytree(src, dst)
@@ -553,12 +604,12 @@ def make_bundle(name: str, entries: list, source: str = "Materials Project",
                 "magnetic_elements": "".join(meta.get("magnetic_elements", [])),
                 "e_above_hull_eV": e.get("e_above_hull_eV", ""),
                 "band_gap_eV": e.get("band_gap_eV", ""),
-                "export_dir": f"structures/{mp_id}",
+                "export_dir": mp_id,
             })
 
         with (root / "manifest.csv").open("w", newline="", encoding="utf-8") as f:
-            # lineterminator="\n"：Windows 上默认写 \r\n，服务器端 bash
-            # `read` 会把 \r 读进最后一个字段（export_dir），导致 cp 失败
+            # lineterminator="\n"：Windows 上默认写 \r\n，服务器端 awk/csv
+            # 会把 \r 读进最后一个字段（export_dir），导致路径拼错
             w = csv.DictWriter(f, fieldnames=MANIFEST_FIELDS, lineterminator="\n")
             w.writeheader()
             w.writerows(rows)
@@ -567,12 +618,36 @@ def make_bundle(name: str, entries: list, source: str = "Materials Project",
                                         encoding="utf-8")
         for fname, text in (extra_files or {}).items():
             (root / fname).write_text(text, encoding="utf-8")
-        tar = shutil.make_archive(str(config.EXPORT_ROOT / name), "gztar", root_dir=root)
-        state.log_event("make_bundle", {"name": name, "n": len(rows)}, {"tar": tar})
-        return {"bundle_dir": str(root), "tar_gz": tar, "n_structures": len(rows),
-                "manifest": str(root / "manifest.csv")}
+        # 先记本次汇总事件，再复制库：包内 db 也含 make_bundle 这条，自洽可追溯。
+        # 真库仍在 .mt.seek/，包内只是随包快照。
+        state.log_event("make_bundle", {"name": name, "n": len(rows)},
+                        {"dir": str(root)})
+        _copy_db_into(root)
+        return {"bundle_dir": str(root), "n_structures": len(rows),
+                "manifest": str(root / "manifest.csv"),
+                "db": str(root / "mt.seek.db")}
     except Exception as e:  # noqa: BLE001
         return {"error": f"{type(e).__name__}: {e}"}
+
+
+def _copy_db_into(root: Path) -> None:
+    """把 SQLite 状态库复制一份到导出包根（文件名为 mt.seek.db）。
+
+    仅当真库存在时才复制；复制前先 WAL checkpoint 保证数据已落盘。
+    """
+    import sqlite3
+    src = config.DB_PATH
+    if not src.exists():
+        return
+    try:
+        con = sqlite3.connect(str(src))
+        try:
+            con.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+        finally:
+            con.close()
+    except sqlite3.Error:
+        pass
+    shutil.copy2(src, root / "mt.seek.db")
 
 
 def _bundle_readme(name: str, rows: list, source: str = "Materials Project") -> str:
@@ -581,7 +656,7 @@ def _bundle_readme(name: str, rows: list, source: str = "Materials Project") -> 
     lines = [
         f"# {name}",
         "",
-        f"生成时间：{ts}　由 mt.seek 打包，结构来源 {source}。",
+        f"生成时间：{ts}　由 mt.seek 导出（直接在服务器上运行），结构来源 {source}。",
         "",
         f"结构数量：**{len(rows)}**",
     ]
@@ -595,21 +670,18 @@ def _bundle_readme(name: str, rows: list, source: str = "Materials Project") -> 
         "",
         "```",
         f"{name}/",
-        "├── structures/<编号>/   # 每个结构的 CIF / POSCAR / JSON",
-        "├── manifest.csv          # 结构清单与元信息",
-        "├── results/              # 服务器端回传结果的约定落点",
-        "└── README.md",
+        "├── README.md          # 本说明",
+        "├── manifest.csv       # 结构清单与元信息",
+        "├── mt.seek.db         # 本次检索/导出的事件与结构状态（SQLite）",
+        "├── <编号>/            # 每个结构一个目录（编号即 mp_id 或 SQS 编号）",
+        "│   ├── *.cif / POSCAR / *.json    # 该 id 的结构文件",
+        "│   └── INCAR / KPOINTS / 提交脚本 / POTCAR   # 仅 --job-template 时生成；POTCAR 需赝势目录",
+        "└── ...",
         "```",
         "",
-        "## 上传与提交",
-        "",
-        "```bash",
-        f"scp {name}.tar.gz user@server:~/calc/",
-        f"ssh user@server 'cd ~/calc && tar xzf {name}.tar.gz'",
-        "```",
-        "",
-        "服务器端按 `manifest.csv` 逐行建任务目录，把 `structures/<编号>/POSCAR`",
-        "复制为计算目录下的 POSCAR，再按需生成 INCAR / KPOINTS / POTCAR / 提交脚本。",
+        "本包已在服务器上就地生成，无需上传、无需解压。按 `manifest.csv` 的",
+        "`export_dir`（相对本包目录）进入对应编号目录，即为该结构的全部文件；",
+        "其中 POSCAR 可直接作为计算输入，作业模板按实际体系修改后使用。",
         "",
         "## 结构清单",
         "",
@@ -630,10 +702,8 @@ def _bundle_readme(name: str, rows: list, source: str = "Materials Project") -> 
 
 def list_exports() -> dict:
     """列出已有的导出包，便于人工确认。"""
-    config.ensure_dirs()
     items = []
     for p in sorted(config.EXPORT_ROOT.iterdir()):
         if p.is_dir() and (p / "manifest.csv").exists():
-            items.append({"name": p.name, "dir": str(p),
-                          "tar_gz": str(config.EXPORT_ROOT / f"{p.name}.tar.gz")})
+            items.append({"name": p.name, "dir": str(p)})
     return {"exports": items, "n": len(items)}

@@ -1382,7 +1382,7 @@ PAGE = """<!doctype html>
   .side{position:sticky;top:28px;align-self:start;max-height:calc(100vh - 56px);overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;}
   .side::-webkit-scrollbar{display:none;}
   .brand{padding:0 8px;}
-  .brand .logo{font-family:"McTa Wordmark","Baloo 2","Fredoka","Arial Rounded MT Bold","Chalkboard SE","Comic Sans MS",cursive;font-weight:900;letter-spacing:1px;font-size:25px;}
+  .brand .logo{display:inline-block;font-family:"McTa Wordmark","Baloo 2","Fredoka","Arial Rounded MT Bold","Chalkboard SE","Comic Sans MS",cursive;font-weight:900;letter-spacing:1px;font-size:25px;}
   .wordmark span{display:inline-block;cursor:pointer;user-select:none;transition:transform .25s ease;-webkit-text-stroke:1.5px #fff;paint-order:stroke fill;text-shadow:1.8px 0 0 #fff,-1.8px 0 0 #fff,0 1.8px 0 #fff,0 -1.8px 0 #fff,1.3px 1.3px 0 #fff,-1.3px 1.3px 0 #fff,1.3px -1.3px 0 #fff,-1.3px -1.3px 0 #fff,0 4px 7px rgba(96,108,130,.2);}
   .wordmark span:nth-child(1){transform:rotate(-6deg) translateY(-1px);}
   .wordmark span:nth-child(2){transform:rotate(3deg) translateY(1px);}
@@ -1406,11 +1406,11 @@ PAGE = """<!doctype html>
   .cn:active,.service:active{box-shadow:inset 3px 3px 6px var(--sd),inset -3px -3px 6px var(--sl);}
   button.lang-switch, .side button.lang-switch {
     display: inline-flex; align-items: center; gap: 6px;
-    margin: 14px 8px 0; padding: 6px 13px; height: 26px; box-sizing: border-box;
+    margin: 0; padding: 6px 13px; height: 26px; box-sizing: border-box;
     border: 0; border-radius: 999px;
     background: var(--bg); color: var(--accent);
     font: inherit; font-size: 11.5px; font-weight: 700; line-height: 1;
-    cursor: pointer; width: auto; text-align: center;
+    cursor: pointer; width: 100%; justify-content: center; text-align: center;
     box-shadow: 2px 2px 5px var(--sd), -2px -2px 5px var(--sl);
   }
   button.lang-switch:hover { color: var(--accent); }
@@ -1419,7 +1419,7 @@ PAGE = """<!doctype html>
   }
   .lang-globe { font-size: 13px; line-height: 1; }
   .lang-caret { font-size: 8px; line-height: 1; opacity: .75; }
-  .lang-wrap { position: relative; display: inline-flex; }
+  .lang-wrap { position: relative; display: inline-flex; width: var(--lang-btn-w, 88px); margin: 14px 8px 0; }
   .lang-menu {
     position: absolute; top: calc(100% + 6px); left: 0; width: 100%; min-width: 0;
     flex-direction: column; gap: 0; padding: 0; display: none; z-index: 210;
@@ -1493,6 +1493,12 @@ PAGE = """<!doctype html>
   .zoom-box{position:relative;display:flex;align-items:center;justify-content:center;flex:1;min-height:0;height:min(62vh,480px);overflow:hidden;border-radius:12px;background:#fff;cursor:grab;touch-action:none;box-shadow:inset 4px 4px 9px var(--sd),inset -4px -4px 9px var(--sl);}
   .zoom-box.dragging{cursor:grabbing;}
   .zoom-box img{max-width:100%;max-height:100%;border-radius:12px;pointer-events:none;user-select:none;transform-origin:center center;will-change:transform;}
+  .zoom-ctl{position:absolute;left:10px;bottom:10px;z-index:4;display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:12px;background:rgba(243,246,251,.82);box-shadow:2px 2px 6px var(--sd),-2px -2px 6px var(--sl);opacity:.62;transition:opacity .35s ease;pointer-events:auto;}
+  .zoom-ctl.idle{opacity:0;pointer-events:auto;}
+  .zoom-ctl.idle:hover{opacity:.62;}
+  .zoom-ctl button{width:26px;height:26px;min-width:26px;padding:0;border:0;border-radius:8px;background:var(--bg);color:var(--accent);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:2px 2px 5px var(--sd),-2px -2px 5px var(--sl);}
+  .zoom-ctl button svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .zoom-ctl input[type=range]{width:118px;height:16px;margin:0;accent-color:var(--accent);cursor:pointer;}
   #quickBody textarea{width:100%;height:min(58vh,430px);resize:vertical;border:0;border-radius:12px;background:#f3f6fb;color:#2f3a4a;font-family:ui-monospace,Consolas,"Courier New",monospace;font-size:12.5px;line-height:1.6;padding:12px 14px;box-shadow:inset 5px 5px 10px var(--sd),inset -5px -5px 10px var(--sl);outline:none;}
   #quickBody input.rename-input{width:100%;border:0;border-radius:12px;background:#f3f6fb;color:#2f3a4a;font:inherit;font-size:14.5px;padding:12px 14px;box-shadow:inset 5px 5px 10px var(--sd),inset -5px -5px 10px var(--sl);outline:none;}
   .pdf-frame{width:100%;height:min(58vh,430px);border:0;border-radius:12px;background:#fff;box-shadow:inset 5px 5px 10px var(--sd),inset -5px -5px 10px var(--sl);}
@@ -1620,8 +1626,8 @@ PAGE = """<!doctype html>
   [data-base-id="quickView"].maxed .mol-win{max-height:none;}
   [data-base-id="quickView"].image-mode .zoom-box{background:#fff;}
   .mol-canvas{position:relative;width:100%;height:min(62vh,460px);border-radius:14px;overflow:hidden;background:#fff;box-shadow:inset 5px 5px 11px var(--sd),inset -5px -5px 11px var(--sl);}
-  /* 左下角坐标轴指示器：固定长度，只跟随结构旋转，不随平移/缩放变化 */
-  .mol-axis-gizmo{position:absolute;left:12px;bottom:12px;width:120px;height:120px;z-index:5;background:transparent;box-shadow:none;cursor:grab;touch-action:none;}
+  /* 左上角坐标轴指示器：贴紧容器边框，只跟随结构旋转，不随平移/缩放变化 */
+  .mol-axis-gizmo{position:absolute;left:0;top:0;width:120px;height:120px;z-index:5;background:transparent;box-shadow:none;cursor:grab;touch-action:none;}
   .mol-axis-gizmo.dragging{cursor:grabbing;}
   .mol-note{color:var(--muted);font-size:12.5px;line-height:1.7;margin:9px 2px 0;}
   .mol-save{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border-radius:18px;background:rgba(231,237,246,.78);z-index:3;}
@@ -1638,6 +1644,8 @@ PAGE = """<!doctype html>
   /* 弹窗顶部按钮与终端浮窗 .term-tools button 同款 */
   .mol-head .win-icon{width:24px;min-width:24px;height:24px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:7px;background:var(--bg);box-shadow:2px 2px 5px var(--sd),-2px -2px 5px var(--sl);color:#2c3648;font-size:13px;line-height:1;}
   .mol-head .win-icon:hover{color:var(--accent);}
+  .mol-head .win-icon:disabled{color:#a6b0be;opacity:.55;cursor:not-allowed;}
+  .mol-head .win-icon:disabled:hover{color:#a6b0be;}
   .mol-head .win-icon:active{box-shadow:inset 2px 2px 5px var(--sd),inset -2px -2px 5px var(--sl);}
   .mol-head .win-glyph{display:inline-flex;align-items:center;justify-content:center;line-height:1;}
   .mol-tools button.tool-icon{width:30px;min-width:30px;padding:0;display:inline-flex;align-items:center;justify-content:center;}
@@ -1668,11 +1676,28 @@ PAGE = """<!doctype html>
   .mol-density-val{font-size:12px;font-weight:600;color:#2f3a4a;font-variant-numeric:tabular-nums;}
   .mol-pick-panel{position:absolute;z-index:20;width:248px;padding:10px 12px;border-radius:12px;background:var(--bg);box-shadow:6px 6px 14px var(--sd),-6px -6px 14px var(--sl);font-size:13px;display:flex;flex-direction:column;gap:8px;}
   .mol-pick-panel.hidden{display:none;}
-  .mol-pick-title{font-weight:600;color:#2f3a4a;font-size:13px;}
+  .mol-pick-head{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .mol-pick-head .mol-pick-title{font-weight:600;color:#2f3a4a;font-size:13px;margin:0;}
+  .mol-pick-head button{height:24px;padding:0 9px;font-size:12px;border-radius:8px;}
   .mol-pick-row{position:relative;display:flex;align-items:center;justify-content:flex-start;gap:8px;color:var(--muted);min-height:26px;}
   .mol-pick-row > span{margin-right:auto;}
   .mol-pick-row.hidden{display:none;}
+  .mol-cell-repeat-title{font-size:11px;color:var(--muted);line-height:18px;margin:4px 0 0;}
+  .mol-cell-dash .mol-cell-repeat-row{gap:10px;margin-left:0;}
+  .mol-cell-dash .mol-cell-repeat-item{font-size:11px;}
+  .mol-pick-row.mol-cell-repeat-row{gap:8px;margin-left:0;}
+  .mol-cell-repeat-item{display:inline-flex;align-items:center;gap:3px;font-size:11px;color:var(--muted);}
+  .mol-cell-repeat-item input[type=number]{width:40px;padding:0 3px;}
   .mol-pick-panel input[type=color]{width:40px;height:24px;padding:0;border:0;background:transparent;box-shadow:none;cursor:pointer;}
+  .mol-pick-row.mol-color-row{display:block;padding-bottom:3px;}
+  .mol-color-main{display:flex;align-items:center;gap:8px;min-height:26px;}
+  .mol-color-extra{display:flex;align-items:center;gap:4px;margin:3px 0 0 0;min-height:22px;}
+  .mol-color-swatches{display:flex;align-items:center;flex-wrap:nowrap;gap:0;width:100%;justify-content:space-between;}
+  .mol-color-swatches.hidden{display:none;}
+  .mol-pick-panel input[type=color]:disabled{opacity:.45;cursor:default;}
+  .mol-color-swatch{width:15px;height:15px;min-width:15px;padding:0;border:1px solid rgba(120,134,156,.28);border-radius:4px;box-shadow:1px 1px 2px var(--sd),-1px -1px 2px var(--sl);cursor:pointer;}
+  .mol-color-swatch.hidden{display:none;}
+  .mol-color-swatch.active{outline:2px solid #2563eb;outline-offset:1px;}
   .mol-pick-num-btn{height:24px;width:20px;min-width:20px;padding:0;font-size:10px;line-height:1;border:0;border-radius:7px;background:var(--bg);color:#2f3a4a;box-shadow:2px 2px 5px var(--sd),-2px -2px 5px var(--sl);cursor:pointer;}
   .mol-pick-num-btn.active{box-shadow:inset 2px 2px 5px var(--sd),inset -2px -2px 5px var(--sl);color:#2563eb;}
   .mol-pick-panel input[type=number]{width:58px;height:24px;padding:0 5px;border:0;border-radius:8px;background:#f3f6fb;color:#2f3a4a;font:inherit;font-size:12px;font-variant-numeric:tabular-nums;box-shadow:inset 2px 2px 5px var(--sd),inset -2px -2px 5px var(--sl);outline:none;}
@@ -1687,6 +1712,7 @@ PAGE = """<!doctype html>
   .mol-pick-group{display:flex;flex-direction:column;gap:8px;}
   .mol-pick-group.hidden{display:none;}
   .mol-pick-panel input[type=checkbox]{width:18px;height:18px;accent-color:#2563eb;cursor:pointer;}
+  .mol-pick-panel select{width:118px;height:24px;padding:0 5px;border:0;border-radius:8px;background:#f3f6fb;color:#2f3a4a;font:inherit;font-size:12px;box-shadow:inset 2px 2px 5px var(--sd),inset -2px -2px 5px var(--sl);outline:none;cursor:pointer;}
   .mol-dd{position:relative;display:inline-block;}
   .mol-dd-btn{height:30px;padding:0 10px;font-size:13px;border-radius:12px;background:var(--bg);color:inherit;border:0;box-shadow:3px 3px 7px var(--sd),-3px -3px 7px var(--sl);cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:4px;}
   .mol-dd.open .mol-dd-btn{box-shadow:inset 2px 2px 5px var(--sd),inset -2px -2px 5px var(--sl);}
@@ -1806,7 +1832,7 @@ PAGE = """<!doctype html>
   <div class="mol-win">
     <div class="mol-head">
       <h2 id="molName"></h2>
-      <button id="molArchive" class="win-icon" type="button" title="存档" aria-label="存档"><span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/></svg></span></button>
+      <button id="molArchive" class="win-icon" type="button" title="存档" aria-label="存档" disabled><span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/></svg></span></button>
       <button id="molSaveImage" class="win-icon" type="button" title="保存图片到电脑" aria-label="保存图片到电脑"><span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="15" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 14-5-5-9 9"/><path d="M19 15v5"/><path d="m16 18 3 3 3-3"/></svg></span></button>
       <button id="molSave" class="win-icon" type="button" title="下载到电脑" aria-label="下载到电脑">
         <span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/></svg></span>
@@ -1835,6 +1861,8 @@ PAGE = """<!doctype html>
       <span class="mol-dd" data-direction="up">
         <button id="molAngleBtn" class="mol-dd-btn" type="button" title="旋转角度" aria-haspopup="listbox">45° ▲</button>
         <ul class="mol-dd-menu" id="molAngleMenu" role="listbox">
+          <li role="option" data-value="5">5°</li>
+          <li role="option" data-value="10">10°</li>
           <li role="option" data-value="15">15°</li>
           <li role="option" data-value="30">30°</li>
           <li role="option" data-value="45" aria-selected="true">45°</li>
@@ -1864,6 +1892,19 @@ PAGE = """<!doctype html>
       </button>
       <button id="molZoomOut" class="tool-icon" type="button" title="缩小" aria-label="缩小">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16 16l5 5M8 11h6"/></svg>
+      </button>
+      <button id="molPickClear" class="tool-icon" type="button" title="清除选中" aria-label="清除选中">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/></svg>
+      </button>
+      <button id="molProj" class="tool-icon" type="button" title="视角：正交" aria-label="视角：正交">
+        <svg id="molProjOrtho" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 3 8v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg>
+        <svg id="molProjPersp" class="hidden" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16v11H4z"/><path d="M4 9l5-5h6l5 5"/><path d="M9 9v11M15 9v11"/></svg>
+      </button>
+      <button id="molFit" class="tool-icon" type="button" title="自适应" aria-label="自适应">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/><path d="M12 8v8M8 12h8"/></svg>
+      </button>
+      <button id="molReset" class="tool-icon" type="button" title="重置" aria-label="重置">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11a9 9 0 1 1 2.6 6.4"/><path d="M3 5v6h6"/></svg>
       </button>
       <span class="mol-sep"></span>
       <span class="mol-density-group hidden" id="molDensityGroup">
@@ -1918,26 +1959,22 @@ PAGE = """<!doctype html>
         </span>
       </span>
       <span class="mol-sep hidden" id="molPlayerSep"></span>
-      <span class="mol-sep"></span>
-      <button id="molPickClear" type="button" title="清除选中" aria-label="清除选中">清除选中</button>
-      <button id="molProj">视角：正交</button>
-      <button id="molReset">重置</button>
     </div>
     <div class="mol-pick-panel hidden" id="molPickPanel" role="dialog" aria-label="原子样式">
-      <p class="mol-pick-title" id="molPickTitle">原子样式</p>
-      <div class="mol-pick-row" id="molPickColorRow">
-        <span>颜色</span><input type="color" id="molPickColor" value="#ff0000">
-      </div>
-      <div class="mol-pick-row" id="molPickSizeRow">
-        <span>大小</span>
-        <input type="number" id="molPickSize" min="0.05" max="0.80" step="0.01" value="0.30" aria-label="大小">
-        <button class="mol-pick-num-btn" id="molPickSizeBtn" type="button" title="调节大小" aria-haspopup="true" aria-label="调节大小">▼</button>
-        <div class="mol-pick-pop" id="molPickSizePop"><input type="range" id="molPickSizeRange" min="0.05" max="0.80" step="0.01" value="0.30" aria-label="大小滑杆"></div>
-      </div>
-      <div class="hidden" id="molPickStyleBox"></div>
-      <div class="mol-pick-ops">
+      <div class="mol-pick-head">
+        <p class="mol-pick-title" id="molPickTitle">原子样式</p>
         <button id="molPickReset" type="button">恢复默认</button>
       </div>
+      <div class="mol-pick-row" id="molPickSizeRow">
+        <span>原子大小</span>
+        <input type="number" id="molPickSize" min="0.05" max="0.80" step="0.01" value="0.30" aria-label="原子大小">
+        <button class="mol-pick-num-btn" id="molPickSizeBtn" type="button" title="调节原子大小" aria-haspopup="true" aria-label="调节原子大小">▼</button>
+        <div class="mol-pick-pop" id="molPickSizePop"><input type="range" id="molPickSizeRange" min="0.05" max="0.80" step="0.01" value="0.30" aria-label="原子大小滑杆"></div>
+      </div>
+      <div class="mol-pick-row" id="molPickColorRow">
+        <span>原子颜色</span><input type="color" id="molPickColor" value="#ff0000" aria-label="原子颜色">
+      </div>
+      <div class="hidden" id="molPickStyleBox"></div>
     </div>
     <div class="mol-save hidden" id="molSaveBox">
       <div class="mol-save-win" role="dialog" aria-modal="true" aria-labelledby="molSaveTitle">
@@ -2098,6 +2135,7 @@ const I18N = {
   "透明度": "Opacity",
   "视角：正交": "View: orthographic",
   "视角：透视": "View: perspective",
+  "自适应": "Fit to view",
   "重置": "Reset",
   "左键拖动旋转 · 滚轮缩放 · 中键拖动平移": "Left-drag to rotate · scroll to zoom · middle-drag to pan",
   "保存图片": "Save image",
@@ -2189,6 +2227,8 @@ const I18N = {
   "顺时针旋转": "Rotate clockwise",
   "缩放比例": "Zoom step",
   "缩小": "Zoom out",
+  "恢复初始视图": "Reset image view",
+  "图片缩放": "Image zoom",
   "密度类型": "Density type",
   "等值面数值": "Isosurface value",
   "调节等值面": "Adjust isosurface",
@@ -2202,23 +2242,46 @@ const I18N = {
   "样式设置": "Style settings",
   "坐标轴设置": "Axis settings",
   "键与雾": "Bond & fog",
+  "外观": "Appearance",
+  "显示原子": "Show atoms",
+  "键": "Bonds",
+  "显示键": "Show bonds",
+  "晶格": "Lattice",
+  "晶格线宽": "Lattice line width",
+  "晶格样式": "Lattice style",
+  "晶格颜色": "Lattice color",
+  "范围": "Range",
+  "间隙": "Gap",
   "晶胞": "Cell",
   "坐标轴": "Axes",
   "轴颜色": "Axis colors",
   "深度雾": "Depth cue",
   "晶胞半径": "Cell radius",
   "晶胞虚线": "Cell dashed",
+  "晶胞样式": "Cell style",
+  "显示样式": "Display mode",
+  "原样": "As-is",
+  "内部": "Inside cell",
+  "超晶胞A": "Supercell A",
+  "超晶胞B": "Supercell B",
+  "超晶胞C": "Supercell C",
+  "超晶胞": "Supercell",
+  "无": "None",
   "虚线段长": "Dash length",
   "虚线间隙": "Gap length",
   "晶胞颜色": "Cell color",
+  "晶胞标记": "Cell labels (O/A/B/C)",
+  "晶格标记": "Lattice labels (O/A/B/C)",
+  "原子大小": "Atom size",
+  "原子颜色": "Atom color",
+  "显示坐标轴": "Show axes",
   "轴长度": "Axis length",
   "轴半径": "Axis radius",
   "箭头比例": "Arrow ratio",
-  "箭头位置": "Arrow position",
   "轴透明度": "Axis opacity",
-  "A 轴颜色": "A axis color",
-  "B 轴颜色": "B axis color",
-  "C 轴颜色": "C axis color",
+  "X轴颜色": "X axis color",
+  "Y轴颜色": "Y axis color",
+  "Z轴颜色": "Z axis color",
   "调节键粗": "Adjust bond radius",
   "调节": "Adjust ",
   "滑杆": " slider",
@@ -2228,9 +2291,24 @@ const I18N = {
   "颜色": "Color",
   "大小": "Size",
   "键粗": "Bond radius",
+  "键颜色模式": "Bond color mode",
+  "键颜色": "Bond color",
+  "按元素": "By element",
+  "自定义": "Custom",
+  "键样式": "Bond style",
+  "实线": "Solid",
+  "虚线": "Dashed",
   "测量": "Measurement",
   "标注字号": "Label size",
   "标注颜色": "Label color",
+  "轴标签字体": "Axis label font",
+  "标注字体": "Label font",
+  "无衬线": "Sans-serif",
+  "衬线": "Serif",
+  "衬线斜体": "Serif italic",
+  "衬线倾斜": "Serif italic",
+  "等宽": "Monospace",
+  "圆体": "Rounded",
   "虚线连线": "Dashed line",
   "连线粗细": "Line width",
   "连线颜色": "Line color",
@@ -2470,6 +2548,20 @@ function tx(s) {
   return best ? I18N[best] + s.slice(best.length) : s;
 }
 
+// 语言按钮宽度跟随侧栏 McTa 动画字符，略宽 10px；下拉项继承同一宽度。
+(function syncLangWidth() {
+  function apply() {
+    const logo = document.querySelector(".brand .logo");
+    const wrap = document.getElementById("langWrap");
+    if (!logo || !wrap || !logo.offsetWidth) return;
+    wrap.style.setProperty("--lang-btn-w", (Math.ceil(logo.offsetWidth) + 10) + "px");
+  }
+  window.__mctaSyncLangWidth = apply;
+  apply();
+  window.addEventListener("resize", apply);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(apply);
+})();
+
 (function initLangSwitch() {
   const btn = document.getElementById("langToggle");
   if (!btn) return;
@@ -2557,15 +2649,32 @@ const state = { root: "", cwd: "", viewing: null, user: null, term: null, es: nu
 function freshMolCtx() {
   return { viewer: null, frames: 0, index: 0, timer: null, home: null,
            baseName: "", volume: null, isoShape: null, volumeGroups: null,
-           ortho: true, saveJob: null, cell: null, cellShapes: [], structureModel: null,
-           pickAtoms: [], measureShapes: [], measureLabels: [], styleAtom: null,
-           atomStyles: {}, archive: null, sourcePath: "",
-           pickMode: "atom", viewDirtyArmed: false };
+           ortho: true, saveJob: null, cell: null, cellShapes: [], cellLabels: [], cellCopies: [], structureModel: null,
+           pickAtoms: [], pickBond: null, measureShapes: [], measureLabels: [], styleAtom: null,
+           atomStyles: {}, bondStyles: {}, bondBaseOrders: {}, bondPickShapes: [], archive: null, sourcePath: "",
+           sourceFrames: null, pickedCellRepeat: [1, 1, 1],
+           pickMode: "atom", styleAtom: null, styleBond: null, viewDirtyArmed: false };
 }
 let MC = freshMolCtx();
 const MOL_BASE_MS = 220;  // 1× 速度下每帧间隔
 const MOL_BOND_RADIUS = 0.06;  // 默认键半径（Å），空白处右键“样式设置”可调整
 let molBondRadius = MOL_BOND_RADIUS;
+// 全局键颜色：空字符串表示按元素着色；非空则覆盖所有未单独设置的键。
+let molBondColor = "";
+// 全局键样式：none 不显示键；solid/dashed 由 molBondDashed 区分；单键设置会被全局设置覆盖。
+let molBondDashed = false;
+let molBondHidden = false;
+// 全局原子样式：0 / 空串表示按元素默认；非 0 / 非空表示覆盖所有原子。
+// 与全局键设置一致，改动全局原子样式会清掉逐原子覆盖。
+let molAtomRadius = 0;
+let molAtomColor = "";
+// 页面初始化阶段就要给样式滑杆取默认值，此时元素色/半径表尚未声明，先用常量。
+const MOL_DEFAULT_ATOM_RADIUS = 0.36;
+const MOL_DEFAULT_ATOM_COLOR = "#9aa4b2";
+// 原子/键整体显示开关（“样式设置 → 外观 / 键”），关闭时对应几何整体隐藏。
+let molAtomsVisible = true, molBondsVisible = true;
+const MOL_BOND_DASH_LENGTH = 0.12;
+const MOL_BOND_GAP_LENGTH = 0.18;
 let activeMask = null;
 let maskSeq = 0;
 const $ = function (id) {
@@ -2931,6 +3040,46 @@ async function watchDir() {
   } catch (err) { /* 忽略目录监测错误 */ }
 }
 
+// 图片缩略图布局：按当前目录图片数量与可用宽度/视口高度动态计算列数和高度。
+// 单图按两列布局的“单张瓦片”尺寸计算，与两图时的缩略图大小一致并居中；
+// 多图按最小瓦片宽度排布，行数越多单张越矮，避免整页被图片撑满。
+function molLayoutGallery() {
+  const gallery = $("gallery");
+  if (!gallery || gallery.classList.contains("hidden")) return;
+  const count = gallery.querySelectorAll(".shot").length;
+  if (!count) return;
+  const W = gallery.clientWidth || (gallery.parentElement && gallery.parentElement.clientWidth) || window.innerWidth || 900;
+  const vh = window.innerHeight || 800;
+  const gap = 16;
+  // 单图借用两图的布局参数计算尺寸，保证瓦片大小完全相同。
+  const layoutCount = Math.max(count, 2);
+  const minTile = W < 640 ? 150 : 210;
+  let cols = Math.max(2, Math.min(6, Math.floor((W + gap) / (minTile + gap))));
+  cols = Math.min(cols, layoutCount);
+  const rows = Math.ceil(layoutCount / cols);
+  const tileW = Math.max(80, (W - (cols - 1) * gap) / cols);
+  const budget = Math.min(Math.max(260, vh * 0.72), 760);
+  const maxH = Math.min(380, Math.max(180, vh * 0.42));
+  let h = Math.floor((budget - (rows - 1) * gap - rows * 36) / rows);
+  h = Math.max(130, Math.min(maxH, h));
+  h = Math.min(h, Math.max(130, Math.round(tileW * 0.85)));
+  if (count === 1) {
+    gallery.style.gridTemplateColumns = tileW + "px";
+    gallery.style.justifyContent = "center";
+  } else {
+    gallery.style.gridTemplateColumns = "repeat(" + cols + ", minmax(0, 1fr))";
+    gallery.style.justifyContent = "";
+  }
+  Array.prototype.forEach.call(gallery.querySelectorAll(".shot img"), function (img) {
+    img.style.height = h + "px";
+  });
+}
+let galleryResizeTimer = null;
+window.addEventListener("resize", function () {
+  clearTimeout(galleryResizeTimer);
+  galleryResizeTimer = setTimeout(molLayoutGallery, 120);
+});
+
 async function load(path, quiet) {
   // 真正切换目录前，先处理未保存的文本修改与已调整的 3D 视图。
   if (path !== state.cwd && dirtyMasks().length) {
@@ -2981,6 +3130,7 @@ async function load(path, quiet) {
       bindEntry(tile, entry);
       gallery.appendChild(tile);
     });
+    molLayoutGallery();
     $("othersLabel").classList.toggle("hidden", images.length === 0 || others.length === 0);
 
     const rows = $("fileTable");
@@ -3076,6 +3226,7 @@ function closeQuick() {
   $("quickAction").classList.add("hidden");
   $("quickArchive").onclick = null;
   $("quickArchive").classList.add("hidden");
+  $("quickArchive").disabled = false;
   activeMask = null;
   if (!anyViewerOpen() && state.viewing) state.viewing = null;
 }
@@ -3097,6 +3248,7 @@ function openQuick(path, data) {
   action.disabled = false;
   const archive = $("quickArchive");
   archive.classList.add("hidden");
+  archive.disabled = true;
   archive.onclick = null;
   const rawUrl = withSid(data.url || ("/raw?path=" + q(path)));
   if (data.kind === "pdf") {
@@ -3168,7 +3320,10 @@ function openQuick(path, data) {
       area.value = data.text;
       area.spellcheck = false;
       area.addEventListener("input", function () {
-        markDirty(mask, { type: "text", path: path, name: data.name });
+        const changed = area.value !== data.text;
+        archive.disabled = !changed;
+        if (changed) markDirty(mask, { type: "text", path: path, name: data.name });
+        else clearDirty(mask);
       });
       area.addEventListener("keydown", function (event) {
         if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
@@ -3179,8 +3334,9 @@ function openQuick(path, data) {
       body.appendChild(area);
       setQuickAction("下载到电脑", true);
       action.onclick = function () { window.open(rawUrl, "_blank"); };
-      // 文本文件在下载按钮左边显示“存档”：保存修改到服务器
+      // 文本文件在下载按钮左边显示“存档”：保存修改到服务器；未修改时不可点击
       archive.classList.remove("hidden");
+      archive.disabled = true;
       archive.onclick = function () { saveQuick(path, data.name, area); };
     }
   }
@@ -3198,13 +3354,68 @@ function bindImageZoom(box, img) {
   let ox = 0;
   let oy = 0;
   let drag = null;
+  let idleTimer = null;
+  const IDLE_MS = 2600;
 
+  // 左下角控件：复位按钮 + 缩放滑杆。闲置后淡到全透明，点一下图片再恢复半透明。
+  const ctl = document.createElement("div");
+  ctl.className = "zoom-ctl";
+  ctl.setAttribute("role", "group");
+  ctl.setAttribute("aria-label", tx("图片缩放"));
+  const reset = document.createElement("button");
+  reset.type = "button";
+  reset.title = tx("恢复初始视图");
+  reset.setAttribute("aria-label", reset.title);
+  reset.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>';
+  const slider = document.createElement("input");
+  slider.type = "range";
+  slider.min = "0.2";
+  slider.max = "8";
+  slider.step = "0.05";
+  slider.value = "1";
+  slider.title = tx("图片缩放");
+  slider.setAttribute("aria-label", tx("图片缩放"));
+  ctl.appendChild(reset);
+  ctl.appendChild(slider);
+  box.appendChild(ctl);
+
+  function reveal() {
+    ctl.classList.remove("idle");
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(function () { ctl.classList.add("idle"); }, IDLE_MS);
+  }
   function apply() {
     img.style.transform = "translate(" + ox + "px," + oy + "px) scale(" + scale + ")";
+    slider.value = String(scale);
   }
+  function resetView() {
+    scale = 1;
+    ox = 0;
+    oy = 0;
+    apply();
+    reveal();
+  }
+  reset.addEventListener("click", function (event) {
+    event.stopPropagation();
+    resetView();
+  });
+  slider.addEventListener("input", function () {
+    const next = Math.min(8, Math.max(0.2, Number(slider.value) || 1));
+    const k = next / scale;
+    ox = -k * ox;
+    oy = -k * oy;
+    scale = next;
+    apply();
+    reveal();
+  });
+  box.addEventListener("pointerdown", reveal, true);
+  box.addEventListener("click", reveal, true);
+  ctl.addEventListener("pointerenter", reveal);
+  ctl.addEventListener("pointermove", reveal);
 
   box.addEventListener("wheel", function (event) {
     event.preventDefault();
+    reveal();
     const rect = box.getBoundingClientRect();
     const cx = event.clientX - rect.left - rect.width / 2;
     const cy = event.clientY - rect.top - rect.height / 2;
@@ -3218,6 +3429,7 @@ function bindImageZoom(box, img) {
   }, {passive: false});
 
   box.addEventListener("pointerdown", function (event) {
+    if (event.target && event.target.closest && event.target.closest(".zoom-ctl")) return;
     if (event.button !== 0) return;
     drag = {x: event.clientX - ox, y: event.clientY - oy};
     box.classList.add("dragging");
@@ -3236,12 +3448,11 @@ function bindImageZoom(box, img) {
   box.addEventListener("pointerup", endDrag);
   box.addEventListener("pointercancel", endDrag);
 
-  box.addEventListener("dblclick", function () {
-    scale = 1;
-    ox = 0;
-    oy = 0;
-    apply();
+  box.addEventListener("dblclick", function (event) {
+    if (event.target && event.target.closest && event.target.closest(".zoom-ctl")) return;
+    resetView();
   });
+  reveal();
 }
 
 async function saveQuick(path, name, area) {
@@ -3257,11 +3468,11 @@ async function saveQuick(path, name, area) {
     $("quickName").textContent = name + " · " + fmtSize(data.size) + " · " + data.mtime;
     const mask = area.closest && area.closest(".mol-mask");
     if (mask) clearDirty(mask);
+    if (action) action.disabled = true;
     toast("已存档 " + data.path);
     saved = true;
   } catch (err) {
     toast(err.message, true);
-  } finally {
     if (action) action.disabled = false;
   }
   return saved;
@@ -3478,10 +3689,15 @@ function maskOf(baseId) {
   if (activeMask && activeMask.dataset.baseId === baseId && !activeMask.classList.contains("hidden")) return activeMask;
   return document.querySelector('.mol-mask[data-base-id="' + baseId + '"]:not(.hidden)');
 }
+function setMolArchiveEnabled(on) {
+  const btn = $("molArchive");
+  if (btn) btn.disabled = !on;
+}
 function molMarkViewDirty() {
   if (!MC || !MC.viewDirtyArmed) return;
   const mask = maskOf("molView");
   if (mask) markDirty(mask, { type: "view" });
+  setMolArchiveEnabled(true);
 }
 
 let molSaveResolve = null;
@@ -3678,13 +3894,22 @@ function showMolFrame(index) {
   if (!MC.viewer || MC.frames < 1) return;
   MC.index = ((index % MC.frames) + MC.frames) % MC.frames;
   MC.viewer.setFrame(MC.index);
+  // 换帧后 3Dmol 使用新一帧的原子对象，单键覆盖/全局虚线需重新写入。
+  if ((MC.bondStyles && Object.keys(MC.bondStyles).length) || molBondDashed || molBondHidden || molBondColor) {
+    MC.bondBaseOrders = {};
+    molApplyBondStyles();
+  }
   // 播放中跳过逐帧重建命中几何（会卡顿）；暂停后由 stopMolPlay 补注册。
   // 单步/拖动切帧时 MC.timer 已清空，这里立即给当前帧注册拾取。
-  if (!MC.timer) molEnableFrameClickables();
+  if (!MC.timer) {
+    molEnableFrameClickables();
+    molRebuildBondPickShapes();
+    molRedrawSupercell();
+  }
   MC.viewer.render();
   // 轨迹播放：保留选中的原子，并按当前帧重新取坐标后重画测量，
   // 这样距离/角度会随帧实时变化；没有选中时无需重画。
-  if ((MC.pickAtoms || []).length) molRefreshPicksForFrame();
+  if ((MC.pickAtoms || []).length || MC.pickBond) molRefreshPicksForFrame();
   molLabel();
   molMarkViewDirty();
 }
@@ -3703,7 +3928,7 @@ function molEnableFrameClickables() {
 // （3Dmol 的 setFrame 会把该帧坐标写入 model.atoms，selectedAtoms 返回的就是更新后的引用），
 // 再据此重算元素名、连线与距离/角度。取不到时退化为原对象，保持选中不丢。
 function molRefreshPicksForFrame() {
-  if (!MC.viewer || !(MC.pickAtoms || []).length) return;
+  if (!MC.viewer || (!(MC.pickAtoms || []).length && !MC.pickBond)) return;
   MC.pickAtoms = MC.pickAtoms.map(function (atom) {
     let cur = atom;
     try {
@@ -3734,8 +3959,10 @@ function setMolPlayIcon(playing) {
 function stopMolPlay() {
   if (MC.timer) { clearInterval(MC.timer); MC.timer = null; }
   setMolPlayIcon(false);
-  // 暂停在任意帧后，当前帧原子需要重新注册才能被点中（测距/测角）。
+  // 暂停在任意帧后，当前帧原子与键需要重新注册才能被右键拾取。
   molEnableFrameClickables();
+  molRebuildBondPickShapes();
+  molRedrawSupercell();
 }
 
 function startMolPlay() {
@@ -3751,21 +3978,66 @@ function startMolPlay() {
 }
 
 // 晶胞：3Dmol 的 GL 线在 WebGL 下固定 1px（linewidth 不生效），
-// 所以 12 条棱改用圆柱绘制，粗细由 cell.radius（Å）控制，线型由 cell.dashed 控制。
+// 所以晶胞棱改用圆柱绘制，线型由 cell.style 控制（无/实线/虚线），visible=false 时不画线。
+// 虚线由 3Dmol 拆成一串短圆柱；细线时给每段加平端盖并设最小有效半径，避免短圆柱变成
+// 无盖细管、被抗锯齿与着色冲淡而“发虚”。
+// repeat=[na,nb,nc] 为沿 A/B/C 的扩胞数；所有格线都画出，保留晶胞之间的分隔线。
 // 以下样式只保存在页面状态中，可在空白处右键的“样式设置”弹窗中调整，即时生效。
-let molCellStyle = { radius: 0.015, dashed: true, dashLength: 0.25, gapLength: 0.25, color: "#0000FF" };
+let molCellStyle = { radius: 0.015, dashed: true, visible: true, repeat: [1, 1, 1],
+                     dashLength: 0.35, gapLength: 0.15, color: "#0000FF", labels: true,
+                     wrapMode: "as-is" };  // as-is 按文件坐标；inside 把原子折回晶胞内部
+const MOL_CELL_REPEAT_MAX = 12;
+const MOL_CELL_DASH_MIN_RADIUS = 0.02;  // 虚线细于该半径时按该值渲染，保证每段有足够像素
+let molAxisVisible = true;  // 左上角坐标轴指示器是否显示（样式设置 → 外观 → 显示坐标轴）
 let molDepthCue = 0;  // 0 = 关闭深度雾，1 = 最强
-// 轴箭头默认值：半径 0.06、不透明、红/绿/蓝三色，midpos 为负表示箭头位于末端前 |midpos| Å 处。
+// 轴箭头默认值：半径 0.06、不透明、红/绿/蓝三色（箭头位置不再单独设置，固定在轴末端）。
 // length 为轴长倍率：默认 0.3；改小缩短、改大延长，即时生效。
+// 标签可选字体族：用于 3Dmol 测量标签(addLabel 的 font)；坐标轴标签只用 canvas，另有“衬线斜体”选项。
+// value 为 CSS font-family 列表，保证跨平台可用且不依赖外部字体资源；“italic ”前缀仅用于 canvas 坐标轴。
+const MOL_FONT_FAMILIES = [
+  { key: "Sans",    label: "无衬线", value: "ui-sans-serif, system-ui, sans-serif" },
+  { key: "Serif",   label: "衬线",   value: "Georgia, 'Times New Roman', serif" },
+  { key: "Mono",    label: "等宽",   value: "ui-monospace, Consolas, 'Courier New', monospace" },
+  { key: "Rounded", label: "圆体",   value: "'Trebuchet MS', 'Segoe UI', sans-serif" }
+];
+// 坐标轴 x/y/z 标签字体：默认衬线斜体；其余选项与测量标签共用。
+const MOL_AXIS_FONT_FAMILIES = MOL_FONT_FAMILIES.concat([
+  { key: "SerifItalic", label: "衬线斜体", value: "italic " + MOL_FONT_FAMILIES[1].value }
+]);
+// 测量标注走 3Dmol addLabel（内部同样是 canvas font 简写），因此也可加 italic 前缀。
+const MOL_MEASURE_FONT_FAMILIES = MOL_FONT_FAMILIES.concat([
+  { key: "SerifOblique", label: "衬线倾斜", value: "italic " + MOL_FONT_FAMILIES[1].value }
+]);
+// 晶胞原点 O 与三个晶格方向 A/B/C 的标注。3Dmol addLabel 只接受 font-family，
+// 无法单独设置 font-style（内部拼成 "<px>px  <font>"），故用 Unicode 数学斜体字母
+// 保证“衬线斜体”效果；字体族取衬线，颜色 O 黑 / A 红 / B 绿 / C 蓝。
+const MOL_CELL_LABEL_FONT = MOL_FONT_FAMILIES[1].value;
+const MOL_CELL_LABEL_SIZE = 18;
+const MOL_CELL_LABEL_SPECS = [
+  { text: "\\uD835\\uDC42", color: "#000000" }, // 𝑂
+  { text: "\\uD835\\uDC34", color: "#FF0000" }, // 𝐴
+  { text: "\\uD835\\uDC35", color: "#00FF00" }, // 𝐵
+  { text: "\\uD835\\uDC36", color: "#0000FF" }  // 𝐶
+];
+function molFontLabel(v) {
+  const hit = MOL_AXIS_FONT_FAMILIES.filter(function (f) { return f.value === v; })[0];
+  return hit ? tx(hit.label) : (v || MOL_FONT_FAMILIES[0].value);
+}
+function molCanvasFont(weight, size, family) {
+  const f = family || MOL_FONT_FAMILIES[0].value;
+  const italic = /^\\s*italic\\s+/i.test(f);
+  return weight + (italic ? " italic" : "") + " " + size + "px " + f.replace(/^\\s*italic\\s+/i, "");
+}
 let molAxisStyle = {
-  radius: 0.06, headRatio: 1.618, midpos: -1, opacity: 1, length: 0.3,
+  radius: 0.06, headRatio: 1.618, opacity: 1, length: 0.3,
+  fontFamily: MOL_AXIS_FONT_FAMILIES[4].value,
   colors: ["#FF0000", "#00FF00", "#0000FF"]
 };
 // 测量标注样式：点击原子显示的元素名/距离/角度标签，以及相邻选中原子之间的连线。
-// 可在空白处右键“样式设置 → 测量”分组中即时调整。
+// 默认衬线、字号 24、连线粗细 0.015、连线颜色 #ADFF2F；可在空白处右键“样式设置 → 测量”分组中即时调整。
 let molMeasureStyle = {
-  fontSize: 18, fontColor: "#1b8a3f",
-  lineRadius: 0.008, lineColor: "#e0553d",
+  fontSize: 24, fontColor: "#87CEFA", fontFamily: MOL_FONT_FAMILIES[1].value,
+  lineRadius: 0.015, lineColor: "#ADFF2F",
   lineDashed: true, lineDashLength: 0.08, lineGapLength: 0.06
 };
 // gizmo 可见圆：半径 = 轴长滑杆上限对应的绘制半径 + x/y/z 标签占用长度。
@@ -3778,34 +4050,119 @@ const MOL_AXIS_LABEL_LEN = MOL_AXIS_LABEL_OFFSET + 8;            // 24：标签�
 const MOL_GIZMO_VISIBLE_R = MOL_AXIS_R_MAX + MOL_AXIS_LABEL_LEN; // 88：可见圆半径
 // CSS 边长 = 可见圆直径 + 4px 抗锯齿余量；后备像素至少 2×（高清屏按 DPR 提升）保证清晰。
 const MOL_GIZMO_SIZE = Math.ceil(MOL_GIZMO_VISIBLE_R * 2) + 4;   // 180
+// 键样式选项：全局“键”与单键右键面板共用；无 = 不显示该键。
+const MOL_BOND_STYLE_MODES = [
+  { key: "none", label: "无" }, { key: "solid", label: "实线" }, { key: "dashed", label: "虚线" }
+];
 
 // “样式设置”弹窗字段：分组、标签、取值范围与实时生效函数。
 // 这些条目可在页面 UI 直接调整，改动即时生效，无需重启服务。
 const MOL_STYLE_GROUPS = [
-  { key: "bond", label: "键与雾", fields: [
-    { key: "BondRadius", id: "molPickBondRadius", label: "键粗", min: 0.02, max: 0.30, step: 0.01,
-      get: function () { return molBondRadius; },
-      set: function (v) { molBondRadius = v; molApplyBondRadius(); } },
+  { key: "bond", label: "外观", fields: [
     { key: "DepthCue", label: "深度雾", min: 0, max: 1, step: 0.01,
       get: function () { return molDepthCue; },
-      set: function (v) { molDepthCue = v; molApplyDepthCue(); } }
+      set: function (v) { molDepthCue = v; molApplyDepthCue(); } },
+    { key: "CellAxesVisible", label: "显示坐标轴", type: "bool",
+      get: function () { return molAxisVisible; },
+      set: function (v) { molAxisVisible = v; molRedrawAxes(); } },
+    { key: "CellWrapMode", id: "molStCellWrapMode", label: "显示样式", type: "select",
+      options: [{ key: "as-is", label: "原样" }, { key: "inside", label: "内部" }],
+      get: function () { return molCellStyle.wrapMode; },
+      set: function (v) {
+        molCellStyle.wrapMode = v === "inside" ? "inside" : "as-is";
+        molApplySupercellModel();
+        molRedrawCell();
+      } },
+    { key: "AtomsVisible", label: "显示原子", type: "bool",
+      get: function () { return molAtomsVisible; },
+      set: function (v) { molAtomsVisible = v; molApplyVisibility(); } },
+    { key: "AtomRadius", id: "molStAtomRadius", label: "原子大小", min: 0.05, max: 0.8, step: 0.01,
+      get: function () { return molAtomRadius || MOL_DEFAULT_ATOM_RADIUS; },
+      set: function (v) {
+        molAtomRadius = Math.abs(v - MOL_DEFAULT_ATOM_RADIUS) < 1e-9 ? 0 : v;
+        MC.atomStyles = {};
+        molApplyGlobalAtomStyle();
+      } },
+    { key: "AtomColor", id: "molStAtomColor", label: "原子颜色", type: "color",
+      get: function () { return molAtomColor || MOL_DEFAULT_ATOM_COLOR; },
+      set: function (v) {
+        molAtomColor = String(v).toLowerCase() === MOL_DEFAULT_ATOM_COLOR ? "" : v;
+        MC.atomStyles = {};
+        molApplyGlobalAtomStyle();
+      } }
   ] },
-  { key: "cell", label: "晶胞", fields: [
-    { key: "CellRadius", label: "晶胞半径", min: 0.005, max: 2, step: 0.005,
-      get: function () { return molCellStyle.radius; },
-      set: function (v) { molCellStyle.radius = v; molRedrawCell(); } },
-    { key: "CellDashed", label: "晶胞虚线", type: "bool",
-      get: function () { return molCellStyle.dashed; },
-      set: function (v) { molCellStyle.dashed = v; molRedrawCell(); } },
-    { key: "CellDashLength", label: "虚线段长", min: 0.01, max: 5, step: 0.01,
+  { key: "bonds", label: "键", fields: [
+    { key: "BondsVisible", label: "显示键", type: "bool",
+      get: function () { return molBondsVisible; },
+      set: function (v) { molBondsVisible = v; molApplyVisibility(); } },
+    { key: "BondStyle", id: "molPickBondStyle", label: "键样式", type: "select",
+      options: MOL_BOND_STYLE_MODES,
+      get: function () { return molBondHidden ? "none" : (molBondDashed ? "dashed" : "solid"); },
+      set: function (v) {
+        molClearBondOverrides();
+        molBondHidden = v === "none";
+        molBondDashed = v === "dashed";
+        molApplyBondRadius();
+      } },
+    { key: "BondRadius", id: "molPickBondRadius", label: "键粗", min: 0.02, max: 0.30, step: 0.01,
+      get: function () { return molBondRadius; },
+      set: function (v) { molClearBondOverrides(); molBondRadius = v; molApplyBondRadius(); } },
+    { key: "BondColorMode", id: "molPickBondColorMode", label: "键颜色模式", type: "select",
+      options: [{ key: "element", label: "按元素" }, { key: "custom", label: "自定义" }],
+      get: function () { return molBondColor ? "custom" : "element"; },
+      set: function (v) {
+        molClearBondOverrides();
+        molBondColor = v === "custom" ? (molBondColor || "#9aa4b2") : "";
+        molApplyBondRadius();
+        molSyncStyleFields();
+      } },
+    { key: "BondColor", id: "molPickBondColor", label: "键颜色", type: "color",
+      get: function () { return molBondColor || "#9aa4b2"; },
+      // “按元素”模式下颜色框只作占位展示；恢复默认时不得把占位色写成全局色。
+      set: function (v) {
+        if (!molBondColor) return;
+        molClearBondOverrides();
+        molBondColor = v;
+        molApplyBondRadius();
+        molSyncStyleFields();
+      } }
+  ] },
+  { key: "cell", label: "晶格", fields: [
+    { key: "CellLabels", label: "晶格标记", type: "bool",
+      get: function () { return molCellStyle.labels; },
+      set: function (v) { molCellStyle.labels = v; molRedrawCell(); } },
+    { key: "CellDashed", id: "molStCellDashed", label: "晶格样式", type: "select",
+      options: [{ key: "none", label: "无" }, { key: "solid", label: "实线" }, { key: "dashed", label: "虚线" }],
+      get: function () {
+        return !molCellStyle.visible ? "none" : (molCellStyle.dashed ? "dashed" : "solid");
+      },
+      set: function (v) {
+        molCellStyle.visible = v !== "none";
+        molCellStyle.dashed = v === "dashed";
+        molRedrawCell();
+        molSyncDashRow();
+      } },
+    { key: "CellDashLength", label: "虚线段长", inline: "dash", min: 0.01, max: 5, step: 0.01,
       get: function () { return molCellStyle.dashLength; },
       set: function (v) { molCellStyle.dashLength = v; molRedrawCell(); } },
-    { key: "CellGapLength", label: "虚线间隙", min: 0.01, max: 5, step: 0.01,
+    { key: "CellGapLength", label: "间隙", inline: "dash", min: 0.01, max: 5, step: 0.01,
       get: function () { return molCellStyle.gapLength; },
       set: function (v) { molCellStyle.gapLength = v; molRedrawCell(); } },
-    { key: "CellColor", label: "晶胞颜色", type: "color",
+    { key: "CellRadius", label: "晶格线宽", min: 0.005, max: 2, step: 0.005,
+      get: function () { return molCellStyle.radius; },
+      set: function (v) { molCellStyle.radius = v; molRedrawCell(); } },
+    { key: "CellColor", label: "晶格颜色", type: "color",
       get: function () { return molCellStyle.color; },
-      set: function (v) { molCellStyle.color = v; molRedrawCell(); } }
+      set: function (v) { molCellStyle.color = v; molRedrawCell(); } },
+    { key: "CellRepeatA", label: "范围A", inline: "repeat", min: 1, max: MOL_CELL_REPEAT_MAX, step: 1,
+      get: function () { return molCellStyle.repeat[0]; },
+      set: function (v) { molCellStyle.repeat[0] = Math.max(1, Math.round(v)); molApplySupercellModel(); molRedrawCell(); molSyncStyleFields(); } },
+    { key: "CellRepeatB", label: "范围B", inline: "repeat", min: 1, max: MOL_CELL_REPEAT_MAX, step: 1,
+      get: function () { return molCellStyle.repeat[1]; },
+      set: function (v) { molCellStyle.repeat[1] = Math.max(1, Math.round(v)); molApplySupercellModel(); molRedrawCell(); molSyncStyleFields(); } },
+    { key: "CellRepeatC", label: "范围C", inline: "repeat", min: 1, max: MOL_CELL_REPEAT_MAX, step: 1,
+      get: function () { return molCellStyle.repeat[2]; },
+      set: function (v) { molCellStyle.repeat[2] = Math.max(1, Math.round(v)); molApplySupercellModel(); molRedrawCell(); molSyncStyleFields(); } }
   ] },
   { key: "axis", label: "坐标轴", fields: [
     { key: "AxisLength", label: "轴长度", min: 0.06, max: 0.4, step: 0.01,
@@ -3817,21 +4174,21 @@ const MOL_STYLE_GROUPS = [
     { key: "AxisHeadRatio", label: "箭头比例", min: 1.62, max: 3.8, step: 0.01,
       get: function () { return molAxisStyle.headRatio; },
       set: function (v) { molAxisStyle.headRatio = v; molRedrawAxes(); } },
-    { key: "AxisMidpos", label: "箭头位置", min: -5, max: 0.99, step: 0.01,
-      get: function () { return molAxisStyle.midpos; },
-      set: function (v) { molAxisStyle.midpos = v; molRedrawAxes(); } },
-    { key: "AxisOpacity", label: "轴透明度", min: 0.35, max: 1, step: 0.01,
+    { key: "AxisOpacity", label: "轴透明度", min: 0, max: 1, step: 0.01,
       get: function () { return molAxisStyle.opacity; },
-      set: function (v) { molAxisStyle.opacity = v; molRedrawAxes(); } }
+      set: function (v) { molAxisStyle.opacity = v; molRedrawAxes(); } },
+    { key: "AxisFont", label: "轴标签字体", type: "font", options: MOL_AXIS_FONT_FAMILIES,
+      get: function () { return molAxisStyle.fontFamily; },
+      set: function (v) { molAxisStyle.fontFamily = v; molRedrawAxes(); } }
   ] },
   { key: "axisColor", label: "轴颜色", fields: [
-    { key: "AxisColorA", label: "A 轴颜色", type: "color",
+    { key: "AxisColorA", label: "X轴颜色", type: "color",
       get: function () { return molAxisStyle.colors[0]; },
       set: function (v) { molAxisStyle.colors[0] = v; molRedrawAxes(); } },
-    { key: "AxisColorB", label: "B 轴颜色", type: "color",
+    { key: "AxisColorB", label: "Y轴颜色", type: "color",
       get: function () { return molAxisStyle.colors[1]; },
       set: function (v) { molAxisStyle.colors[1] = v; molRedrawAxes(); } },
-    { key: "AxisColorC", label: "C 轴颜色", type: "color",
+    { key: "AxisColorC", label: "Z轴颜色", type: "color",
       get: function () { return molAxisStyle.colors[2]; },
       set: function (v) { molAxisStyle.colors[2] = v; molRedrawAxes(); } }
   ] },
@@ -3842,6 +4199,10 @@ const MOL_STYLE_GROUPS = [
     { key: "MeasureFontColor", label: "标注颜色", type: "color",
       get: function () { return molMeasureStyle.fontColor; },
       set: function (v) { molMeasureStyle.fontColor = v; molRedrawMeasure(); } },
+    { key: "MeasureFontFamily", label: "标注字体", type: "font",
+      options: MOL_MEASURE_FONT_FAMILIES,
+      get: function () { return molMeasureStyle.fontFamily; },
+      set: function (v) { molMeasureStyle.fontFamily = v; molRedrawMeasure(); } },
     { key: "MeasureLineDashed", label: "虚线连线", type: "bool",
       get: function () { return molMeasureStyle.lineDashed; },
       set: function (v) { molMeasureStyle.lineDashed = v; molRedrawMeasure(); } },
@@ -3922,6 +4283,26 @@ function molApplyDefaultAtomStyle() {
       sphere: { color: molDefaultColor(elem), radius: molDefaultRadius(elem) }
     });
   });
+  molRedrawSupercell();
+}
+
+// 全局原子大小/颜色：先统一覆盖到所有原子（用显式默认值而非 undefined，避免
+// 未知元素在 3Dmol 内留下空样式），再把保持“按元素”的项逐元素写回。
+function molApplyGlobalAtomStyle() {
+  if (!MC.viewer) return;
+  MC.viewer.addStyle({}, { sphere: {
+    color: molAtomColor || MOL_DEFAULT_ATOM_COLOR,
+    radius: molAtomRadius || MOL_DEFAULT_ATOM_RADIUS
+  } });
+  if (!molAtomColor || !molAtomRadius) {
+    Object.keys(MOL_ATOM_RADII).forEach(function (elem) {
+      const sp = {};
+      if (!molAtomColor) sp.color = molDefaultColor(elem);
+      if (!molAtomRadius) sp.radius = molDefaultRadius(elem);
+      MC.viewer.addStyle({ elem: elem }, { sphere: sp });
+    });
+  }
+  molApplyVisibility();
 }
 
 // 深度雾（Depth cue）强度 0–1：0 关闭；>0 时 fogStart 从 0.4 线性降到 0，
@@ -3940,45 +4321,239 @@ function molApplyDepthCue() {
 function molAxisSpec(color) {
   return {
     color: color, radius: molAxisStyle.radius, radiusRatio: molAxisStyle.headRatio,
-    midpos: molAxisStyle.midpos, opacity: molAxisStyle.opacity
+    opacity: molAxisStyle.opacity
   };
 }
 
-function molCellPoints(cell) {
-  const corner = function (a, b, c) {
-    return {
-      x: cell[0][0] * a + cell[1][0] * b + cell[2][0] * c,
-      y: cell[0][1] * a + cell[1][1] * b + cell[2][1] * c,
-      z: cell[0][2] * a + cell[1][2] * b + cell[2][2] * c
-    };
+function molCellRepeat() {
+  const r = molCellStyle.repeat || [1, 1, 1];
+  return [0, 1, 2].map(function (i) {
+    const n = Math.round(Number(r[i]) || 1);
+    return Math.max(1, Math.min(MOL_CELL_REPEAT_MAX, n));
+  });
+}
+// 超晶胞第 (a,b,c) 个格点：A/B/C 三个方向分别按 repeat 数扩展。
+function molCellCorner(cell, a, b, c) {
+  return {
+    x: cell[0][0] * a + cell[1][0] * b + cell[2][0] * c,
+    y: cell[0][1] * a + cell[1][1] * b + cell[2][1] * c,
+    z: cell[0][2] * a + cell[1][2] * b + cell[2][2] * c
   };
-  const pts = [];
-  for (let a = 0; a < 2; a++) {
-    for (let b = 0; b < 2; b++) {
-      for (let c = 0; c < 2; c++) pts.push(corner(a, b, c));
-    }
-  }
-  return pts;
+}
+// 每个方向逐段画格线：既画超晶胞外框，也画隔开每个单胞的内部线。
+function molCellEdges(n) {
+  const edges = [];
+  for (let b = 0; b <= n[1]; b++) for (let c = 0; c <= n[2]; c++)
+    for (let a = 0; a < n[0]; a++) edges.push([[a, b, c], [a + 1, b, c]]);
+  for (let a = 0; a <= n[0]; a++) for (let c = 0; c <= n[2]; c++)
+    for (let b = 0; b < n[1]; b++) edges.push([[a, b, c], [a, b + 1, c]]);
+  for (let a = 0; a <= n[0]; a++) for (let b = 0; b <= n[1]; b++)
+    for (let c = 0; c < n[2]; c++) edges.push([[a, b, c], [a, b, c + 1]]);
+  return edges;
 }
 
 function drawMolCell(cell) {
-  const pts = molCellPoints(cell);
   const shapes = [];
-  [[0, 1], [0, 2], [0, 4], [1, 3], [1, 5], [2, 3], [2, 6], [3, 7],
-   [4, 5], [4, 6], [5, 7], [6, 7]].forEach(function (edge) {
-    try {
-      const shape = MC.viewer.addCylinder({
-        start: pts[edge[0]], end: pts[edge[1]], radius: molCellStyle.radius,
-        color: molCellStyle.color, dashed: molCellStyle.dashed,
-        dashLength: molCellStyle.dashLength, gapLength: molCellStyle.gapLength
-      });
-      if (shape) shapes.push(shape);
-    } catch (err) { /* 忽略画线失败 */ }
-  });
+  if (cell && cell.length >= 3 && molCellStyle.visible !== false) {
+    molCellEdges(molCellRepeat()).forEach(function (edge) {
+      try {
+        const dashed = !!molCellStyle.dashed;
+        const spec = {
+          start: molCellCorner(cell, edge[0][0], edge[0][1], edge[0][2]),
+          end: molCellCorner(cell, edge[1][0], edge[1][1], edge[1][2]),
+          radius: dashed ? Math.max(molCellStyle.radius, MOL_CELL_DASH_MIN_RADIUS)
+                         : molCellStyle.radius,
+          color: molCellStyle.color,
+          dashed: dashed,
+          dashLength: molCellStyle.dashLength,
+          gapLength: molCellStyle.gapLength
+        };
+        if (dashed) { spec.fromCap = 2; spec.toCap = 2; }  // 每段虚线封口，端头不发虚
+        const shape = MC.viewer.addCylinder(spec);
+        if (shape) shapes.push(shape);
+      } catch (err) { /* 忽略画线失败 */ }
+    });
+  }
+  // 原点 O 与三条晶胞向量末端的 A/B/C 标注（label 用 viewer.removeLabel 清理，
+  // 与圆柱 shape 分开存到 MC.cellLabels）。扩胞后仍标在原始单胞上。
+  MC.cellLabels = [];
+  if (molCellStyle.labels && cell && cell.length >= 3) {
+    const ends = [
+      { x: 0, y: 0, z: 0 },
+      { x: cell[0][0] || 0, y: cell[0][1] || 0, z: cell[0][2] || 0 },
+      { x: cell[1][0] || 0, y: cell[1][1] || 0, z: cell[1][2] || 0 },
+      { x: cell[2][0] || 0, y: cell[2][1] || 0, z: cell[2][2] || 0 }
+    ];
+    MOL_CELL_LABEL_SPECS.forEach(function (spec, i) {
+      try {
+        const label = MC.viewer.addLabel(spec.text, {
+          position: ends[i], inFront: true, showBackground: false,
+          font: MOL_CELL_LABEL_FONT, fontSize: MOL_CELL_LABEL_SIZE,
+          fontColor: spec.color, borderThickness: 0
+        });
+        if (label) MC.cellLabels.push(label);
+      } catch (err) { /* 忽略标签失败 */ }
+    });
+  }
   return shapes;
 }
 
-// 左下角坐标轴指示器：只取主 viewer 的旋转四元数（getView 索引 4–7），
+// 超晶胞：直接把原胞扩成 3Dmol 原生模型（原子和键都由 3Dmol 渲染），
+// 不再为每个平移单胞逐个 addSphere/addCylinder —— 后者在大超晶胞下会产生上万个
+// 独立 shape，非常卡顿。原胞原子 index 保持不变，逐原子/逐键样式与存档仍有效。
+function molClearSupercellCopies() {
+  if (MC.viewer && MC.viewer.removeShape) {
+    (MC.cellCopies || []).forEach(function (s) {
+      try { MC.viewer.removeShape(s); } catch (err) { /* 忽略 */ }
+    });
+  }
+  MC.cellCopies = [];
+}
+function molShiftPos(pos, off) {
+  return { x: pos.x + off.x, y: pos.y + off.y, z: pos.z + off.z };
+}
+
+// 把原子按晶胞周期折回原胞内部（分数坐标取 [0,1)），用于“显示样式 → 内部”。
+// 折回后原有键不再可靠，统一清空交给 molEnsureBondGrid 按距离重建。
+function molWrapFramesToCell(frames, cell) {
+  const m = [[cell[0][0], cell[1][0], cell[2][0]],
+             [cell[0][1], cell[1][1], cell[2][1]],
+             [cell[0][2], cell[1][2], cell[2][2]]];
+  const inv = molInv3(m);
+  if (!inv) return frames;
+  return (frames || []).map(function (base) {
+    return (base || []).map(function (atom) {
+      const copy = Object.assign({}, atom);
+      const f = [0, 0, 0];
+      for (let k = 0; k < 3; k++) f[k] = inv[k][0]*atom.x + inv[k][1]*atom.y + inv[k][2]*atom.z;
+      for (let k = 0; k < 3; k++) f[k] -= Math.floor(f[k]);
+      copy.x = m[0][0]*f[0] + m[0][1]*f[1] + m[0][2]*f[2];
+      copy.y = m[1][0]*f[0] + m[1][1]*f[1] + m[1][2]*f[2];
+      copy.z = m[2][0]*f[0] + m[2][1]*f[1] + m[2][2]*f[2];
+      copy.bonds = [];
+      copy.bondOrder = [];
+      return copy;
+    });
+  });
+}
+
+// 按共价半径 + 0.45 Å 容差补齐缺失的键：扩胞后连接超晶胞边界两侧，
+// “内部”模式折回后重建被原坐标拆散的键。网格分桶避免 O(N²) 全扫描。
+function molEnsureBondGrid(atoms) {
+  if (!atoms || !atoms.length) return;
+  const CUT = 6.5;  // 覆盖半径表最大组合 + 容差
+  const buckets = Object.create(null);
+  const key = function (x, y, z) {
+    return Math.floor(x/CUT) + "," + Math.floor(y/CUT) + "," + Math.floor(z/CUT);
+  };
+  atoms.forEach(function (a, i) {
+    const k = key(a.x, a.y, a.z);
+    (buckets[k] || (buckets[k] = [])).push(i);
+  });
+  const radius = function (a) { return MOL_ATOM_RADII[molElemKey(a.elem)] || 0.9; };
+  atoms.forEach(function (a, i) {
+    const ix = Math.floor(a.x/CUT), iy = Math.floor(a.y/CUT), iz = Math.floor(a.z/CUT);
+    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) for (let dz = -1; dz <= 1; dz++) {
+      const list = buckets[(ix+dx)+","+(iy+dy)+","+(iz+dz)];
+      if (!list) continue;
+      list.forEach(function (j) {
+        if (j <= i) return;
+        if ((a.bonds || []).indexOf(j) >= 0) return;
+        const b = atoms[j];
+        const ddx = b.x-a.x, ddy = b.y-a.y, ddz = b.z-a.z;
+        const d2 = ddx*ddx + ddy*ddy + ddz*ddz;
+        if (d2 < 0.01) return;
+        const t = radius(a) + radius(b) + 0.45;
+        if (d2 >= t*t) return;
+        a.bonds.push(j); a.bondOrder.push(1);
+        b.bonds.push(i); b.bondOrder.push(1);
+      });
+    }
+  });
+}
+
+// 由原胞帧生成扩胞帧：每个晶格平移点复制一套原子，键索引同步偏移到新数组。
+function molExpandFrames(frames, cell, n) {
+  const offsets = [];
+  for (let i = 0; i < n[0]; i++) for (let j = 0; j < n[1]; j++) for (let k = 0; k < n[2]; k++) {
+    offsets.push({
+      x: cell[0][0]*i + cell[1][0]*j + cell[2][0]*k,
+      y: cell[0][1]*i + cell[1][1]*j + cell[2][1]*k,
+      z: cell[0][2]*i + cell[1][2]*j + cell[2][2]*k
+    });
+  }
+  return (frames || []).map(function (base) {
+    const out = [];
+    offsets.forEach(function (off) {
+      (base || []).forEach(function (atom, ai) {
+        const copy = {};
+        Object.keys(atom).forEach(function (key) {
+          if (key === "style" || key === "bondStyles" || key === "intersectionShape" ||
+              key === "bonds" || key === "bondOrder" || key === "clickable" ||
+              key === "hoverable" || key === "callback") return;
+          copy[key] = atom[key];
+        });
+        const shift = out.length - ai;
+        copy.x = (Number(atom.x) || 0) + off.x;
+        copy.y = (Number(atom.y) || 0) + off.y;
+        copy.z = (Number(atom.z) || 0) + off.z;
+        copy.index = out.length;
+        copy.serial = out.length;
+        copy.bonds = (atom.bonds || []).map(function (j) { return j + shift; });
+        copy.bondOrder = (atom.bondOrder || []).slice();
+        out.push(copy);
+      });
+    });
+    return out;
+  });
+}
+
+// 把扩胞后的原子写回模型。只在超晶胞数改变或结构重新打开时调用。
+function molApplySupercellModel() {
+  if (!MC.viewer || !MC.sourceFrames || !MC.cell || MC.cell.length < 3) return;
+  const models = molViewerModels();
+  if (!models.length) return;
+  const n = molCellRepeat();
+  const base = molCellStyle.wrapMode === "inside"
+    ? molWrapFramesToCell(MC.sourceFrames, MC.cell) : MC.sourceFrames;
+  const expanded = molExpandFrames(base, MC.cell, n);
+  expanded.forEach(function (atoms) { molEnsureBondGrid(atoms); });
+  const model = models[0];
+  MC.bondBaseOrders = {};
+  if (model.frames && model.frames.length) {
+    model.frames = expanded;
+    const idx = Math.max(0, Math.min(expanded.length - 1, MC.index || 0));
+    model.atoms = expanded[idx] || expanded[0] || [];
+    if (MC.viewer.setFrame) MC.viewer.setFrame(idx);
+  } else {
+    model.atoms = expanded[0] || [];
+  }
+  model.molObj = null;
+  MC.pickedCellRepeat = n.slice();
+
+  // 样式走 3Dmol 原生管线；自定义覆盖按 index 重新写入（原胞 index 不变）。
+  molApplyDefaultAtomStyle();
+  // 扩胞会重建 model.atoms 并重置样式，全局原子大小/颜色必须在其后重新叠加。
+  molApplyGlobalAtomStyle();
+  Object.keys(MC.atomStyles || {}).forEach(function (key) {
+    const s = MC.atomStyles[key];
+    if (s) MC.viewer.addStyle(molSelector(s), { sphere: { color: s.color, radius: s.radius } });
+  });
+  molApplyBondRadius();
+  molApplyVisibility();
+  if (MC.viewer.setClickable) MC.viewer.setClickable({}, true, molOnAtomClick);
+  molRebuildBondPickShapes();
+  if ((MC.pickAtoms || []).length || MC.pickBond) molRefreshPicksForFrame();
+  molDrawMeasure();
+  MC.viewer.render();
+}
+
+// 兼容原有调用点：扩胞走原生模型后无需重画副本，只重渲染一次即可。
+function molRedrawSupercell() {
+  if (MC.viewer) MC.viewer.render();
+}
+
+// 左上角坐标轴指示器：只取主 viewer 的旋转四元数（getView 索引 4–7），
 // 不取平移/缩放，因此轴只跟随结构旋转，长度恒为固定像素值，不会穿过原子。
 function molQuatRotateVec(q, v) {
   const x = q[0] || 0, y = q[1] || 0, z = q[2] || 0, w = (typeof q[3] === "number" ? q[3] : 1);
@@ -3993,14 +4568,36 @@ function molQuatRotateVec(q, v) {
 }
 
 // 三条单位轴经四元数旋转后投影到屏幕（x 右、y 上），返回相对中心的偏移与深度。
+// 正交：三条轴在 2D 上一律归一到等长 R（不带深度缩放，读起来是“平面正交”指示器，
+//       不再因投影缩短而呈现近大远小的透视感）；
+// 透视：按深度 k=D/(D-z) 缩放（朝向观察者的一侧更长），再整体归一到半径 R 内，
+//       避免标签被裁掉。切换“视角：正交/透视”按钮时两者形状明显不同。
 function molGizmoAxisEnds(q, R) {
-  return [[1,0,0], [0,1,0], [0,0,1]].map(function (v) {
+  const perspective = !MC || MC.ortho === false;
+  const D = 3;
+  const out = [[1,0,0], [0,1,0], [0,0,1]].map(function (v) {
     const r = molQuatRotateVec(q, v);
-    // 归一化旋转结果：即使 getView 四元数带数值误差而非严格单位化，也保证端点 3D 长度恒为 R，
-    // 从而 2D 投影恒 ≤ R、标签中心恒 ≤ R + 标签偏移，任何角度都不越出可见圆。
+    // 归一化旋转结果：即使 getView 四元数带数值误差而非严格单位化，也保证端点 3D 长度恒为 1。
     const n = Math.sqrt(r.x*r.x + r.y*r.y + r.z*r.z) || 1;
-    return { x: r.x/n*R, y: -r.y/n*R, z: r.z/n };
+    const x = r.x/n, y = r.y/n, z = r.z/n;
+    const k = perspective ? D / Math.max(1, D - z) : 1;
+    return { x: x*k*R, y: -y*k*R, z: z };
   });
+  if (perspective) {
+    let maxLen = 0;
+    out.forEach(function (e) { maxLen = Math.max(maxLen, Math.sqrt(e.x*e.x + e.y*e.y)); });
+    if (maxLen > R) {
+      const f = R / maxLen;
+      out.forEach(function (e) { e.x *= f; e.y *= f; });
+    }
+  } else {
+    // 正交：每条轴按各自的屏幕方向归一到等长 R，消除投影造成的长短差。
+    out.forEach(function (e) {
+      const len = Math.sqrt(e.x*e.x + e.y*e.y);
+      if (len > 1e-6) { e.x = e.x / len * R; e.y = e.y / len * R; }
+    });
+  }
+  return out;
 }
 
 function molGizmoQuat() {
@@ -4012,8 +4609,39 @@ function molGizmoQuat() {
   return [0, 0, 0, 1];
 }
 
+// 短轴（如正对 z 轴时投影长度≈0 的 z）不拉伸成假轴：轴线保持真实投影长度，
+// 标签改放到其余轴标签之间角度最大的空白扇区，避免叠在圆心或其他标签上。
+// 返回相对圆心的标签坐标，并保留 short 标记便于测试。
+function molGizmoLabelPoints(ends, R) {
+  const MIN_LEN = 11;
+  const k = 1 + MOL_AXIS_LABEL_OFFSET / Math.max(R, 1);
+  const pts = ends.map(function (e) {
+    return { x: e.x * k, y: e.y * k, short: Math.sqrt(e.x * e.x + e.y * e.y) < MIN_LEN };
+  });
+  const used = pts.filter(function (p) { return !p.short; })
+    .map(function (p) { return Math.atan2(p.y, p.x); });
+  pts.forEach(function (p) {
+    if (!p.short) return;
+    let best = -Math.PI, bestGap = -1;
+    for (let t = 0; t < 24; t++) {
+      const a = -Math.PI + t * Math.PI / 12;
+      let gap = Math.PI;
+      used.forEach(function (u) {
+        const da = Math.abs(Math.atan2(Math.sin(a - u), Math.cos(a - u)));
+        if (da < gap) gap = da;
+      });
+      if (gap > bestGap) { bestGap = gap; best = a; }
+    }
+    const lr = Math.max(10, R * 0.55);
+    p.x = Math.cos(best) * lr;
+    p.y = Math.sin(best) * lr;
+    used.push(best);
+  });
+  return pts;
+}
+
 // 坐标轴指示器：CSS 尺寸与后备像素常量见上方 MOL_GIZMO_SIZE / molGizmoScale。
-let molGizmoPos = null;  // 用户拖动后的位置（相对画布左上角）；null = 默认左下角
+let molGizmoPos = null;  // 用户拖动后的位置（相对画布左上角）；null = 默认左上角贴边
 function molGizmoScale() {
   const dpr = (typeof window !== "undefined" && window.devicePixelRatio) || 1;
   return Math.max(2, Math.min(3, dpr));
@@ -4050,8 +4678,8 @@ function molEnsureGizmo() {
   const saved = host._gizmoPos || molGizmoPos;
   if (saved) place(saved.left, saved.top);
   else {
-    // 默认停靠左下角；CSS 初值一致，place() 会改写为具体 left/top 像素
-    place(12, Math.max(0, (host.clientHeight || 0) - MOL_GIZMO_SIZE - 12));
+    // 默认停靠左上角并贴紧边框；CSS 初值一致，place() 会改写为具体 left/top 像素
+    place(0, 0);
   }
 
   let drag = null;
@@ -4111,30 +4739,17 @@ function molHexRgba(hex, alpha) {
 function molDrawAxisGizmo() {
   const cv = molEnsureGizmo();
   if (!cv || !cv.getContext) return;
+  // 「样式设置 → 外观 → 显示坐标轴」关闭时隐藏指示器；开启后再恢复并继续重画。
+  cv.style.display = molAxisVisible ? "" : "none";
+  if (!molAxisVisible) return;
   const ctx = cv.getContext("2d");
   if (!ctx) return;
   const s = Number(cv.dataset.scale) || molGizmoScale();
   const W = MOL_GIZMO_SIZE, H = MOL_GIZMO_SIZE, cx = W/2, cy = H/2;
   const R = Math.max(10, Math.min(MOL_AXIS_R_MAX, molAxisStyle.length * MOL_AXIS_R_SCALE));
-  const rawEnds = molGizmoAxisEnds(molGizmoQuat(), R);
-  // 保证任意旋转角度三条轴都可见：投影过短（轴几乎正对视线）时给一个最小可见长度，
-  // 完全退化时按互成 120° 的固定方向展开，避免三轴与标签叠在圆心互相遮挡。
-  const MIN_LEN = 11;
-  const ends = rawEnds.map(function (e, i) {
-    let x = e.x, y = e.y;
-    const len = Math.sqrt(x * x + y * y);
-    if (len < MIN_LEN) {
-      if (len < 1e-4) {
-        const a = (-90 + i * 120) * Math.PI / 180;
-        x = Math.cos(a) * MIN_LEN;
-        y = Math.sin(a) * MIN_LEN;
-      } else {
-        x = x / len * MIN_LEN;
-        y = y / len * MIN_LEN;
-      }
-    }
-    return { x: x, y: y, z: e.z };
-  });
+  // 不再给退化轴兜底拉伸：短轴按真实投影长度绘制，标签由 molGizmoLabelPoints
+  // 移到旁边空白区域，避免把正对屏幕的轴画成假的长箭头。
+  const ends = molGizmoAxisEnds(molGizmoQuat(), R);
   // 逻辑坐标按 CSS 像素绘制，由变换放大到高清后备像素。
   if (ctx.setTransform) ctx.setTransform(s, 0, 0, s, 0, 0);
   else if (ctx.scale) { ctx.save(); ctx.scale(s, s); }
@@ -4143,20 +4758,17 @@ function molDrawAxisGizmo() {
   const order = [0, 1, 2].sort(function (a, b) { return ends[a].z - ends[b].z; });
   const lw = Math.max(1.5, Math.min(5, molAxisStyle.radius * 30));
   const head = Math.max(6, Math.min(14, 6 * molAxisStyle.headRatio / 1.618));
-  // 1) 先画三条轴线（按深度从远到近），每条垫一层浅色描边，交叉处也能彼此分辨、不被盖住。
+  // 1) 先画三条轴线（按深度从远到近）；不垫白色描边，避免轴与箭头外圈出现白边。
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
   order.forEach(function (i) {
     const e = ends[i];
-    // 远轴稍淡但始终清晰可见（最低 0.55），保证不被近轴完全盖住。
+    // 按深度从远到近淡出；透明度取自 0–1 滑杆，0 时完全不可见（不再设 alpha 下限）。
     const depthFade = 0.7 + 0.3 * Math.max(0, Math.min(1, (e.z + 1) / 2));
     const rgba = molHexRgba(molAxisStyle.colors[i],
-      Math.max(0.55, Math.min(1, molAxisStyle.opacity * depthFade)));
+      Math.min(1, Math.max(0, molAxisStyle.opacity * depthFade)));
     const ex = cx + e.x, ey = cy + e.y;
     const ang = Math.atan2(e.y, e.x);
-    ctx.strokeStyle = "rgba(255,255,255,.92)";
-    ctx.lineWidth = lw + 2.6;
-    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(ex, ey); ctx.stroke();
     ctx.strokeStyle = rgba; ctx.fillStyle = rgba; ctx.lineWidth = lw;
     ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(ex, ey); ctx.stroke();
     ctx.beginPath();
@@ -4166,28 +4778,30 @@ function molDrawAxisGizmo() {
     ctx.lineTo(ex - head*Math.cos(ang + 0.42), ey - head*Math.sin(ang + 0.42));
     ctx.stroke();
   });
-  // 2) 三个标签最后统一绘制，并垫浅色描边，保证任何角度都不被轴线或其他标签遮挡。
-  const k = 1 + MOL_AXIS_LABEL_OFFSET / Math.max(R, 1);
-  ctx.font = "700 14px ui-sans-serif, system-ui, sans-serif";
+  // 2) 三个标签最后统一绘制；短轴标签挪到空白扇区，其余仍贴轴端外侧。
+  const labelPts = molGizmoLabelPoints(ends, R);
+  ctx.font = molCanvasFont("700", 14, molAxisStyle.fontFamily);
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
   order.forEach(function (i) {
-    const e = ends[i];
-    const lx = cx + e.x*k, ly = cy + e.y*k;
-    ctx.strokeStyle = "rgba(255,255,255,.95)"; ctx.lineWidth = 3.5;
-    if (ctx.strokeText) ctx.strokeText(labels[i], lx, ly);
-    ctx.fillStyle = molHexRgba(molAxisStyle.colors[i], Math.max(0.7, Math.min(1, molAxisStyle.opacity)));
-    ctx.fillText(labels[i], lx, ly);
+    const p = labelPts[i];
+    ctx.fillStyle = molHexRgba(molAxisStyle.colors[i], Math.min(1, Math.max(0, molAxisStyle.opacity)));
+    ctx.fillText(labels[i], cx + p.x, cy + p.y);
   });
   if (!ctx.setTransform && ctx.restore) ctx.restore();
 }
 
-// 样式设置改动后即时重画晶胞棱；轴相关改动即时重画左下角指示器。
+// 样式设置改动后即时重画晶胞棱；轴相关改动即时重画左上角指示器。
 function molRedrawCell() {
+  molClearSupercellCopies();
   if (!MC.viewer || !MC.cell) return;
   (MC.cellShapes || []).forEach(function (s) {
     try { MC.viewer.removeShape(s); } catch (err) { /* 忽略 */ }
   });
+  (MC.cellLabels || []).forEach(function (s) {
+    try { MC.viewer.removeLabel(s); } catch (err) { /* 忽略 */ }
+  });
   MC.cellShapes = drawMolCell(MC.cell);
+  molRedrawSupercell();
   MC.viewer.render();
 }
 
@@ -4198,8 +4812,17 @@ function molSetProjection(ortho) {
   if (!MC.viewer) return;
   MC.ortho = !!ortho;
   MC.viewer.setProjection(MC.ortho ? "orthographic" : "perspective");
-  $("molProj").textContent = MC.ortho ? tx("视角：正交") : tx("视角：透视");
+  const proj = $("molProj");
+  if (proj) {
+    const label = tx(MC.ortho ? "视角：正交" : "视角：透视");
+    proj.title = label;
+    proj.setAttribute("aria-label", label);
+    const orthoIcon = $("molProjOrtho"), perspIcon = $("molProjPersp");
+    if (orthoIcon) orthoIcon.classList.toggle("hidden", !MC.ortho);
+    if (perspIcon) perspIcon.classList.toggle("hidden", MC.ortho);
+  }
   MC.viewer.show();
+  molDrawAxisGizmo();
   molMarkViewDirty();
 }
 
@@ -4283,6 +4906,7 @@ function molClearGraphics() {
 function molClearMeasure(skipRender) {
   molClearGraphics();
   MC.pickAtoms = [];
+  MC.pickBond = null;
   molSyncClearButton();
   if (!skipRender && MC.viewer) MC.viewer.render();
 }
@@ -4293,6 +4917,7 @@ function molAddPickLabel(pos, text) {
     const label = MC.viewer.addLabel(text, {
       position: pos, inFront: true, showBackground: false,
       fontColor: molMeasureStyle.fontColor, fontSize: molMeasureStyle.fontSize,
+      font: molMeasureStyle.fontFamily || MOL_FONT_FAMILIES[0].value,
       borderThickness: 0
     });
     if (label) MC.measureLabels.push(label);
@@ -4319,13 +4944,13 @@ function molRedrawMeasure() {
 
 function molSyncClearButton() {
   const clear = $("molPickClear");
-  if (clear) clear.disabled = (MC.pickAtoms || []).length === 0;
+  if (clear) clear.disabled = (MC.pickAtoms || []).length === 0 && !MC.pickBond;
 }
 
 function molDrawMeasure() {
   molClearGraphics();
   const atoms = MC.pickAtoms;
-  if (!MC.viewer || !atoms.length) { molSyncClearButton(); return; }
+  if (!MC.viewer || (!atoms.length && !MC.pickBond)) { molSyncClearButton(); return; }
   // 元素名标在原子上方；选中的原子持续累加，直到点“清除选中”才全部消失。
   atoms.forEach(function (atom) {
     const p = molAtomPos(atom);
@@ -4352,6 +4977,20 @@ function molDrawMeasure() {
     else { bis.x /= lb; bis.y /= lb; bis.z /= lb; }
     molAddPickLabel(molVecAdd(b, { x: bis.x*0.55, y: bis.y*0.55, z: bis.z*0.55 }),
       molAngleDeg(atoms[i], atoms[i+1], atoms[i+2]).toFixed(1) + "°");
+  }
+  // 左键选中的单键：标出该键键长（跨边界时同样按最小镜像换算）。
+  // 用 model/index 取当前帧原子，轨迹切帧后 molRefreshPicksForFrame 重绘时长度会跟着更新。
+  if (MC.pickBond) {
+    const b = MC.pickBond;
+    const low = molFindAtomByIndex(b.model, b.a);
+    const other = molFindAtomByIndex(b.model, b.b);
+    if (low && other) {
+      const start = molAtomPos(low);
+      const vec = molWrapVec(molVecSub(other, low));
+      const end = molVecAdd(start, vec);
+      molAddPickLine(start, end);
+      molAddPickLabel(molVecMid(start, end), molVecLen(vec).toFixed(3) + " Å");
+    }
   }
   molSyncClearButton();
   MC.viewer.render();
@@ -4386,6 +5025,7 @@ function molHidePickPanel() {
   if (panel) panel.classList.add("hidden");
   molClosePickPops();
   MC.styleAtom = null;
+  MC.styleBond = null;
   MC.pickMode = "atom";
 }
 
@@ -4429,6 +5069,114 @@ function molPositionPickPanel(ev, panel) {
   panel.style.top = Math.max(132, Math.min(cy - rect.top + 8, rect.height - h - 8)) + "px";
 }
 
+// 颜色控件增强：在原色块下方加一排常用色板，色块数量随弹窗宽度调整。
+const MOL_COMMON_COLORS = [
+  "#e0553d", "#f2a33c", "#f2d649", "#17a06b", "#00a1d6", "#3b57d1",
+  "#8a45b5", "#e45a9a", "#8b5a2b", "#9aa5b1", "#000000", "#ffffff"
+];
+const MOL_SWATCH_SIZE = 15;
+const MOL_SWATCH_GAP = 4;
+function molLayoutColorSwatches() {
+  const panel = $("molPickPanel");
+  if (!panel) return;
+  const inner = Math.max(0, (panel.clientWidth || 248) - 24);
+  const count = Math.max(2, Math.min(MOL_COMMON_COLORS.length,
+    Math.floor((inner + MOL_SWATCH_GAP) / (MOL_SWATCH_SIZE + MOL_SWATCH_GAP))));
+  const last = MOL_COMMON_COLORS.length - 1;
+  panel.querySelectorAll(".mol-color-swatches").forEach(function (box) {
+    const all = Array.from(box.querySelectorAll(".mol-color-swatch"));
+    const visible = [];
+    for (let i = 0; i < count; i++) visible.push(all[Math.round(i * last / Math.max(1, count - 1))]);
+    all.forEach(function (b) { b.classList.add("hidden"); });
+    visible.forEach(function (b) { if (b) b.classList.remove("hidden"); });
+  });
+}
+function molAttachColorEditor(input, apply) {
+  if (!input || input.dataset.colorEditor) return;
+  input.dataset.colorEditor = "1";
+  const row = input.closest(".mol-pick-row");
+  if (row) {
+    row.classList.add("mol-color-row");
+    const main = document.createElement("div");
+    main.className = "mol-color-main";
+    while (row.firstChild) main.appendChild(row.firstChild);
+    row.appendChild(main);
+  }
+
+  const extra = document.createElement("div");
+  extra.className = "mol-color-extra";
+  const swatchBox = document.createElement("div");
+  swatchBox.className = "mol-color-swatches";
+  const swatches = MOL_COMMON_COLORS.map(function (hex) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "mol-color-swatch";
+    b.style.background = hex;
+    b.title = hex.toUpperCase();
+    b.setAttribute("aria-label", hex.toUpperCase());
+    b.onclick = function () {
+      input.value = hex;
+      apply(hex);
+      sync(hex);
+    };
+    swatchBox.appendChild(b);
+    return b;
+  });
+  extra.appendChild(swatchBox);
+  if (row) row.appendChild(extra);
+
+  function sync(hex) {
+    swatches.forEach(function (b, i) {
+      b.classList.toggle("active", MOL_COMMON_COLORS[i].toLowerCase() === String(hex).toLowerCase());
+    });
+  }
+  input.addEventListener("input", function () { sync(this.value); });
+  input._molColorSync = sync;
+  sync(input.value);
+  molLayoutColorSwatches();
+}
+
+// 虚线段长/间隙只在“晶格样式 = 虚线”时显示。
+function molSyncDashRow() {
+  const row = $("molStCellDashRow");
+  if (row) row.classList.toggle("hidden", !molCellStyle.visible || !molCellStyle.dashed);
+}
+
+// 晶格内联行：repeat=范围下一行 A/B/C；dash=虚线段长与间隙同一行。
+function molMakeInlineNumberRow(fields, kind) {
+  const wrap = document.createElement("div");
+  wrap.className = kind === "dash" ? "mol-cell-dash" : "mol-cell-repeat";
+  if (kind === "dash") wrap.id = "molStCellDashRow";
+  if (kind !== "dash") {
+    const title = document.createElement("div");
+    title.className = "mol-cell-repeat-title";
+    title.textContent = tx("范围");
+    wrap.appendChild(title);
+  }
+  const row = document.createElement("div");
+  row.className = "mol-pick-row mol-cell-repeat-row";
+  fields.forEach(function (f, i) {
+    const item = document.createElement("label");
+    item.className = "mol-cell-repeat-item";
+    item.textContent = (kind === "dash"
+      ? [tx("虚线段长"), tx("间隙")][i] : "ABC".charAt(i)) + " ";
+    const input = document.createElement("input");
+    input.type = "number";
+    input.id = f.id;
+    input.min = String(f.min);
+    input.max = String(f.max);
+    input.step = String(f.step);
+    input.value = String(f.get());
+    input.setAttribute("aria-label", tx(f.label));
+    input.oninput = function () { molApplyStyleNumber(f, this.value, false); };
+    item.appendChild(input);
+    row.appendChild(item);
+  });
+  wrap.appendChild(row);
+  if (kind === "dash") molSyncDashRow();
+  return wrap;
+}
+
 // 按字段类型生成一行控件；数值框右侧的小三角按钮上方弹出滑杆。
 function molMakeStyleRow(f) {
   const row = document.createElement("div");
@@ -4451,6 +5199,37 @@ function molMakeStyleRow(f) {
     input.value = molHexColor(f.get());
     input.oninput = function () { f.set(this.value); molMarkViewDirty(); };
     row.appendChild(input);
+    molAttachColorEditor(input, function (v) { f.set(v); molMarkViewDirty(); });
+    return row;
+  }
+  if (f.type === "select") {
+    const sel = document.createElement("select");
+    sel.id = f.id;
+    sel.setAttribute("aria-label", tx(f.label));
+    (f.options || []).forEach(function (o) {
+      const opt = document.createElement("option");
+      opt.value = o.value !== undefined ? o.value : o.key;
+      opt.textContent = tx(o.label);
+      sel.appendChild(opt);
+    });
+    sel.value = String(f.get());
+    sel.onchange = function () { f.set(this.value); molMarkViewDirty(); };
+    row.appendChild(sel);
+    return row;
+  }
+  if (f.type === "font") {
+    const sel = document.createElement("select");
+    sel.id = f.id;
+    sel.setAttribute("aria-label", tx(f.label));
+    (f.options || MOL_FONT_FAMILIES).forEach(function (o) {
+      const opt = document.createElement("option");
+      opt.value = o.value;
+      opt.textContent = tx(o.label);
+      sel.appendChild(opt);
+    });
+    sel.value = f.get();
+    sel.onchange = function () { f.set(this.value); molMarkViewDirty(); };
+    row.appendChild(sel);
     return row;
   }
   input.type = "number";
@@ -4503,11 +5282,11 @@ function molBuildStylePanel(mode) {
   if (!box || box.dataset.mode === mode) return;
   box.dataset.mode = mode;
   box.innerHTML = "";
-  // 空白右键：键与雾 + 晶胞 + 测量；坐标轴区域右键：坐标轴 + 轴颜色。
+  // 空白右键：外观 + 键 + 晶格 + 测量；坐标轴区域右键：坐标轴 + 轴颜色。
   const groups = MOL_STYLE_GROUPS.filter(function (g) {
     return mode === "axis"
       ? (g.key === "axis" || g.key === "axisColor")
-      : (g.key === "bond" || g.key === "cell" || g.key === "measure");
+      : (g.key === "bond" || g.key === "bonds" || g.key === "cell" || g.key === "measure");
   });
   const tabs = document.createElement("div");
   tabs.className = "mol-pick-tabs";
@@ -4531,9 +5310,23 @@ function molBuildStylePanel(mode) {
     const group = document.createElement("div");
     group.className = "mol-pick-group" + (gi ? " hidden" : "");
     group.id = "molPickGroup-" + g.key;
-    g.fields.forEach(function (f) { group.appendChild(molMakeStyleRow(f)); });
+    // 按字段声明顺序插入控件；每组内联行在该组第一个 inline 字段的位置插入一次。
+    const doneInline = {};
+    g.fields.forEach(function (f) {
+      if (f.inline) {
+        if (!doneInline[f.inline]) {
+          doneInline[f.inline] = true;
+          group.appendChild(molMakeInlineNumberRow(g.fields.filter(function (x) {
+            return x.inline === f.inline;
+          }), f.inline));
+        }
+        return;
+      }
+      group.appendChild(molMakeStyleRow(f));
+    });
     box.appendChild(group);
   });
+  molSyncDashRow();
 }
 
 function molSyncStyleFields() {
@@ -4542,15 +5335,28 @@ function molSyncStyleFields() {
     if (!el) return;
     const v = f.get();
     if (f.type === "bool") el.checked = !!v;
-    else if (f.type === "color") el.value = molHexColor(v);
+    else if (f.type === "color") {
+      el.value = molHexColor(v);
+      if (f.key === "BondColor") {
+        el.disabled = !molBondColor;
+        const row = el.closest(".mol-pick-row");
+        if (row) row.classList.toggle("hidden", !molBondColor);
+        const sw = row && row.querySelector(".mol-color-swatches");
+        if (sw) sw.classList.toggle("hidden", !molBondColor);
+      }
+      if (el._molColorSync) el._molColorSync(el.value);
+    }
+    else if (f.type === "select" || f.type === "font") el.value = String(v);
     else molSetNumInputs(f.id, v);
   });
+  molSyncDashRow();
 }
 
 function molOpenPickPanel(atom, ev) {
   atom = molResolveAtom(atom);
   if (!atom) { molOpenStylePanel(ev); return; }
   MC.styleAtom = atom;
+  MC.styleBond = null;
   MC.pickMode = "atom";
   const panel = $("molPickPanel");
   if (!panel) return;
@@ -4564,15 +5370,17 @@ function molOpenPickPanel(atom, ev) {
   const color = $("molPickColor");
   const sphere = atom && atom.style && atom.style.sphere;
   const sizeValue = sphere && typeof sphere.radius === "number" ? sphere.radius : (sphere && sphere.scale);
-  if (color) color.value = molColorHex(atom);
+  if (color) { color.value = molColorHex(atom); if (color._molColorSync) color._molColorSync(color.value); }
   molSetNumInputs("molPickSize",
     Math.min(0.8, Math.max(0.05, Number(sizeValue) || molDefaultRadius(atom && atom.elem))));
   panel.classList.remove("hidden");
   molPositionPickPanel(ev, panel);
+  molLayoutColorSwatches();
 }
 
 function molOpenStylePanel(ev, mode) {
   MC.styleAtom = null;
+  MC.styleBond = null;
   MC.pickMode = "global";
   const isAxis = mode === "axis";
   const panelTitle = isAxis ? "坐标轴设置" : "样式设置";
@@ -4589,6 +5397,7 @@ function molOpenStylePanel(ev, mode) {
   molSyncStyleFields();
   panel.classList.remove("hidden");
   molPositionPickPanel(ev, panel);
+  molLayoutColorSwatches();
 }
 
 function molApplyAtomStyle() {
@@ -4599,6 +5408,7 @@ function molApplyAtomStyle() {
   const color = colorEl ? colorEl.value : molDefaultColor(atom.elem);
   molSyncNumButton("molPickSize", radius);
   MC.viewer.addStyle(molSelector(atom), { sphere: { color: color, radius: radius } });
+  molRedrawSupercell();
   MC.viewer.render();
   MC.atomStyles[molAtomKey(atom)] = { model: atom.model, index: atom.index, elem: atom.elem, color: color, radius: radius };
   molMarkViewDirty();
@@ -4613,22 +5423,366 @@ function molResetAtomStyle() {
     sphere: { color: color, radius: radius }
   });
   const colorEl = $("molPickColor");
-  if (colorEl) colorEl.value = color;
+  if (colorEl) { colorEl.value = color; if (colorEl._molColorSync) colorEl._molColorSync(color); }
   molSetNumInputs("molPickSize", radius);
   delete MC.atomStyles[molAtomKey(atom)];
+  molRedrawSupercell();
   MC.viewer.render();
   molMarkViewDirty();
 }
 
-// 键型固定为 3Dmol 原生 stick，“样式设置”只调整键粗。
+// 键样式：全局“键”设置优先；改动全局键粗/颜色/样式会清掉逐键覆盖。
+// 3Dmol 在 addStyle 时会清空 molObj，仅改 atom.bondStyles 后 render 不会重建键几何，
+// 所以每次样式变化都重新 addStyle 一次，确保实时生效。
 function molApplyBondRadius() {
+  molApplyBondStyles();
+}
+// 全局键设置优先：改动“键”里的键粗/颜色/样式时清掉所有逐键覆盖。
+// 拾取圆柱半径也随全局键粗重建，之后全局设置自然作用于每条键。
+function molClearBondOverrides() {
+  if (!MC.bondStyles || !Object.keys(MC.bondStyles).length) return;
+  MC.bondStyles = {};
+  molRebuildBondPickShapes();
+}
+
+// 「外观」的显示开关：用 addStyle 给全部原子叠加 hidden，3Dmol 的 setStyle
+// 用 Object.assign 合并，单独设置过的原子颜色/半径会被保留，只切换 hidden 位。
+function molApplyVisibility() {
   if (!MC.viewer) return;
-  MC.viewer.addStyle({}, { stick: { radius: molBondRadius } });
+  MC.viewer.addStyle({}, {
+    sphere: { hidden: !molAtomsVisible },
+    stick: { hidden: !molBondsVisible }
+  });
+  molRedrawSupercell();
+  MC.viewer.render();
+}
+
+// ---- 单键样式：右键键拾取 + 键粗/颜色/实线虚线 ----
+function molBondKey(bond) {
+  return String(bond && bond.model) + ":" + String(bond && bond.a) + ":" + String(bond && bond.b);
+}
+function molViewerModels() {
+  if (!MC.viewer) return [];
+  if (Array.isArray(MC.viewer.models)) return MC.viewer.models;
+  if (MC.viewer.getModels) {
+    try { const list = MC.viewer.getModels(); if (Array.isArray(list)) return list; } catch (err) { /* 忽略 */ }
+  }
+  const m = MC.viewer.models;
+  if (m && Array.isArray(m.atoms)) return [m];
+  if (m && Array.isArray(m.models)) return m.models;
+  return [];
+}
+function molFindAtomByIndex(model, index) {
+  if (!MC.viewer) return null;
+  if (MC.viewer.selectedAtoms) {
+    try {
+      const sel = { index: index };
+      if (model !== undefined) sel.model = model;
+      const hits = MC.viewer.selectedAtoms(sel);
+      if (hits && hits.length) return hits[0];
+    } catch (err) { /* 回退到 models 遍历 */ }
+  }
+  const models = molViewerModels();
+  for (let i = 0; i < models.length; i++) {
+    const m = models[i];
+    const id = m.getID ? m.getID() : m.id;
+    if (model !== undefined && id !== model) continue;
+    const atoms = m.atoms || [];
+    for (let j = 0; j < atoms.length; j++) if (atoms[j].index === index) return atoms[j];
+  }
+  return null;
+}
+function molBondStyle(bond) {
+  const key = molBondKey(bond);
+  if (!MC.bondStyles[key]) {
+    MC.bondStyles[key] = { model: bond.model, a: bond.a, b: bond.b };
+  }
+  return MC.bondStyles[key];
+}
+// 遍历当前模型中所有键（低索引端 → 高索引端）。
+function molEachBond(cb) {
+  molViewerModels().forEach(function (m) {
+    const modelId = m.getID ? m.getID() : m.id;
+    const atoms = m.atoms || [];
+    atoms.forEach(function (atom) {
+      (atom.bonds || []).forEach(function (j, pos) {
+        if (!Number.isInteger(j) || atom.index >= j) return;
+        const other = atoms[j] || molFindAtomByIndex(modelId, j);
+        if (!other) return;
+        cb({ model: modelId, a: atom.index, b: j, pos: pos }, atom, other);
+      });
+    });
+  });
+}
+// 记录每条键的原始键级，供实线恢复与虚线切换使用（1.5 只是渲染用的非整数键级）。
+function molBondBaseOrder(bond, low) {
+  const key = molBondKey(bond);
+  if (typeof MC.bondBaseOrders[key] === "number") return MC.bondBaseOrders[key];
+  const order = low.bondOrder && typeof low.bondOrder[bond.pos] === "number" ? low.bondOrder[bond.pos] : 1;
+  MC.bondBaseOrders[key] = order;
+  return order;
+}
+function molCaptureBondBaseOrders() {
+  if (!MC.bondBaseOrders) MC.bondBaseOrders = {};
+  molEachBond(function (bond, low) { molBondBaseOrder(bond, low); });
+}
+function molBondStyleMode(st) {
+  if (molBondHidden) return "none";
+  if (st && (st.style === "none" || st.style === "solid" || st.style === "dashed")) return st.style;
+  const dashed = st && typeof st.dashed === "boolean" ? st.dashed : molBondDashed;
+  return dashed ? "dashed" : "solid";
+}
+function molBondRenderSpec(bond, baseOrder) {
+  const st = MC.bondStyles[molBondKey(bond)];
+  const mode = molBondStyleMode(st);
+  const hidden = mode === "none";
+  // 3Dmol 的 bondStyles 不支持逐键 hidden；用极小半径让该键实际不可见，
+  // 同时保留拾取圆柱，仍可左键选中/右键把它改回实线或虚线。
+  const radius = hidden ? 1e-5
+    : (st && typeof st.radius === "number" ? st.radius : molBondRadius);
+  const color = st && st.color ? st.color : molBondColor;
+  const dashed = mode === "dashed";
+  const bs = { radius: radius };
+  if (color) { bs.color1 = color; bs.color2 = color; }
+  if (dashed) {
+    const cfg = { dashLength: MOL_BOND_DASH_LENGTH, gapLength: MOL_BOND_GAP_LENGTH };
+    if (color) { cfg.solidColor = color; cfg.dashedColor = color; }
+    bs.dashedBondConfig = cfg;
+  }
+  return { bs: bs, dashed: dashed, baseOrder: baseOrder };
+}
+function molSetBondRender(bond, low, other, spec) {
+  // 没有覆盖（默认半径/按元素/实线）时不留 per-bond 样式，让 3Dmol 走原生默认渲染。
+  const needOverride = !!spec.bs.color1 || !!spec.bs.dashedBondConfig || spec.bs.radius !== molBondRadius;
+  [low, other].forEach(function (atom, i) {
+    if (!atom || !Array.isArray(atom.bonds)) return;
+    const pos = atom.bonds.indexOf(i ? bond.a : bond.b);
+    if (pos < 0) return;
+    if (!needOverride) {
+      if (Array.isArray(atom.bondStyles)) delete atom.bondStyles[pos];
+    } else {
+      if (!Array.isArray(atom.bondStyles)) atom.bondStyles = new Array(atom.bonds.length);
+      atom.bondStyles[pos] = spec.bs;
+    }
+    if (Array.isArray(atom.bondOrder)) atom.bondOrder[pos] = spec.dashed ? 1.5 : spec.baseOrder;
+  });
+}
+// 把所有键（含单键覆盖）的渲染样式刷到模型，并强制 3Dmol 重建键几何。
+function molApplyBondStyles() {
+  if (!MC.viewer) return;
+  molCaptureBondBaseOrders();
+  molEachBond(function (bond, low, other) {
+    molSetBondRender(bond, low, other,
+      molBondRenderSpec(bond, molBondBaseOrder(bond, low)));
+  });
+  // 关键：addStyle 是 merge（3Dmol setStyle 内部 Object.assign），若“按元素”时
+  // 不带 color 键，上次“自定义”写入的 atom.style.stick.color 会残留，键无法恢复按元素着色。
+  // 这里始终显式给出 color（无自定义色时为 undefined）以覆盖旧值；
+  // dashedBondConfig 每次都是新对象，solidColor/dashedColor 随之被整体替换。
+  const stick = { radius: molBondRadius, color: molBondColor || undefined,
+    dashedBondConfig: { dashLength: MOL_BOND_DASH_LENGTH, gapLength: MOL_BOND_GAP_LENGTH } };
+  if (molBondColor) {
+    stick.dashedBondConfig.solidColor = molBondColor;
+    stick.dashedBondConfig.dashedColor = molBondColor;
+  }
+  MC.viewer.addStyle({}, { stick: stick });
+  molRedrawSupercell();
   MC.viewer.render();
   molMarkViewDirty();
+}
+function molSetBondOrder(model, a, b, order) {
+  [a, b].forEach(function (idx, i) {
+    const other = i ? a : b;
+    const atom = molFindAtomByIndex(model, idx);
+    if (!atom || !Array.isArray(atom.bonds) || !Array.isArray(atom.bondOrder)) return;
+    const pos = atom.bonds.indexOf(other);
+    if (pos >= 0) atom.bondOrder[pos] = order;
+  });
+}
+function molApplyBondStyle(bond) {
+  if (!bond) return;
+  molApplyBondStyles();
+}
+function molResetBondStyle(bond) {
+  if (!bond) return;
+  delete MC.bondStyles[molBondKey(bond)];
+  molApplyBondStyles();
+}
+function molResetAllBondStyles() {
+  MC.bondStyles = {};
+  molApplyBondStyles();
+}
+function molClearBondPickShapes() {
+  if (MC.viewer && MC.viewer.removeShape) {
+    (MC.bondPickShapes || []).forEach(function (entry) {
+      try { MC.viewer.removeShape(entry.shape); } catch (err) { /* 忽略 */ }
+    });
+  }
+  MC.bondPickShapes = [];
+}
+function molRebuildBondPickShapes() {
+  molClearBondPickShapes();
+  if (!MC.viewer || !MC.viewer.addCylinder) return;
+  // 扩胞后原子数成倍增长；拾取圆柱只给原胞（前 baseLen 个原子）建，
+  // 否则大超晶胞会额外产生几万个透明圆柱，又变卡。
+  const baseLen = MC.sourceFrames && MC.sourceFrames[0] ? MC.sourceFrames[0].length : 0;
+  const models = molViewerModels();
+  models.forEach(function (m) {
+    const modelId = m.getID ? m.getID() : m.id;
+    const atoms = m.atoms || [];
+    atoms.forEach(function (atom) {
+      if (baseLen && atom.index >= baseLen) return;
+      (atom.bonds || []).forEach(function (j, pos) {
+        if (!Number.isInteger(j) || atom.index >= j) return;
+        const other = atoms[j] || molFindAtomByIndex(modelId, j);
+        if (!other) return;
+        const bond = { model: modelId, a: atom.index, b: j, pos: pos };
+        const st = MC.bondStyles[molBondKey(bond)] || {};
+        const shape = MC.viewer.addCylinder({
+          start: molAtomPos(atom), end: molAtomPos(other),
+          radius: Math.max(0.14, (typeof st.radius === "number" ? st.radius : molBondRadius) * 2.2),
+          color: "#ffffff", opacity: 0.01, contextMenuEnabled: true,
+          clickable: true, callback: molOnBondClick
+        });
+        if (shape) MC.bondPickShapes.push({ shape: shape, bond: bond });
+      });
+    });
+  });
+  if (MC.bondPickShapes.length && MC.viewer.render) MC.viewer.render();
+}
+function molBondFromPickShape(shape) {
+  const list = MC.bondPickShapes || [];
+  // 3Dmol 回调首参是 shape 本身（其 clickable 为布尔 true），命中列表里则是
+  // {clickable: shape}；两种形式都接受，避免左键点键时取不到 bond。
+  const shapes = [shape, shape && shape.clickable && typeof shape.clickable === "object"
+    ? shape.clickable : null];
+  for (let s = 0; s < shapes.length; s++) {
+    if (!shapes[s]) continue;
+    for (let i = 0; i < list.length; i++) if (list[i].shape === shapes[s]) return list[i].bond;
+  }
+  return null;
+}
+// 左键点在键的透明拾取圆柱上：切换选中并显示该键键长；与原子测量互斥。
+// 3Dmol 调用签名是 (clickable, viewer, event)；右键由 host 的 contextmenu 处理，这里只认左键。
+function molOnBondClick(shape, viewer, ev, container, hits) {
+  const button = ev && typeof ev.button === "number" ? ev.button : 0;
+  if (button !== 0) return;
+  // 3Dmol 把 shape 本体作为第一个参数（shape.clickable 是布尔 true，不是 shape），
+  // 不能直接取 shape.clickable；命中的是圆柱时它本身就在 bondPickShapes 里。
+  const target = shape;
+  const bond = molBondFromPickShape(target);
+  if (!bond) return;
+  // 键拾取圆柱较粗，可能与原子拾取球重叠；若射线更近命中原子，交回原子点击处理。
+  if (viewer && viewer.mouseXY && viewer.targetedObjects && ev) {
+    try {
+      const xy = viewer.mouseXY(ev.pageX, ev.pageY);
+      const atomHits = viewer.targetedObjects(xy.x, xy.y, viewer.clickables || []) || [];
+      const atomTarget = molNearestTarget(atomHits, function (h) { return molResolveAtom(h.clickable || h); });
+      let bondDist = null;
+      (hits || []).some(function (h) {
+        if ((h.clickable || h) === target) {
+          bondDist = typeof h.distance === "number" && isFinite(h.distance) ? h.distance : 0;
+          return true;
+        }
+        return false;
+      });
+      if (atomTarget && (bondDist === null || atomTarget.distance < bondDist)) {
+        molOnAtomClick(atomTarget.obj, viewer, ev);
+        return;
+      }
+    } catch (err) { /* 比较失败时按键处理 */ }
+  }
+  molHidePickPanel();
+  const cur = MC.pickBond;
+  const same = cur && cur.model === bond.model && cur.a === bond.a && cur.b === bond.b;
+  MC.pickBond = same ? null : bond;
+  MC.pickAtoms = [];
+  molDrawMeasure();
+}
+function molBondDefaults(bond) {
+  const st = MC.bondStyles[molBondKey(bond)] || {};
+  const low = molFindAtomByIndex(bond.model, bond.a);
+  return {
+    color: st.color || molBondColor || molDefaultColor(low && low.elem),
+    radius: typeof st.radius === "number" ? st.radius : molBondRadius,
+    mode: molBondStyleMode(st)
+  };
+}
+function molBuildBondPanel(bond) {
+  const box = $("molPickStyleBox");
+  if (!box) return;
+  // 键面板复用同一个容器：改标记，切回空白/原子右键时才能重建“样式设置”。
+  box.dataset.mode = "bond";
+  box.innerHTML = "";
+  const d = molBondDefaults(bond);
+  const key = molBondKey(bond);
+  const group = document.createElement("div");
+  group.className = "mol-pick-group";
+  // 顺序：键样式、键粗、键颜色模式、键颜色（仅“自定义”时显示）。
+  group.appendChild(molMakeStyleRow({ id: "molBondPickStyle", label: "键样式", type: "select",
+    options: MOL_BOND_STYLE_MODES,
+    get: function () { return d.mode; },
+    set: function (v) {
+      molBondStyle(bond).style = v;
+      molBondStyle(bond).dashed = v === "dashed";
+      molApplyBondStyle(bond);
+    } }));
+  group.appendChild(molMakeStyleRow({ id: "molBondPickRadius", label: "键粗",
+    min: 0.02, max: 0.30, step: 0.01,
+    get: function () { return d.radius; },
+    set: function (v) { molBondStyle(bond).radius = v; molApplyBondStyle(bond); } }));
+  group.appendChild(molMakeStyleRow({ id: "molBondPickColorMode", label: "键颜色模式", type: "select",
+    options: [{ key: "element", label: "按元素" }, { key: "custom", label: "自定义" }],
+    get: function () { return d.color && (MC.bondStyles[key] || {}).color ? "custom" : "element"; },
+    set: function (v) {
+      if (v === "custom") {
+        molBondStyle(bond).color = d.color;
+      } else if (MC.bondStyles[key]) {
+        delete MC.bondStyles[key].color;
+        if (!Object.keys(MC.bondStyles[key]).some(k => k !== "model" && k !== "a" && k !== "b")) {
+          delete MC.bondStyles[key];
+        }
+      }
+      molApplyBondStyle(bond);
+      molBuildBondPanel(bond);
+    } }));
+  const colorRow = molMakeStyleRow({ id: "molBondPickColor", label: "键颜色", type: "color",
+    get: function () { return d.color; },
+    set: function (v) { molBondStyle(bond).color = v; molApplyBondStyle(bond); } });
+  colorRow.id = "molBondPickColorRow";
+  const colorInput = colorRow.querySelector('input[type="color"]');
+  const custom = !!(MC.bondStyles[key] || {}).color;
+  if (colorInput) colorInput.disabled = !custom;
+  colorRow.classList.toggle("hidden", !custom);
+  group.appendChild(colorRow);
+  box.appendChild(group);
+}
+function molOpenBondPanel(bond, ev) {
+  if (!bond) { molOpenStylePanel(ev); return; }
+  MC.styleAtom = null;
+  MC.styleBond = bond;
+  MC.pickMode = "bond";
+  const panel = $("molPickPanel");
+  if (!panel) return;
+  const title = $("molPickTitle");
+  if (title) title.textContent = tx("键样式");
+  panel.setAttribute("aria-label", tx("键样式"));
+  const colorRow = $("molPickColorRow"), sizeRow = $("molPickSizeRow"), styleBox = $("molPickStyleBox");
+  if (colorRow) colorRow.classList.add("hidden");
+  if (sizeRow) sizeRow.classList.add("hidden");
+  if (styleBox) styleBox.classList.remove("hidden");
+  molBuildBondPanel(bond);
+  panel.classList.remove("hidden");
+  molPositionPickPanel(ev, panel);
+  molLayoutColorSwatches();
 }
 
 function molResetPickSettings() {
+  if (MC.pickMode === "bond") {
+    if (MC.styleBond) molResetBondStyle(MC.styleBond);
+    if (MC.styleBond) molBuildBondPanel(MC.styleBond);
+    return;
+  }
   if (MC.pickMode === "global") {
     MOL_STYLE_FIELDS.forEach(function (f) { f.set(f.def); });
     molSyncStyleFields();
@@ -4637,16 +5791,42 @@ function molResetPickSettings() {
   molResetAtomStyle();
 }
 
+// 取命中列表里最近的一个有效对象及其射线距离。3Dmol 的 targetedObjects 结果按距离升序，
+// distance 可直接比较；测试桩若不给 distance 则用数组顺序（下标）作为回退排序依据。
+function molNearestTarget(hits, resolve) {
+  const list = hits || [];
+  for (let i = 0; i < list.length; i++) {
+    const obj = resolve(list[i]);
+    if (!obj) continue;
+    const d = typeof list[i].distance === "number" && isFinite(list[i].distance)
+      ? list[i].distance : i;
+    return { obj: obj, distance: d };
+  }
+  return null;
+}
+
 function molOnContextMenu(ev) {
   ev.preventDefault();
   if (!MC.viewer) return;
-  let atom = null;
+  let atom = null, bond = null;
   try {
     const xy = MC.viewer.mouseXY(ev.pageX, ev.pageY);
-    const hits = MC.viewer.targetedObjects(xy.x, xy.y, MC.viewer.clickables) || [];
-    if (hits.length) atom = molResolveAtom(hits[0]);
+    // 原子与键拾取圆柱同时可能命中：键圆柱较粗、会包围原子附近区域。
+    // 取射线距离更近者，从而准确区分“点在原子上 / 键上 / 空白处”。
+    const atomHits = MC.viewer.targetedObjects(xy.x, xy.y, MC.viewer.clickables || []) || [];
+    const menuObjects = MC.viewer.contextMenuEnabledObjects || [];
+    const bondHits = menuObjects.length
+      ? (MC.viewer.targetedObjects(xy.x, xy.y, menuObjects) || []) : [];
+    const atomTarget = molNearestTarget(atomHits, molResolveAtom);
+    const bondTarget = molNearestTarget(bondHits, function (h) { return molBondFromPickShape(h.clickable); });
+    if (atomTarget && bondTarget) {
+      if (bondTarget.distance < atomTarget.distance) bond = bondTarget.obj;
+      else atom = atomTarget.obj;
+    } else if (atomTarget) atom = atomTarget.obj;
+    else if (bondTarget) bond = bondTarget.obj;
   } catch (err) { /* 拾取失败时按空白处处理 */ }
   if (atom) molOpenPickPanel(atom, ev);
+  else if (bond) molOpenBondPanel(bond, ev);
   else molOpenStylePanel(ev);
 }
 
@@ -4655,6 +5835,7 @@ function molOnAtomClick(atom, viewer, ev) {
   if (button === 2) { molOpenPickPanel(atom, ev); return; }
   if (button !== 0) return;
   molHidePickPanel();
+  MC.pickBond = null;  // 原子测量与单键键长互斥
   const key = molAtomKey(atom);
   const at = MC.pickAtoms.findIndex(function (a) { return molAtomKey(a) === key; });
   if (at >= 0) MC.pickAtoms.splice(at, 1);
@@ -4768,6 +5949,57 @@ function molZoom(inward) {
   MC.viewer.render();
 }
 
+// 当前显示内容的模型坐标点：可见原子 + 晶格外框 8 个角点（超晶胞的外边界）。
+function molFitPoints() {
+  const pts = [];
+  if (molAtomsVisible !== false) {
+    molViewerModels().forEach(function (m) {
+      (m.atoms || []).forEach(function (atom) {
+        const sphere = atom.style && atom.style.sphere;
+        if (sphere && sphere.hidden) return;
+        pts.push(molAtomPos(atom));
+      });
+    });
+  }
+  if (MC.cell && MC.cell.length >= 3 && molCellStyle.visible !== false) {
+    const n = molCellRepeat();
+    for (let a = 0; a <= 1; a++) for (let b = 0; b <= 1; b++) for (let c = 0; c <= 1; c++) {
+      pts.push(molCellCorner(MC.cell, a * n[0], b * n[1], c * n[2]));
+    }
+  }
+  return pts;
+}
+
+// 把当前显示的所有内容（原子/键/晶格线/超晶胞）缩放到不超出窗口的最大尺寸。
+function molFitToView() {
+  if (!MC.viewer) return;
+  try { MC.viewer.zoomTo(); } catch (err) { /* 视图不支持时保持原样 */ }
+  // zoomTo 按包围球 + 最小半径 5Å 定镜头，宽窗口或小块结构会留下很大空白。
+  // 再用屏幕投影后的真实包围盒精确放大一次，让晶格外框尽量贴边（四周留 8%）。
+  try {
+    const v = MC.viewer, host = $("molCanvas");
+    const W = host && host.clientWidth, H = host && host.clientHeight;
+    const pts = molFitPoints();
+    if (W && H && pts.length && typeof v.modelToScreen === "function" && typeof v.zoom === "function") {
+      const scr = v.modelToScreen(pts) || [];
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      scr.forEach(function (p) {
+        if (!p || !isFinite(p.x) || !isFinite(p.y)) return;
+        minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
+        minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
+      });
+      const w = maxX - minX, h = maxY - minY, fill = 0.84;
+      if (w > 0 && h > 0) {
+        const factor = Math.min(W * fill / w, H * fill / h);
+        if (isFinite(factor) && factor > 1.01 && factor < 20) v.zoom(factor, 0);
+      }
+    }
+  } catch (err) { /* 投影不可用时保留 zoomTo 的结果 */ }
+  MC.viewer.render();
+  molDrawAxisGizmo();
+  molMarkViewDirty();
+}
+
 // “重置”回到未打开任何 _mcta.json 存档时的初始状态：
 // 视图/相机、投影、帧、全局样式、逐原子样式、选中与测量、坐标轴指示器位置全部复位。
 function resetMolView() {
@@ -4781,6 +6013,12 @@ function resetMolView() {
   // 2) 逐原子颜色/大小恢复默认
   MC.atomStyles = {};
   molApplyDefaultAtomStyle();
+  // 2b) 逐键样式恢复默认（同时清掉被虚线改写的键级基准）
+  MC.bondStyles = {};
+  MC.bondBaseOrders = {};
+  molApplyBondStyles();
+  molApplyVisibility();
+  molRebuildBondPickShapes();
 
   // 3) 清除选中与测量标注
   molClearMeasure(true);
@@ -4788,15 +6026,15 @@ function resetMolView() {
   molSyncClearButton();
   molHidePickPanel();
 
-  // 4) 坐标轴指示器回到默认左下角
+  // 4) 坐标轴指示器回到默认左上角贴边
   molGizmoPos = null;
   const host = $("molCanvas");
   if (host) {
     host._gizmoPos = null;
     const cv = host.querySelector(".mol-axis-gizmo");
     if (cv) {
-      cv.style.left = "12px";
-      cv.style.top = Math.max(0, (host.clientHeight || 0) - MOL_GIZMO_SIZE - 12) + "px";
+      cv.style.left = "0px";
+      cv.style.top = "0px";
       cv.style.bottom = "auto";
     }
   }
@@ -4968,19 +6206,31 @@ function molCaptureArchive() {
     view: { matrix: view, lookingAt: look, ortho: !!MC.ortho, frame: MC.index || 0 },
     style: {
       bondRadius: molBondRadius,
+      bondColor: molBondColor,
+      bondDashed: molBondDashed,
+      bondHidden: molBondHidden,
+      atomRadius: molAtomRadius,
+      atomColor: molAtomColor,
+      atomsVisible: molAtomsVisible,
+      bondsVisible: molBondsVisible,
       depthCue: molDepthCue,
       cell: {
-        radius: molCellStyle.radius, dashed: molCellStyle.dashed,
+        radius: molCellStyle.radius, dashed: molCellStyle.dashed, visible: molCellStyle.visible,
+        repeat: molCellStyle.repeat.slice(),
+        wrapMode: molCellStyle.wrapMode,
         dashLength: molCellStyle.dashLength, gapLength: molCellStyle.gapLength,
-        color: molCellStyle.color
+        color: molCellStyle.color, labels: molCellStyle.labels,
+        axesVisible: molAxisVisible
       },
       axis: {
         radius: molAxisStyle.radius, headRatio: molAxisStyle.headRatio,
-        midpos: molAxisStyle.midpos, opacity: molAxisStyle.opacity,
-        length: molAxisStyle.length, colors: molAxisStyle.colors.slice()
+        opacity: molAxisStyle.opacity,
+        length: molAxisStyle.length, fontFamily: molAxisStyle.fontFamily,
+        colors: molAxisStyle.colors.slice()
       },
       measure: {
         fontSize: molMeasureStyle.fontSize, fontColor: molMeasureStyle.fontColor,
+        fontFamily: molMeasureStyle.fontFamily,
         lineRadius: molMeasureStyle.lineRadius, lineColor: molMeasureStyle.lineColor,
         lineDashed: molMeasureStyle.lineDashed,
         lineDashLength: molMeasureStyle.lineDashLength, lineGapLength: molMeasureStyle.lineGapLength
@@ -4988,6 +6238,12 @@ function molCaptureArchive() {
       gizmoPos: molGizmoPos ? { left: molGizmoPos.left, top: molGizmoPos.top } : null
     },
     atoms: atoms,
+    bonds: Object.keys(MC.bondStyles || {}).map(function (key) {
+      const s = MC.bondStyles[key];
+      return { model: s.model, a: s.a, b: s.b, radius: s.radius,
+               color: s.color, style: molBondStyleMode(s), dashed: !!s.dashed,
+               baseOrder: s.baseOrder };
+    }),
     picks: picks
   };
 }
@@ -5005,6 +6261,7 @@ async function molSaveArchive(anchor) {
     MC.archive = stateObj;
     const mask = maskOf("molView");
     if (mask) clearDirty(mask);
+    setMolArchiveEnabled(false);
     toast(tx("已存档") + " " + path, false, anchor);
     return true;
   } catch (err) {
@@ -5030,22 +6287,43 @@ async function molLoadArchive(path) {
 function molApplyArchive(arc) {
   if (!arc || !MC.viewer) return;
   const style = arc.style || {};
+  // 存档可能把键级改成 1.5；先清空基准键级，按当前模型重新记录原键级。
+  MC.bondBaseOrders = {};
   if (typeof style.bondRadius === "number") molBondRadius = style.bondRadius;
+  if (typeof style.bondColor === "string") molBondColor = style.bondColor;
+  if (typeof style.bondDashed === "boolean") molBondDashed = style.bondDashed;
+  if (typeof style.bondHidden === "boolean") molBondHidden = style.bondHidden;
+  if (typeof style.atomRadius === "number") molAtomRadius = style.atomRadius;
+  if (typeof style.atomColor === "string") molAtomColor = style.atomColor;
+  if (typeof style.atomsVisible === "boolean") molAtomsVisible = style.atomsVisible;
+  if (typeof style.bondsVisible === "boolean") molBondsVisible = style.bondsVisible;
   if (typeof style.depthCue === "number") molDepthCue = style.depthCue;
   const cell = style.cell || {};
   if (typeof cell.radius === "number") molCellStyle.radius = cell.radius;
   if (typeof cell.dashed === "boolean") molCellStyle.dashed = cell.dashed;
+  if (typeof cell.visible === "boolean") molCellStyle.visible = cell.visible;
+  if (Array.isArray(cell.repeat) && cell.repeat.length === 3) {
+    molCellStyle.repeat = [0, 1, 2].map(function (i) {
+      const n = Math.round(Number(cell.repeat[i]) || 1);
+      return Math.max(1, Math.min(MOL_CELL_REPEAT_MAX, n));
+    });
+  }
   if (typeof cell.dashLength === "number") molCellStyle.dashLength = cell.dashLength;
   if (typeof cell.gapLength === "number") molCellStyle.gapLength = cell.gapLength;
   if (typeof cell.color === "string") molCellStyle.color = cell.color;
+  if (typeof cell.labels === "boolean") molCellStyle.labels = cell.labels;
+  if (cell.wrapMode === "inside" || cell.wrapMode === "as-is") molCellStyle.wrapMode = cell.wrapMode;
+  if (typeof cell.axesVisible === "boolean") molAxisVisible = cell.axesVisible;
   const axis = style.axis || {};
-  ["radius", "headRatio", "midpos", "opacity", "length"].forEach(function (k) {
+  ["radius", "headRatio", "opacity", "length"].forEach(function (k) {
     if (typeof axis[k] === "number") molAxisStyle[k] = axis[k];
   });
   if (Array.isArray(axis.colors) && axis.colors.length === 3) molAxisStyle.colors = axis.colors.slice();
+  if (typeof axis.fontFamily === "string") molAxisStyle.fontFamily = axis.fontFamily;
   const measure = style.measure || {};
   if (typeof measure.fontSize === "number") molMeasureStyle.fontSize = measure.fontSize;
   if (typeof measure.fontColor === "string") molMeasureStyle.fontColor = measure.fontColor;
+  if (typeof measure.fontFamily === "string") molMeasureStyle.fontFamily = measure.fontFamily;
   if (typeof measure.lineRadius === "number") molMeasureStyle.lineRadius = measure.lineRadius;
   if (typeof measure.lineColor === "string") molMeasureStyle.lineColor = measure.lineColor;
   if (typeof measure.lineDashed === "boolean") molMeasureStyle.lineDashed = measure.lineDashed;
@@ -5054,10 +6332,15 @@ function molApplyArchive(arc) {
   if (style.gizmoPos && typeof style.gizmoPos.left === "number") {
     molGizmoPos = { left: style.gizmoPos.left, top: style.gizmoPos.top };
   }
-  // 恢复全局样式到 viewer
+  // 恢复全局样式到 viewer（扩胞重建后需再叠加一次全局原子样式）
   molApplyDepthCue();
   molApplyBondRadius();
-  if (MC.cell) molRedrawCell();
+  molApplyVisibility();
+  if (MC.cell) {
+    molApplySupercellModel();
+    molRedrawCell();
+  }
+  molApplyGlobalAtomStyle();
   molDrawAxisGizmo();
   molSyncStyleFields();
   // 恢复逐原子颜色/大小覆盖
@@ -5073,6 +6356,21 @@ function molApplyArchive(arc) {
       model: o.model, index: o.index, color: color, radius: radius
     };
   });
+  // 恢复逐键颜色/键粗/线型覆盖
+  MC.bondStyles = {};
+  (arc.bonds || []).forEach(function (o) {
+    if (!Number.isInteger(o.a) || !Number.isInteger(o.b)) return;
+    const bond = { model: o.model, a: o.a, b: o.b };
+    const st = molBondStyle(bond);
+    if (typeof o.radius === "number") st.radius = o.radius;
+    if (typeof o.color === "string") st.color = o.color;
+    if (o.style === "none" || o.style === "solid" || o.style === "dashed") st.style = o.style;
+    else st.style = o.dashed ? "dashed" : "solid";
+    st.dashed = st.style === "dashed";
+    if (typeof o.baseOrder === "number") st.baseOrder = o.baseOrder;
+    molApplyBondStyle(bond);
+  });
+  molRebuildBondPickShapes();
   // 恢复投影与帧
   const view = arc.view || {};
   if (typeof view.ortho === "boolean") molSetProjection(view.ortho);
@@ -5182,7 +6480,9 @@ function setMolPlayerVisible(on) {
 
 function closeStructure() {
   clearDirty($("molView"));
+  setMolArchiveEnabled(false);
   stopMolPlay();
+  molClearBondPickShapes();
   molHidePickPanel();
   if (MC.saveJob) closeMolSave();
   resetModalMax($("molView"));
@@ -5212,6 +6512,7 @@ function closeStructure() {
 async function openStructure(path, anchor) {
   const mask = acquireMask("molView", "view:" + path);
   mask.dataset.dockTag = "3D";
+  setMolArchiveEnabled(false);
   if (typeof $3Dmol === "undefined") {
     toast("3Dmol 资源未加载，无法显示结构", true, anchor);
     return;
@@ -5247,7 +6548,7 @@ async function openStructure(path, anchor) {
     // 在 125%/150% 缩放屏上被非整数缩小，边缘会发虚。
     MC.viewer = $3Dmol.createViewer($("molCanvas"),
       { backgroundAlpha: 0, antialias: true, upscale: false, orthographic: true });
-    // 视图变化（拖拽/按钮旋转/复位）时同步重画左下角坐标轴指示器。
+    // 视图变化（拖拽/按钮旋转/复位）时同步重画左上角坐标轴指示器。
     if (MC.viewer.setViewChangeCallback) {
       MC.viewer.setViewChangeCallback(function () { molDrawAxisGizmo(); });
     }
@@ -5270,8 +6571,18 @@ async function openStructure(path, anchor) {
       if (data.cell) MC.cellShapes = drawMolCell(data.cell);
       setMolPlayerVisible(false);
     }
+    // 若设置了全局原子大小/颜色，覆盖到新载入的结构（逐原子样式已在上面清空）。
+    molApplyGlobalAtomStyle();
+    // 保存原胞各帧作为扩胞基准，再按当前超晶胞数生成原生扩胞模型。
+    const loaded = molViewerModels();
+    if (loaded.length && MC.cell) {
+      const lm = loaded[0];
+      MC.sourceFrames = (lm.frames && lm.frames.length) ? lm.frames.slice() : [lm.atoms || []];
+      molApplySupercellModel();
+    }
     // 沿用用户设定的键粗（键型固定为原生 stick）
     molApplyBondRadius();
+    molApplyVisibility();
     MC.viewer.zoomTo();
     MC.viewer.setClickable({}, true, molOnAtomClick);
     configureMolDensity(data);
@@ -5291,6 +6602,7 @@ async function openStructure(path, anchor) {
       MC.viewer.render();
       molDrawAxisGizmo();
     }
+    molRebuildBondPickShapes();
     // 加载阶段的样式/投影调用不算“视图调整”；此处开始记录用户改动。
     MC.viewDirtyArmed = true;
     if (!host._mctaViewDirty) {
@@ -5451,7 +6763,7 @@ function navigateToPath(raw) {
   if (!box || !canvas) return;
   const ctx = canvas.getContext("2d");
   let raf = null, active = false, visible = true, last = 0, step = null;
-  let paused = false, resizeTimer = null, lastTick = 0;
+  let paused = false, resizeTimer = null, lastTick = 0, disabled = false;
 
   function setup() {
     // 高分屏画布像素翻倍是卡顿来源之一，上限压到 1.5。
@@ -5486,6 +6798,8 @@ function navigateToPath(raw) {
     // + document.hidden + 交互暂停统一表达，覆盖/LICENSE 浮层下照常运行。
     const wrap = box.closest(".term-wrap");
     if (wrap && wrap.classList.contains("floating")) return false;
+    // 用户执行过一次命令后永久关闭；页面目录点击产生的自动 cd 不走这条路径。
+    if (disabled) return false;
     return !paused && !document.hidden && visible;
   }
 
@@ -5525,6 +6839,7 @@ function navigateToPath(raw) {
   }
   setInterval(function () {
     const now = Date.now();
+    if (disabled) { stop(); return; }
     if (!canRun()) {
       if (paused && !resizeTimer) paused = false; // 暂停定时器丢失时解除卡住的暂停
       return;
@@ -5564,6 +6879,15 @@ function navigateToPath(raw) {
     }, wait);
   }
   function pauseRainForResize() { pauseRain(180); }
+  // 用户真正输入并回车执行过命令后关闭字符雨；目录点击触发的自动 cd 不会调用这里。
+  function disableRain() {
+    if (disabled) return;
+    disabled = true;
+    clearTimeout(resizeTimer);
+    resizeTimer = null;
+    paused = false;
+    stop();
+  }
   window.addEventListener("resize", pauseRainForResize);
   if ("ResizeObserver" in window) {
     let roFirst = true;
@@ -5581,9 +6905,10 @@ function navigateToPath(raw) {
   start();
   window.__mctaRainPause = function (ms) { pauseRain(ms); };
   window.__mctaRainResize = function () { pauseRain(180); };
+  window.__mctaRainDisable = disableRain;
   window.__mctaRainKick = kick;
   window.__mctaRainState = function () {
-    return { active: active, paused: paused, lastTick: lastTick, canRun: canRun() };
+    return { active: active, paused: paused, disabled: disabled, lastTick: lastTick, canRun: canRun() };
   };
 })();
 
@@ -5668,6 +6993,8 @@ function startTerminal() {
       body: JSON.stringify({data: b64encode(data), sid: SESSION_ID})
     }).catch(function (err) { toast(err.message, true); });
     if (data.indexOf("\\r") >= 0 || data.indexOf("\\n") >= 0) {
+      // 只有真实终端输入回车才判定为用户执行命令；页面目录跳转走 sendTermCd，不会触发这里。
+      if (window.__mctaRainDisable) window.__mctaRainDisable();
       clearTimeout(cwdKick);
       cwdKick = setTimeout(syncCwd, 200);
     }
@@ -6391,8 +7718,10 @@ function scheduleMolDensityUpdate() {
 }
 
 $("molReset").onclick = resetMolView;
+$("molFit").onclick = molFitToView;
 $("molPickClear").onclick = function () { molClearMeasure(); };
 $("molPickColor").oninput = molApplyAtomStyle;
+molAttachColorEditor($("molPickColor"), molApplyAtomStyle);
 $("molPickSize").oninput = function () { molApplyAtomStyle(); };
 $("molPickSizeRange").oninput = function () {
   const num = $("molPickSize");
@@ -6496,6 +7825,7 @@ document.addEventListener("keydown", function (event) {
 });
 window.addEventListener("resize", function () {
   molClampGizmo();
+  molLayoutColorSwatches();
   if (!MC.viewer) return;
   MC.viewer.resize();
   MC.viewer.render();

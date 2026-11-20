@@ -94,7 +94,7 @@ TOOLS = (
         "key": "skl",
         "name": "mt.skl",
         "what": "scikit-learn 结构清单分析",
-        "source": "exports/*/manifest.csv（离线，不联网）",
+        "source": "工作根下 <name>/manifest.csv（离线，不联网）",
         "examples": (
             ("mt.skl", "随机森林预测 ehull 与带隙，输出 <home>/ml/"),
             ("mt.skl --home .", "指定工作根目录（默认当前目录）"),
@@ -179,7 +179,7 @@ GROUPS = (
         "names": "mt.seek  mt.skl  mt.sqs",
         "lines": (
             "从 Materials Project 检索并策展结构，用 scikit-learn 分析结构清单，或生成准随机固溶体 SQS。",
-            "数据来源：MP API（需 MP_API_KEY）、exports/*/manifest.csv（离线）、本地晶胞文件；三者共用 MT_SEEK_HOME 工作目录。",
+            "数据来源：MP API（需 MP_API_KEY）、*/manifest.csv（离线）、本地晶胞文件；三者共用 MT_SEEK_HOME 工作目录。",
         ),
         "examples": (
             ("mt.seek -c Ti-C -k 3", "按化学体系检索近稳定相"),
