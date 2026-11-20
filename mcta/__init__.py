@@ -3,7 +3,7 @@
 import os
 import platform
 
-__version__ = "0.0.21"
+__version__ = "0.0.22"
 
 
 def version_string() -> str:

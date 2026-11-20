@@ -7,10 +7,12 @@
 """
 import atexit
 import csv
+import importlib.util
 import json
 import os
 import re
 import shutil
+import sys
 import time
 import warnings
 from datetime import datetime
@@ -51,6 +53,29 @@ def close_rester() -> None:
 
 
 atexit.register(close_rester)
+
+
+def _format_mp_import_error(exc: ImportError) -> str:
+    """把 mp_api.client 导入失败翻译成可定位的报错，而不是笼统说没装。"""
+    msg = str(exc) or exc.name or type(exc).__name__
+    hint = ""
+    if any(k in msg for k in ("CXXABI", "GLIBC", "libstdc++")):
+        lib_dir = Path(sys.prefix) / "lib"
+        hint = (f"\n  提示：这是 C++ 运行库版本不匹配（常见于 scipy/numpy 的二进制扩展）。"
+                f"\n  可尝试：export LD_LIBRARY_PATH={lib_dir}:$LD_LIBRARY_PATH 后重试")
+    return f"mp-api 依赖导入失败：{type(exc).__name__}: {msg}{hint}"
+
+
+def _check_mp_api() -> dict | None:
+    """探测 mp_api.client 能否导入；返回错误 dict 或 None。"""
+    try:
+        import mp_api.client  # noqa: F401
+    except ImportError as exc:
+        if exc.name == "mp_api" or importlib.util.find_spec("mp_api") is None:
+            return {"error": "未安装 mp-api：pip install mp-api"}
+        return {"error": _format_mp_import_error(exc)}
+    return None
+
 
 # 网络抖动/限流时可重试的特征
 _TRANSIENT = ("429", "500", "502", "503", "504", "timed out", "timeout",
@@ -206,11 +231,9 @@ def search_mp(chemsys: str = None, formula: str = None, max_ehull: float = 0.05,
     try:
         if not config.MP_API_KEY:
             return {"error": "未设置环境变量 MP_API_KEY（materialsproject.org 免费注册）"}
-        try:
-            import mp_api.client  # 探测依赖，缺包时给出可读报错（连接统一走 _rester()）
-            del mp_api
-        except ImportError:
-            return {"error": "未安装 mp-api：pip install mp-api"}
+        err = _check_mp_api()
+        if err:
+            return err
         query = {}
         if formula:
             query["formula"] = formula
@@ -341,8 +364,9 @@ def get_structure(mp_id: str) -> dict:
         try:
             st = _with_retry(lambda mid: _rester().get_structure_by_material_id(mid),
                              mp_id)
-        except ImportError:
-            return {"error": "未安装 mp-api：pip install mp-api"}
+        except ImportError as exc:
+            err = _check_mp_api()
+            return err or {"error": _format_mp_import_error(exc)}
         except Exception as e:  # noqa: BLE001
             if "404" in str(e):
                 return {"error": f"Materials Project 上没有 {mp_id}（检查 ID 拼写）"}
