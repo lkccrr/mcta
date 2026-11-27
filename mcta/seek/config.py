@@ -7,7 +7,8 @@ def _resolve_workroot() -> Path:
     """工作根目录：MT_SEEK_HOME 优先，否则用当前目录。
 
     导出包直接落在这个根目录下（<包名>/），不再套 exports/ 中间层；
-    内部缓存与状态放隐藏的 .mt.seek/，不污染工作目录。
+    状态库放隐藏的 .mt.seek/，缓存统一放 ~/.cache/mcta/seek/
+    （可用 XDG_CACHE_HOME 覆盖根），不污染工作目录。
     """
     env = os.environ.get("MT_SEEK_HOME")
     if env:
@@ -15,22 +16,29 @@ def _resolve_workroot() -> Path:
     return Path.cwd()
 
 
+def _resolve_cache_dir() -> Path:
+    """mt.seek 缓存根目录：XDG_CACHE_HOME/mcta/seek，默认 ~/.cache/mcta/seek。"""
+    root = os.environ.get("XDG_CACHE_HOME")
+    base = Path(root).expanduser() if root else Path.home() / ".cache"
+    return (base / "mcta" / "seek").resolve()
+
+
 WORKROOT = _resolve_workroot()
 # 导出包根 = 工作根：每个任务直接生成 <包名>/，内部仍用 EXPORT_ROOT 这个名字
 # 复用扫描逻辑（curate/ml 扫 */manifest.csv）。
 EXPORT_ROOT = WORKROOT
-STATE_DIR = WORKROOT / ".mt.seek"           # 隐藏的内部状态（缓存/搜索/中间文件）
-STRUCT_CACHE = STATE_DIR / "cache"          # MP 结构原始缓存（json）与写文件中间目录
+STATE_DIR = WORKROOT / ".mt.seek"           # 隐藏的内部状态（SQLite 事件库）
+STRUCT_CACHE = _resolve_cache_dir()         # 统一缓存（MP 结构、检索、SQS 中间文件）
 DB_PATH = STATE_DIR / "mt.seek.db"          # 事件与任务状态（SQLite）；打包时复制进包
 
 
 def set_home(path) -> Path:
     """运行时切换工作根目录（供 --home 使用）。"""
-    global WORKROOT, EXPORT_ROOT, STATE_DIR, STRUCT_CACHE, DB_PATH, MP_API_KEY
+    global WORKROOT, EXPORT_ROOT, STATE_DIR, DB_PATH, MP_API_KEY
     WORKROOT = Path(path).expanduser().resolve()
     EXPORT_ROOT = WORKROOT
     STATE_DIR = WORKROOT / ".mt.seek"
-    STRUCT_CACHE = STATE_DIR / "cache"
+    # 缓存目录是用户级、跨 --home 复用，set_home 不应改变它。
     DB_PATH = STATE_DIR / "mt.seek.db"
     # MP_API_KEY 在模块导入时解析；切换根目录后必须重读该目录的 mt.seek.conf，
     # 否则 --home 指定的配置永远不会生效。
@@ -150,7 +158,8 @@ MAGNETIC_ELEMENTS = {
 
 
 def ensure_dirs() -> None:
-    # 内部状态目录（缓存/搜索/db）统一收进隐藏的 .mt.seek/，导出包不落这里。
+    # 状态库留在 .mt.seek/；缓存统一放用户级 ~/.cache/mcta/seek/。
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
     STRUCT_CACHE.mkdir(parents=True, exist_ok=True)
 
 

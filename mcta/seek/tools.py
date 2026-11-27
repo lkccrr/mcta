@@ -24,6 +24,49 @@ from mcta.seek import config, state
 # ---------------------------------------------------------------- MP 连接
 _MPR = {"key": None, "client": None}
 
+# C++ ABI 自动修复只重试一次，避免 libstdc++ 路径本身有问题时无限 exec。
+_CXXABI_ENV = "MTA_SEEK_CXXABI_FIX"
+
+
+def _is_cxx_abi_error(exc: ImportError) -> bool:
+    """是否是 libstdc++ / CXXABI / GLIBC 版本不匹配。"""
+    msg = str(exc) or ""
+    return any(k in msg for k in ("CXXABI", "GLIBC", "libstdc++"))
+
+
+def _restart_with_env_libstdcxx() -> bool:
+    """用当前 Python 环境的 libstdc++ 原地重启命令。
+
+    LD_LIBRARY_PATH 是动态链接器在进程启动时读取的，运行中改 os.environ
+    对已加载的扩展无效，所以这里用 os.execve 重启；标记环境变量保证只重试
+    一次。仅 posix 且当前环境确实带有 libstdc++.so.6 时才尝试。
+    """
+    if os.name != "posix" or os.environ.get(_CXXABI_ENV):
+        return False
+    lib_dir = Path(sys.prefix) / "lib"
+    if not (lib_dir / "libstdc++.so.6").exists():
+        return False
+    env = os.environ.copy()
+    current = env.get("LD_LIBRARY_PATH", "")
+    parts = [item for item in current.split(os.pathsep) if item]
+    if str(lib_dir) in parts:
+        return False
+    env["LD_LIBRARY_PATH"] = str(lib_dir) + (os.pathsep + current if current else "")
+    env[_CXXABI_ENV] = "1"
+    # 只有真实的脚本入口才能原样重启；python -c / -m 无法从 argv 重建，
+    # 这种情况下保留错误提示，让用户按提示手动设置环境变量。
+    script = sys.argv[0] if sys.argv and sys.argv[0] else ""
+    if not script or script.startswith("-") or not os.path.isfile(script):
+        return False
+    argv = [sys.executable, os.path.abspath(script), *sys.argv[1:]]
+    print("检测到 C++ 运行库版本不匹配，已自动使用当前环境的 libstdc++ 重启命令…",
+          file=sys.stderr, flush=True)
+    try:
+        os.execve(sys.executable, argv, env)
+    except OSError:
+        return False
+    return True
+
 
 def _rester():
     """取复用的 MPRester（一个进程一个连接）。
@@ -59,10 +102,11 @@ def _format_mp_import_error(exc: ImportError) -> str:
     """把 mp_api.client 导入失败翻译成可定位的报错，而不是笼统说没装。"""
     msg = str(exc) or exc.name or type(exc).__name__
     hint = ""
-    if any(k in msg for k in ("CXXABI", "GLIBC", "libstdc++")):
+    if _is_cxx_abi_error(exc):
         lib_dir = Path(sys.prefix) / "lib"
         hint = (f"\n  提示：这是 C++ 运行库版本不匹配（常见于 scipy/numpy 的二进制扩展）。"
-                f"\n  可尝试：export LD_LIBRARY_PATH={lib_dir}:$LD_LIBRARY_PATH 后重试")
+                f"\n  若自动重启后仍失败，可手动执行："
+                f"export LD_LIBRARY_PATH={lib_dir}:$LD_LIBRARY_PATH 后重试")
     return f"mp-api 依赖导入失败：{type(exc).__name__}: {msg}{hint}"
 
 
@@ -73,6 +117,8 @@ def _check_mp_api() -> dict | None:
     except ImportError as exc:
         if exc.name == "mp_api" or importlib.util.find_spec("mp_api") is None:
             return {"error": "未安装 mp-api：pip install mp-api"}
+        if _is_cxx_abi_error(exc):
+            _restart_with_env_libstdcxx()  # 成功时不会返回；失败则给出下方提示
         return {"error": _format_mp_import_error(exc)}
     return None
 

@@ -17,6 +17,7 @@ pip install mcta[sqs]     # + mt.sqs (sqsgenerator)
 pip install mcta[mc]      # + mt.mc (numba)
 pip install mcta[all]     # all: seek + skl + sqs + mc
 ```
+On Debian/Ubuntu systems that enforce PEP 668, a plain `pip install mcta[all]` fails with `externally-managed-environment`. Use a virtual environment (`python3 -m venv .venv && . .venv/bin/activate`, then run the command above) or, if you accept the risk, add `--user --break-system-packages`; `pipx` also works for the CLI tools.
 Every extra is optional; only the tools that need one ask for it (`mt.seek` &rarr; `mcta[seek]`, `mt.skl` &rarr; `mcta[skl]`, `mt.sqs` &rarr; `mcta[sqs]`, `mt.mc` &rarr; `mcta[mc]`).
 ***
 <b><i>mt</i></b> prints an overview, checks the current directory and suggests the next command.
@@ -67,7 +68,7 @@ mt.ph3 w --br --symfc                # English original, then Chinese translatio
 ```
 ***
 <b><i>mt.seek</i></b> / <b><i>mt.sqs</i></b> / <b><i>mt.skl</i></b>: structure retrieval, SQS generation, and data-driven analysis
-* `mt.seek`: Materials Project retrieval and curation, run directly on the server. Retrieves structures and writes one export directory `<name>/` in the working root — containing `README.md`, `manifest.csv`, `mt.seek.db` and one `<id>/` directory per structure (CIF / POSCAR / JSON, plus INCAR / KPOINTS / job script when requested; POTCAR is concatenated into the POSCAR directory with `mt.sh po` when a pseudopotential directory is configured). No tarball, no upload; internal cache/state stay hidden in `.mt.seek/`. Also filters or deduplicates local datasets; no calculations run locally. Set the API key once (free account at https://next-gen.materialsproject.org).
+* `mt.seek`: Materials Project retrieval and curation, run directly on the server. Retrieves structures and writes one export directory `<name>/` in the working root — containing `README.md`, `manifest.csv`, `mt.seek.db` and one `<id>/` directory per structure (CIF / POSCAR / JSON, plus INCAR / KPOINTS / job script when requested; POTCAR is concatenated into the POSCAR directory with `mt.sh po` when a pseudopotential directory is configured). No tarball, no upload; internal state stays hidden in `.mt.seek/`, while all caches live under `~/.cache/mcta/seek/` (override with `XDG_CACHE_HOME`). Also filters or deduplicates local datasets; no calculations run locally. Set the API key once (free account at https://next-gen.materialsproject.org).
 * `mt.sqs`: special quasirandom structures from a custom unit cell. Reads POSCAR / CONTCAR / CIF / JSON, expands a supercell, and randomises one sublattice toward a target composition using `sqsgenerator`; no network access is required.
 * `mt.skl`: data-driven analysis of exported structures with scikit-learn. Runs two regression tasks (`ehull` stability and `band_gap`) with a random forest and 5-fold cross-validation, writing results to `<home>/ml/`; `--home DIR` sets the working root (default: current directory).
 ```bash

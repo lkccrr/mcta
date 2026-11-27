@@ -666,7 +666,7 @@ mt &lt; band | dos | phband | phdos | ph | ph3 | seek | skl | sqs | mc | sh | se
           <code>MCTA_RENDER_RETRY_SECONDS</code>（远端渲染失败后的重试间隔秒数）、
           <code>MCTA_RENDER_TOTAL_SECONDS</code>（单次渲染总时长上限秒数）、
           <code>MCTA_XFER_CHANNELS</code>（传输通道数，默认 3，第 3 条仅小文件）、<code>MCTA_XFER_LARGE_MB</code>（大文件阈值 MB）、
-          <code>XDG_CACHE_HOME</code>（3D 渲染与 -R 文件缓存根目录，默认 ~/.cache）。
+          <code>XDG_CACHE_HOME</code>（3D 渲染、-R 文件与 mt.seek 缓存根目录，默认 ~/.cache；mt.seek 缓存在 ~/.cache/mcta/seek）。
         </p>
         <p style="margin:0">
           <b>其他工具</b>：<code>MT_PH_DOCS</code>、<code>MT_PH3_DOCS</code>、<code>MTSH_SCRIPTS</code>、
@@ -705,6 +705,10 @@ mt &lt; band | dos | phband | phdos | ph | ph3 | seek | skl | sqs | mc | sh | se
           </tbody>
         </table>
       </div>
+
+      <p style="margin:10px 0 0">
+        Debian/Ubuntu 等启用 PEP 668 的系统会拒绝直接 pip install（externally-managed-environment）；建议先建虚拟环境 python3 -m venv .venv && . .venv/bin/activate 再执行上表命令；若接受风险，可在命令后加 --user --break-system-packages，或用 pipx。
+      </p>
 
       <h2 class="sec-title">说明</h2>
       <p style="margin:0">
@@ -1429,9 +1433,10 @@ mt.server -S</pre>
       "（单次渲染总时长上限秒数）、": "(total time cap for one render request), ",
       "（传输通道数，默认 3，第 3 条仅小文件）、": "(number of transfer channels, default 3; channel 3 carries small files only), ",
       "（大文件阈值 MB）、": "(large-file threshold in MB), ",
-      "（3D 渲染与 -R 文件缓存根目录，默认 ~/.cache）。": "(root of the 3D render cache and -R file cache, default ~/.cache).",
+      "（3D 渲染、-R 文件与 mt.seek 缓存根目录，默认 ~/.cache；mt.seek 缓存在 ~/.cache/mcta/seek）。": "(root of the 3D render cache, -R file cache and mt.seek cache, default ~/.cache; mt.seek cache lives in ~/.cache/mcta/seek).",
       "通道三：上传、下载与文件正文读取默认走三条 SFTP 传输通道；传输通道 1/2 大小文件都能用，第三条只传小文件。每次传输按文件大小和实时负载选通道，并发上传下载会随时切换；文件先缓存到本机": "Channel 3: uploads, downloads and file reads use three SFTP transfer channels by default; channels 1/2 accept any file size while the third carries small files only. Each transfer picks a channel by size and live load, so concurrent uploads and downloads switch channels as load changes; files are cached locally under ",
       "目录，同一服务器固定目录名、退出不删除可复用，仅在目录过大时提示。": ", with a fixed directory name per server; the cache survives exit and is reused, with a warning only when it grows too large.",
+      "Debian/Ubuntu 等启用 PEP 668 的系统会拒绝直接 pip install（externally-managed-environment）；建议先建虚拟环境 python3 -m venv .venv && . .venv/bin/activate 再执行上表命令；若接受风险，可在命令后加 --user --break-system-packages，或用 pipx。": "On systems with PEP 668 (e.g. Debian/Ubuntu), a plain pip install is rejected with externally-managed-environment; create a virtual environment first with python3 -m venv .venv && . .venv/bin/activate, then run the commands above, or add --user --break-system-packages if you accept the risk, or use pipx.",
     };
     /* I18N_EN_END */
 
@@ -1840,14 +1845,14 @@ mt.server -S</pre>
 
   环境变量（也可写入 ~/.config/mcta/config，KEY=VALUE；环境变量优先）：
     绘图          MT_FONT_FAMILY、MT_MATHTEXT_FONTSET、MT_RESOL、MT_XTICK_DIRECTION、MT_YTICK_DIRECTION
-    结构检索      MP_API_KEY、MT_SEEK_HOME、MT_SEEK_CONFIG、MT_SEEK_API_KEY、MT_SEEK_PROVIDER、MT_SEEK_BASE_URL、MT_SEEK_MODEL、MT_SEEK_MAX_TURNS、MT_SEEK_MAX_CAND
+    结构检索      MP_API_KEY、MT_SEEK_HOME、MT_SEEK_CONFIG、MT_SEEK_API_KEY、MT_SEEK_PROVIDER、MT_SEEK_BASE_URL、MT_SEEK_MODEL、MT_SEEK_MAX_TURNS、MT_SEEK_MAX_CAND、XDG_CACHE_HOME
     mt.server     MCTA_REMOTE_SOCKET、MCTA_REMOTE_RENDER_MIN_MB、MCTA_REMOTE_LIST_TTL、MCTA_RENDER_CACHE_MAX_MB、MCTA_CACHE_FRESH_SECONDS、MCTA_RENDER_RETRY_SECONDS、MCTA_RENDER_TOTAL_SECONDS、MCTA_XFER_CHANNELS、MCTA_XFER_LARGE_MB、XDG_CACHE_HOME
     其他工具      MT_PH_DOCS、MT_PH3_DOCS、MTSH_SCRIPTS、PBE_PATH、LDA_PATH、GGA_PATH
 
   -v, -V, --version     显示版本号（各子命令同样支持）`;
 
     /* 兜底值与当前 mcta/__init__.py 一致；file:// 打开或 fetch 失败时 -v 仍显示正确版本 */
-    let VERSION = 'McTa (Meta Crystal Toolkit & Analysis) 0.0.34';
+    let VERSION = 'McTa (Meta Crystal Toolkit & Analysis) 0.0.35';
 
     /* 版本号以 mcta/__init__.py 为准；站点与包同根目录时可直接读取 */
     fetch('mcta/__init__.py').then(function (r) {
@@ -2165,7 +2170,7 @@ options:
 
   Environment variables (also accepted in ~/.config/mcta/config as KEY=VALUE; env wins):
     Plot             MT_FONT_FAMILY, MT_MATHTEXT_FONTSET, MT_RESOL, MT_XTICK_DIRECTION, MT_YTICK_DIRECTION
-    Structure search MP_API_KEY, MT_SEEK_HOME, MT_SEEK_CONFIG, MT_SEEK_API_KEY, MT_SEEK_PROVIDER, MT_SEEK_BASE_URL, MT_SEEK_MODEL, MT_SEEK_MAX_TURNS, MT_SEEK_MAX_CAND
+    Structure search MP_API_KEY, MT_SEEK_HOME, MT_SEEK_CONFIG, MT_SEEK_API_KEY, MT_SEEK_PROVIDER, MT_SEEK_BASE_URL, MT_SEEK_MODEL, MT_SEEK_MAX_TURNS, MT_SEEK_MAX_CAND, XDG_CACHE_HOME
     mt.server        MCTA_REMOTE_SOCKET, MCTA_REMOTE_RENDER_MIN_MB, MCTA_REMOTE_LIST_TTL, MCTA_RENDER_CACHE_MAX_MB, MCTA_CACHE_FRESH_SECONDS, MCTA_RENDER_RETRY_SECONDS, MCTA_RENDER_TOTAL_SECONDS, MCTA_XFER_CHANNELS, MCTA_XFER_LARGE_MB, XDG_CACHE_HOME
     Other tools      MT_PH_DOCS, MT_PH3_DOCS, MTSH_SCRIPTS, PBE_PATH, LDA_PATH, GGA_PATH
 
@@ -2511,7 +2516,7 @@ options:
     const FILE_TEXT = {
       '/home/demo/mcta/README.md': ['# mcta', '', 'McTa (Meta Crystal Toolkit & Analysis).', '', 'pip install mcta', 'mt -h'],
       '/home/demo/mcta/pyproject.toml': ['[build-system]', 'requires = ["setuptools>=77", "wheel"]', '', '[project]', 'name = "mcta"', 'requires-python = ">=3.9"', 'dynamic = ["version"]'],
-      '/home/demo/mcta/mcta/__init__.py': ['"""McTa —— Meta Crystal Toolkit & Analysis"""', '', '__version__ = "0.0.34"', '', '', 'def version_string() -> str:', '    """统一的 -V 输出格式。"""'],
+      '/home/demo/mcta/mcta/__init__.py': ['"""McTa —— Meta Crystal Toolkit & Analysis"""', '', '__version__ = "0.0.35"', '', '', 'def version_string() -> str:', '    """统一的 -V 输出格式。"""'],
       '/home/demo/mcta/mcta/server/__init__.py': ['"""mt.server：CLI、进程管理与服务入口"""', '', 'from mcta import version_string', 'from ._handlers import _Server, _make_handler', 'from ._structure import ( ... )', 'from ._terminal import ( ... )'],
       '/home/demo/mcta/mcta/server/_handlers.py': ['"""HTTP 路由、文件服务与内嵌页面（PAGE）"""', '', 'PAGE = """<!doctype html>..."""', '', 'class _Server(BaseHTTPRequestHandler):', '    def do_GET(self): ...'],
       '/home/demo/mcta/mcta/server/_remote.py': ['"""mt.server 的 SSH/SFTP 后端（-R/--ssh）"""', '', 'def parse_ssh_spec(parts): ...', 'def connect(spec, password=None): ...', 'class RemoteFS:', '    def list_entries(self, path): ...', 'class _RemoteTerminal:', '    def _open_channel(self): ...'],
