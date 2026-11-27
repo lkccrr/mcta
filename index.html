@@ -1847,7 +1847,7 @@ mt.server -S</pre>
   -v, -V, --version     显示版本号（各子命令同样支持）`;
 
     /* 兜底值与当前 mcta/__init__.py 一致；file:// 打开或 fetch 失败时 -v 仍显示正确版本 */
-    let VERSION = 'McTa (Meta Crystal Toolkit & Analysis) 0.0.33';
+    let VERSION = 'McTa (Meta Crystal Toolkit & Analysis) 0.0.34';
 
     /* 版本号以 mcta/__init__.py 为准；站点与包同根目录时可直接读取 */
     fetch('mcta/__init__.py').then(function (r) {
@@ -2511,7 +2511,7 @@ options:
     const FILE_TEXT = {
       '/home/demo/mcta/README.md': ['# mcta', '', 'McTa (Meta Crystal Toolkit & Analysis).', '', 'pip install mcta', 'mt -h'],
       '/home/demo/mcta/pyproject.toml': ['[build-system]', 'requires = ["setuptools>=77", "wheel"]', '', '[project]', 'name = "mcta"', 'requires-python = ">=3.9"', 'dynamic = ["version"]'],
-      '/home/demo/mcta/mcta/__init__.py': ['"""McTa —— Meta Crystal Toolkit & Analysis"""', '', '__version__ = "0.0.33"', '', '', 'def version_string() -> str:', '    """统一的 -V 输出格式。"""'],
+      '/home/demo/mcta/mcta/__init__.py': ['"""McTa —— Meta Crystal Toolkit & Analysis"""', '', '__version__ = "0.0.34"', '', '', 'def version_string() -> str:', '    """统一的 -V 输出格式。"""'],
       '/home/demo/mcta/mcta/server/__init__.py': ['"""mt.server：CLI、进程管理与服务入口"""', '', 'from mcta import version_string', 'from ._handlers import _Server, _make_handler', 'from ._structure import ( ... )', 'from ._terminal import ( ... )'],
       '/home/demo/mcta/mcta/server/_handlers.py': ['"""HTTP 路由、文件服务与内嵌页面（PAGE）"""', '', 'PAGE = """<!doctype html>..."""', '', 'class _Server(BaseHTTPRequestHandler):', '    def do_GET(self): ...'],
       '/home/demo/mcta/mcta/server/_remote.py': ['"""mt.server 的 SSH/SFTP 后端（-R/--ssh）"""', '', 'def parse_ssh_spec(parts): ...', 'def connect(spec, password=None): ...', 'class RemoteFS:', '    def list_entries(self, path): ...', 'class _RemoteTerminal:', '    def _open_channel(self): ...'],

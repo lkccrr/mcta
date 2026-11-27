@@ -34,7 +34,7 @@ user@host:22、user@host 22、user host 22、host 22、host 等写法，用户�
 连接断开会自动重建 SSH/SFTP 与终端 shell。
 
 -R 模式下若远端装有兼容的 mt.server，3D 渲染会走第五条独立通道：本地系统 ssh
-把回环端口转发到远端 ~/.config/mcta/sock/mcta.sock，远端解析/降采样后只回传精简数据；
+把回环端口转发到远端 ~/.config/mcta/sock/mcta-render.sock，远端解析/降采样后只回传精简数据；
 远端不监听 TCP 端口，隧道断开后渲染自动回退到 SFTP + 本地解析。可用环境变量
 MCTA_REMOTE_SOCKET 改 socket 路径（-c/--socket 默认也用这个路径），
 MCTA_REMOTE_RENDER_MIN_MB 改阈值（默认 8 MB）。

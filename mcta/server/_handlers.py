@@ -321,7 +321,7 @@ def _make_handler():
         def _readonly_remote(self):
             if _CONF.get("remote_fs") is None:
                 return False
-            self._error("远程模式暂不支持此操作；新建目录/文本、上传、文本编辑与 3D 状态存档可用，其余写入请通过 SSH 终端", 405)
+            self._error("远程模式暂不支持此操作；新建目录/文本、上传、删除、文本编辑与 3D 状态存档可用，其余写入请通过 SSH 终端", 405)
             return True
 
         def _body(self):
@@ -1441,14 +1441,24 @@ def _make_handler():
             self._json({"ok": True, "path": self._rel(target), "name": target.name})
 
         def _delete(self):
-            if self._readonly_remote():
-                return
             import shutil
             try:
                 payload = self._body()
                 rel = str(payload.get("path") or "")
                 if not rel:
                     raise ValueError("缺少 path")
+                remote = _CONF.get("remote_fs")
+                if remote is not None:
+                    try:
+                        remote.remove(remote.remote_for(rel))
+                    except (RemoteNotFound, ValueError) as exc:
+                        err = ValueError(str(exc))
+                        err.not_found = isinstance(exc, RemoteNotFound) or getattr(exc, "not_found", False)
+                        raise err
+                    except RemoteError as exc:
+                        raise ValueError(str(exc))
+                    self._json({"ok": True})
+                    return
                 target = self._resolve(rel)
                 if not target.exists():
                     raise ValueError("路径不存在")

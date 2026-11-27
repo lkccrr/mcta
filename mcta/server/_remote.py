@@ -70,14 +70,54 @@ class PasswordRequired(RemoteError):
     """本地密钥/agent 都不可用，需要交互式密码。"""
 
 
-DEFAULT_RENDER_SOCKET = "~/.config/mcta/sock/mcta.sock"
+DEFAULT_RENDER_SOCKET = "~/.config/mcta/sock/mcta-render.sock"
 # -c/--socket 与 -R --socket 共用的默认路径，可用 MCTA_REMOTE_SOCKET 覆盖。
-DEFAULT_FORWARD_SOCKET = DEFAULT_RENDER_SOCKET
+DEFAULT_FORWARD_SOCKET = "~/.config/mcta/sock/mcta.sock"
 REMOTE_RENDER_RETRY_SECONDS = max(
     1.0, float(os.environ.get("MCTA_RENDER_RETRY_SECONDS", "30") or 30))
 
 # 文件正文缓存：放在 ~/.cache/mcta 下，按服务器固定目录名，退出不删除以便复用。
 CACHE_WARN_BYTES = 2 * 1024 * 1024 * 1024  # 超过 2 GB 才提示（不强制清理）
+
+
+def _ssh_env(extra=None):
+    """给系统 ssh 子进程准备环境变量。
+
+    conda 激活时会把其 lib 目录写进 LD_LIBRARY_PATH，系统 ssh 因此可能加载
+    conda 里的 OpenSSL（例如 3.5.x），而 ssh 是按系统 OpenSSL（例如 3.0.2）
+    编译的，启动即报 ``OpenSSL version mismatch`` 并退出。探测通道用
+    Paramiko 不受影响，所以会出现“普通 -R 正常、-R -c 失败”的现象。
+
+    仅当 ssh 本身不是来自 conda 环境时剔除这些路径；若 ssh 就在 conda 环境里，
+    保留原环境以免破坏它自己的库依赖。
+    """
+    env = dict(os.environ)
+    ssh = shutil.which("ssh") or ""
+    prefix = os.environ.get("CONDA_PREFIX") or ""
+    conda_ssh = bool(prefix and ssh and
+                     (ssh.startswith(prefix + os.sep) or "/envs/" in ssh))
+    if not conda_ssh:
+        for name in ("LD_LIBRARY_PATH", "DYLD_LIBRARY_PATH"):
+            value = env.get(name)
+            if not value:
+                continue
+            keep = []
+            for part in value.split(os.pathsep):
+                item = part.strip()
+                if not item:
+                    continue
+                if prefix and (item == prefix or item.startswith(prefix + os.sep)):
+                    continue
+                if re.search(r"(?:^|[\\/])(?:miniconda3|anaconda3|miniforge3|mambaforge)(?:[\\/]|$)", item):
+                    continue
+                keep.append(part)
+            if keep:
+                env[name] = os.pathsep.join(keep)
+            else:
+                env.pop(name, None)
+    if extra:
+        env.update(extra)
+    return env
 
 
 def cache_base_dir():
@@ -1133,7 +1173,9 @@ done
             cur += "/" + part
             try:
                 info = self._sftp_call("stat", cur, channel=channel)
-            except FileNotFoundError:
+            except (FileNotFoundError, RemoteNotFound):
+                # _sftp_call 把 ENOENT 统一包装成 RemoteNotFound，新建目录
+                # 必须同样视为“不存在”，否则远程模式下无法创建多级目录。
                 self._sftp_call("mkdir", cur, channel=channel)
             except Exception as exc:
                 if "no such file" in str(exc).lower() or "not found" in str(exc).lower():
@@ -1144,6 +1186,50 @@ done
                 if not stat.S_ISDIR(info.st_mode):
                     raise RemoteError("远程路径不是目录：%s" % cur)
         norm = posixpath.normpath(remote)
+        self.invalidate_list_cache(posixpath.dirname(norm) or "/")
+        self.invalidate_list_cache(norm)
+
+    def _remove_tree(self, remote):
+        """递归删除远程目录；只用 SFTP，遇到符号链接直接 unlink，不跟随。"""
+        for entry in self._sftp_call("listdir_attr", remote):
+            name = getattr(entry, "filename", "")
+            if name in ("", ".", ".."):
+                continue
+            child = posixpath.join(remote, name)
+            mode = getattr(entry, "st_mode", 0)
+            if stat.S_ISDIR(mode) and not stat.S_ISLNK(mode):
+                self._remove_tree(child)
+            else:
+                self._sftp_call("unlink", child)
+        self._sftp_call("rmdir", remote)
+
+    def remove(self, remote):
+        """删除远程文件或目录（目录递归删除）。
+
+        与上传/新建目录一样走浏览通道：DELETE 是一次性小操作，不必占用传输
+        通道。删除后同时失效目录列表缓存与本地文件缓存，避免页面继续展示
+        或复用已经不存在的文件。
+        """
+        norm = posixpath.normpath(str(remote or ""))
+        if not norm or norm == "/" or norm == posixpath.normpath(self.root):
+            raise RemoteError("不允许删除起始目录本身")
+        with self._locks["browse"]:
+            try:
+                info = self._sftp_call("lstat", norm)
+            except RemoteNotFound:
+                raise
+            if stat.S_ISDIR(info.st_mode) and not stat.S_ISLNK(info.st_mode):
+                self._remove_tree(norm)
+            else:
+                self._sftp_call("unlink", norm)
+        local = self.local_for_remote(norm)
+        try:
+            if local.is_dir() and not local.is_symlink():
+                shutil.rmtree(local)
+            else:
+                local.unlink(missing_ok=True)
+        except OSError:
+            pass
         self.invalidate_list_cache(posixpath.dirname(norm) or "/")
         self.invalidate_list_cache(norm)
 
@@ -1257,7 +1343,7 @@ class RemoteRenderChannel:
         if self.identity:
             # OpenSSH 8.8+ 默认禁用 ssh-rsa 签名；老服务器只认它时显式追加。
             opts.append("PubkeyAcceptedKeyTypes=+ssh-rsa")
-        env = None
+        env = _ssh_env()
         if self.password:
             # BatchMode=yes 会禁用密码认证；sshpass 又不是系统标配。
             # 用 OpenSSH 自带 SSH_ASKPASS（9.6 支持 SSH_ASKPASS_REQUIRE=force）。
@@ -1267,11 +1353,12 @@ class RemoteRenderChannel:
                 "PubkeyAuthentication=no",
                 "NumberOfPasswordPrompts=1",
             ]
-            env = dict(os.environ,
-                       SSH_ASKPASS=self._make_askpass(),
-                       SSH_ASKPASS_REQUIRE="force",
-                       DISPLAY=os.environ.get("DISPLAY") or ":0",
-                       MCTA_ASKPASS_SECRET=self.password)
+            env = _ssh_env({
+                "SSH_ASKPASS": self._make_askpass(),
+                "SSH_ASKPASS_REQUIRE": "force",
+                "DISPLAY": os.environ.get("DISPLAY") or ":0",
+                "MCTA_ASKPASS_SECRET": self.password,
+            })
         else:
             opts.append("BatchMode=yes")
         # 不分配 PTY：远端 mt.server 的日志走 stderr/文件，
@@ -1455,7 +1542,7 @@ class SocksShare:
             argv += ["-o", opt]
         # 本机 sshd 是 SOCKS5 的服务端，出口即本机网络；默认本机 22 端口。
         argv += ["-p", "22", "-l", getpass.getuser(), "127.0.0.1"]
-        return argv, None
+        return argv, _ssh_env()
 
     def _remote_command(self):
         opts = [
@@ -1468,7 +1555,7 @@ class SocksShare:
         ]
         if self.identity:
             opts.append("PubkeyAcceptedKeyTypes=+ssh-rsa")
-        env = None
+        env = _ssh_env()
         if self.password:
             opts += [
                 "BatchMode=no",
@@ -1476,11 +1563,12 @@ class SocksShare:
                 "PubkeyAuthentication=no",
                 "NumberOfPasswordPrompts=1",
             ]
-            env = dict(os.environ,
-                       SSH_ASKPASS=self._make_askpass(),
-                       SSH_ASKPASS_REQUIRE="force",
-                       DISPLAY=os.environ.get("DISPLAY") or ":0",
-                       MCTA_ASKPASS_SECRET=self.password)
+            env = _ssh_env({
+                "SSH_ASKPASS": self._make_askpass(),
+                "SSH_ASKPASS_REQUIRE": "force",
+                "DISPLAY": os.environ.get("DISPLAY") or ":0",
+                "MCTA_ASKPASS_SECRET": self.password,
+            })
         else:
             opts.append("BatchMode=yes")
         argv = ["ssh", "-T", "-N"]
@@ -1667,7 +1755,7 @@ class RemoteForwardChannel:
         ]
         if self.identity:
             opts.append("PubkeyAcceptedKeyTypes=+ssh-rsa")
-        env = dict(os.environ)
+        env = _ssh_env()
         # 远端 token 必须由远端自己生成；不要继承本地可能存在的 token 环境。
         env.pop("MCTA_SERVER_TOKEN", None)
         env.pop("MCTA_SERVER_NO_TOKEN", None)
@@ -1742,7 +1830,8 @@ class RemoteForwardChannel:
             self.error = "本机缺少 ssh 命令"
             return False
         if self._port_open(self.local_port):
-            self.error = ("本地端口 %d 已被占用，无法建立转发；请用 -p 换一个端口。"
+            self.error = ("本地端口 %d 已被占用，无法建立转发；请用 -p 换一个端口"
+                          "（若为本机残留的 mt.server，可先执行 mt.server -S）。"
                           % self.local_port)
             return False
         argv, env = self._command()
@@ -1760,8 +1849,12 @@ class RemoteForwardChannel:
             if self.proc.poll() is not None:
                 with self._lock:
                     tail = self.lines[-5:]
-                self.error = ("远端 mt.server 启动失败（ssh 已退出）：%s"
-                              % (" / ".join(tail) if tail else "远端无输出"))
+                if any("OpenSSL version mismatch" in line for line in tail):
+                    self.error = ("本机 ssh 与 LD_LIBRARY_PATH 中的 OpenSSL 版本冲突；"
+                                  "请先 conda deactivate 或执行 unset LD_LIBRARY_PATH 后重试")
+                else:
+                    self.error = ("远端 mt.server 启动失败（ssh 已退出）：%s"
+                                  % (" / ".join(tail) if tail else "远端无输出"))
                 self.close()
                 return False
             if (self.no_token or self.token) and self._probe():
@@ -1772,8 +1865,14 @@ class RemoteForwardChannel:
                            elapsed_ms=int((time.monotonic() - started) * 1000))
                 return True
             time.sleep(0.2)
-        self.error = ("转发建立超时：本地端口 %d 未收到远端服务响应；"
-                      "请查看上方远端输出。" % self.local_port)
+        detail = " / ".join(self.lines[-5:])
+        if any(("正在被使用" in line) or ("in use" in line.lower())
+               for line in self.lines):
+            self.error = ("远端 mt.server 启动失败：%s；请用 -c PATH 换一个 socket 路径，"
+                          "或先停止占用该路径的服务" % detail)
+        else:
+            self.error = ("转发建立超时：本地端口 %d 未收到远端服务响应；"
+                          "请查看上方远端输出。" % self.local_port)
         self.close()
         return False
 

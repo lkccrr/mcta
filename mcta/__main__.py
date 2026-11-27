@@ -24,7 +24,7 @@
     MT_SEEK_MAX_CAND       LLM 最大候选结构数，默认 20
 
   本地文件与终端服务（mt.server）：
-    MCTA_REMOTE_SOCKET          远端 mt.server Unix socket 路径，默认 ~/.config/mcta/sock/mcta.sock
+    MCTA_REMOTE_SOCKET          远端 mt.server Unix socket 路径，默认 ~/.config/mcta/sock/mcta-render.sock
     MCTA_REMOTE_RENDER_MIN_MB   -R 下启用远端 3D 解析的大小阈值 MB，默认 8
     MCTA_REMOTE_LIST_TTL        远端目录列表缓存秒数，默认 1，0 表示关闭
     MCTA_RENDER_CACHE_MAX_MB    3D 渲染缓存容量上限 MB，默认 512
