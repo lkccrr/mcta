@@ -1,0 +1,3626 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>McTa · Meta Crystal Toolkit &amp; Analysis</title>
+<meta name="description" content="McTa（格塔）把 VASP 与 phonopy 的常见后处理收进一组 mt.* 命令：直接读取原始输出绘制能带、态密度与声子谱，并支持结构检索、SQS、描述符分析与磁性蒙特卡洛。">
+<link rel="canonical" href="https://lkccrr.github.io/mcta/">
+<link rel="alternate" hreflang="zh-CN" href="https://lkccrr.github.io/mcta/">
+<link rel="alternate" hreflang="en" href="https://lkccrr.github.io/mcta/?lang=en">
+<link rel="alternate" hreflang="x-default" href="https://lkccrr.github.io/mcta/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23f1f4f9'/%3E%3Ctext x='32' y='45' text-anchor='middle' font-family='Arial,Helvetica,sans-serif' font-size='36' font-weight='700' fill='%23e0553d'%3EM%3C/text%3E%3C/svg%3E">
+<meta name="theme-color" content="#f1f4f9">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="mcta">
+<meta property="og:title" content="McTa · Meta Crystal Toolkit &amp; Analysis">
+<meta property="og:description" content="McTa（格塔）把 VASP 与 phonopy 的常见后处理收进一组 mt.* 命令：直接读取原始输出绘制能带、态密度与声子谱，并支持结构检索、SQS、描述符分析与磁性蒙特卡洛。">
+<meta property="og:url" content="https://lkccrr.github.io/mcta/">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:locale:alternate" content="en_US">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="McTa · Meta Crystal Toolkit &amp; Analysis">
+<meta name="twitter:description" content="McTa（格塔）把 VASP 与 phonopy 的常见后处理收进一组 mt.* 命令：直接读取原始输出绘制能带、态密度与声子谱，并支持结构检索、SQS、描述符分析与磁性蒙特卡洛。">
+<noscript><style>.page{display:block!important}.term-wrap,.lang-switch{display:none}</style></noscript>
+<style>
+@font-face{font-family:"McTa Wordmark";src:url("data:font/woff2;base64,d09GMgABAAAAAAyIABEAAAAAF8gAAAwuAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGhYbgRgcHgZgAFQISgmcFREICoZchXsLDgABNgIkAxgEIAWDZgcgDIEyGysWEUV9iEwjZeH8/fz/cn72SpL9GdTwlGo5P1bJDeR0Ox2nyvrujgP+lEjB0rfDPHjOrDRnFivg/Vw5hKvtrIDOHm3RO/Vn7yQ5lRKWjAF00jgMCrJD6CQFILtlqw+AW3byiPHv8V/B/1pD7d8N2dQxC9+pcHUu8/Yu7cIFiVWBxxMqoLtikBS5KFVA6yqELwjINgZGFNa5/RSsqEqCiGapFO+QQFaKWDHcNJ0iRaKze98hTZK3NvguUeGFp15/mSbHorvHI4cm42/SNJrlCq7QDjkkj7+lVuT4S0nmaHeIbYLQbgxdFPTslomCliPthuVXyRuDKkVLJXmi1iGolPXEv5yvqEK6Uzhp0fSGFcQTdEGc0a1tq9/EzOSOeg8/QL8hpoH7k3GVyP2LeIJQ7uo88WfnV4TmmOOs0KuqYpjoUdt5MN3LI6b76ZByGijTNuYx/tP44/Efx78f/y7qdkse5+kRHHmz83Px11HH+84fxv92fi7+Of73eJ82SXe3xM+KuwuQ4hU5SpOMufcZze/1UD14JMUlHzuZfZqLoxROmH8+SazIYCCP/SAAZSAjOyMSZKyOIRTYPh3DUTIINjSGq3j4obu6RtpgxbC1unRWjS5D18Axh+8yZiUcY/IhvP67I8dxjNUInjoRrFjeaH5N6BMMx0g9WhErxmoJ6qdPZaN1IeUWw1NwI6yZ9FjZWDdm7Qb4PGR814dXe2S0I+ZMMkhQTdIAbpjtP5oGMvCLlNHvpwHamc9ojouaWcalZPV8iJ1+GsQSGOdE6pwUfTcsP81FkTOm+6n1GbxaTY/5FboyHZtlmQ8nxKwZgPZTUC9hXoBZ48NPVTzVyz9bpIFwjM8qdJxlwzyDiLJMecrWEetG6ixGRXHC8MJ8yJgw/RQTUmNSaj8IMggbo2prF7gRD8uJY81roKvxTx39+nBsMkClHkRLN1xwARGV5yohvNpeavt+vp+lMgsyRvsgzSnfJfZpvCvGhMKUiUbk+JgmlzUltWSQ1Dmc46chBhAWE/UYU4oVbTBvBp95dMxbZ6Bts/WRthN+bFqNpubJJLoepJpzzKhUZGb3MJyIJMjACy0nhcw9KiwdQb43SsE+2taqAjeUeWf3Q5nbNANn+mlh0PYGkfNKmzX7cG6W3KSfBr4MsnoQY0GVjpNgmHdiLCoIy4wFc+/GDRgLUmdYjLF9vXiuaCkSixaZHH/m0aCQOZaM5cIylqSWzH5Z9Q7T0ht2sjOYe0q+G2NF9fbS3sGScD8o+6wcvqpKWjZHLsvLBiLXWIoutwpwQl0u9NiiG8S6ZLhhPy1tVxFeqIuCD1lzsR5IiHxqfBGSRzrhwhsyLJguFk3XBh14qiv+G7EkWpEdCAO6MRJCVBexpqgkJzlMsSw1J5iXGnMSjtVMa1VqthD5p5ubgpZohbTWTkhYNXb1tMvVyQg/jfzbshjrqqS1KMaGKsWQNrlDW9ylbe6Rzyt0glfpJJ+gU3ySTvOplEhJL7iianuHqeQGxOOXzJUx1JqAdd/XTo4Dar6vPyVWhIVIW5jp+zFK7UxjAWN2G4ZSAuQZgAwBsgaQtwPkDkDeAZB1QGZDcSvT0lkXi03LRkLYlCHzMAKNlPvDnFM4G+FsPcZ5xdxln2bIvCnv7l0XKt/wkAvnOaOcrybpzgvn62VFrCXpuczAvhdt0yVx5iXFl5VOvqyIQZLjXR8iUgOrEmn9o8dfg84N2SwviTUzn8oVxS3uqv4zgUzejHFVNTZaMZrJpgFhBs0Yd6rSofWQG9y9LwwHJ7xVFF3ZlTmnx/6tdwpSj5pCrK3WY1xToHVslAq9EF6Y5NPlLGnMmOipoiGZW0UzOMX1SG4USxhVqSUTGPbGMmx7L/3Q4wr7H3q1ynamb7eF04YLKf2Ycteiaq5ZZW951qNpep6xQ4mKyYf9FJ7JfVSMvd11KD98Lpnh1eRu3vQlps3uYyty2hzhvJZzSlIgUTXWE7evhDkqe0yAVzsBHma7oR3eTtscJyeL0XLDCcyMSq2WbDVj3LU8EtOis7vggDiDoTfsB00sJzcGHaYNbsngoWsvUayS7YdHoRqiEt56gbE82GlGt8+Ukum9791KhBhfKfuW06G+wf4taCvJDQf+5V1smLTv72cpt7JGeU6sRjHuEZy+7/cH19t1WfqujcK16GANOwrXo4K5lb0usGgmK4eqaeBcpBN9kTVNzelFOWal1hups7rkFjdkc981d1U57YU6eU+m53+im4FhDu5hN7dk0w+ySnSQqUjdFLoWOaTZTVXS9SiQRduQM/qzW2btko8Y0dX9QlYauFKPce+qafVUSWJ1BVfrMe5TuLMe434HtkwkN3i3kLmjIh5QqfmNuD+K8aAaEe1GQUFfjUiMaE+LBbmPQB2IWZcfIlRHAPUQIO5h9SHhZPKBqfpQjCkzYlE+goV6VIYL/pgI1eMI1BMI1JPHYwm3qKgcoI4BaiBmN/kQqKcA6mmAfkYl1vF5FlX9HEA/D9AvAPSLAP0SQL8MKH1FldTynn41Fo52yfc1do963eKiyXT2G6oUYvNmA/i85Sfo7Vi6a4/6nZjAvNsA5j2QlN53xFrzQQjM9wD0/Vi6sS/9g5jA/LABzI8A7Mf2WvPQ/hCYAwA6GIvqfelDMYE53ADmCIAdtdeaYyEwfkCmkbGovN7OPyA5FgXGG4aSEhwJw8O1rkDQXIAnd29/UKvMD+jMy5cR9pzVUp8FS7nAHnI+/AQlIYIaPpohiw/y/xfCOec81aKFuIznSPQ9r4QYz0LwPiMHr5L73QNsmbvfPeB+9RT5HJO3nVaMmOHR2xTjpG38FnhPyP5T9pGh60/I/tiRoZtPyJ+eIlH2nyLfaSXEOAnvCVkWvCfkH08RPSP7P/uMfJ9/rhifljLvCfmzt12jD8r+Tz6B90Pl088+I9/nnyvGp5k3wHtC9t9oPvWU7P/gE3hffFMx3nadVoyT8KpnPpHz823Z9jybx55oz3bUWD3J7p/WLOa1zT/UVFC18t6Vp7N61yxuWqxoOBYenrOrKPf6qKR7jj911zPPOyNmc/cWNpqintLUzTmj99zyUOfV4Un3+G4cvCb3+qjUv8Vv1LA71HdV7W31Tu1pTXtGuzNMfUdN2BB2KDLUaCkeLMydqW4s37+6pymrxbrhbvVZdef8snAmvJ3oqilIGsitnMw1XhY9paWzFfXVvmU9ZYV6/M9/RkU9pYb8fhvjjrhfnQNZael749IyS9OsUU9FqGdf8xSVFwGAXmq3WsyaGmnijNoBMA62TCROxAdF4pwmBSJOXTYbYHPYHBHhCENIoSRZXHpyokPhDNROBFg6RIFzxqysE4ATKc7U5FTJZHfpsYwAmgRRRIdAnFt5JwAztOSCJNFkc+lh4cTJamEC5wSBt7cFrN1DuhWc0zSI7B0SCQKmRcYAKzodbYG87iE9GpzTNIjsHRIJAqYBWDtEOvyzOvRokRjY4R1oFNZ1eFiP0jRAS9DiHTaoiHImm0xWl54PYgIjwQuBM4HvBWPy7vYOcC5OSySKVvHU09KxNIlKTqfJ5HD9axmO4ZX/x/3vTYZV/B8Uxv8IMr+Kj/hkONaVEa9dcl/W+G/8ARBMv4iIrP9AzyykX3Jf3s1/+2dTXmKhCKPZcCQnolkwJLoAJ30Gp1RlCcMQsez/lncyOnEFACNUA993QhDm/x6FC0ui5DP4ZHqAoOIF/E1znuAARxb8QSTHYjUHRNjRe0BCNIpkaOHzwHJsxmasxyaUIRvZhfoebMQKrMfm+qYsbJKrWe912IhlyEYXGtGOOqzDGqyAB52YwxbMIRO1WIfVmMUA5rBxmy9dh7WIRx6ykIMc5BdC4wmIbyNzI+UolytsxwosUzd4i04jLCauxw4TLEko4JWDXBQgHm4s308X9u7VjY1Yh5WYg2ebyjXYgs1YbvrtNyEeac5KXIYVwspbMIMsePaosx1Yfh12YgfWFuQqnOzVOJqztmCW/jl8UuDyo8hD691tT+CN3qEFoiuHA/Q267Z+Aabah2FnSB9XfTROCAticnFbErNIiUtqn/7l6c2gpC9AqX0aOvS6evJ4bvULyXS0ZyigHx2q0yxPS3oiCPkKqB92LKQWP/BUkBck6Ec97qVoLePRBBYhsdD0J+jyoYBwxQJD/cPirIT6eg==") format("woff2");font-style:normal;font-weight:700 900;font-display:swap;} /* Comic Neue subset, SIL OFL 1.1 */
+  :root {
+    --bg: #f1f4f9;
+    --ink: #39424f;
+    --muted: #616d80;
+    --accent: #3b57d1;
+    --sd: #c5ccd8;
+    --sl: #ffffff;
+    --radius: 20px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC",
+                 "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-size: 15.5px;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:focus-visible, button:focus-visible, input:focus-visible, [tabindex]:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px;
+  }
+  code, pre {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+                 "Liberation Mono", monospace;
+  }
+
+  .app {
+    display: grid;
+    grid-template-columns: 340px minmax(0, 1fr);
+    gap: 26px;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 30px 24px 60px;
+    align-items: start;
+  }
+
+  /* ---------- 左侧栏 ---------- */
+  .sidebar {
+    position: sticky; top: 28px;
+    max-height: calc(100vh - 56px);
+    overflow-y: auto;
+    padding: 24px 18px 18px;
+    border-radius: 26px;
+    background: var(--bg);
+    box-shadow: 12px 12px 24px var(--sd), -12px -12px 24px var(--sl);
+  }
+  .sidebar { scrollbar-width: none; -ms-overflow-style: none; }
+  .sidebar::-webkit-scrollbar { display: none; }
+
+  .brand { padding: 0 8px; }
+  .brand .logo,
+  h1.wordmark {
+    font-family: "McTa Wordmark", "Baloo 2", "Fredoka", "Arial Rounded MT Bold",
+                 "Chalkboard SE", "Comic Sans MS", cursive;
+    font-weight: 900;
+    letter-spacing: 1px;
+  }
+  .brand .logo { font-size: 25px; display: inline-block; }
+  h1.wordmark { font-size: 38px; letter-spacing: 1.2px; margin: 16px 0 6px; }
+  .wordmark span {
+    display: inline-block; cursor: pointer; user-select: none;
+    transition: transform .25s ease;
+    -webkit-text-stroke: 2px #fff; paint-order: stroke fill;
+    text-shadow:
+      2.5px 0 0 #fff, -2.5px 0 0 #fff, 0 2.5px 0 #fff, 0 -2.5px 0 #fff,
+      1.8px 1.8px 0 #fff, -1.8px 1.8px 0 #fff,
+      1.8px -1.8px 0 #fff, -1.8px -1.8px 0 #fff,
+      0 6px 10px rgba(96, 108, 130, .22);
+  }
+  .brand .logo span {
+    -webkit-text-stroke: 1.5px #fff; paint-order: stroke fill;
+    text-shadow:
+      1.8px 0 0 #fff, -1.8px 0 0 #fff, 0 1.8px 0 #fff, 0 -1.8px 0 #fff,
+      1.3px 1.3px 0 #fff, -1.3px 1.3px 0 #fff,
+      1.3px -1.3px 0 #fff, -1.3px -1.3px 0 #fff,
+      0 4px 7px rgba(96, 108, 130, .2);
+  }
+  .wordmark span:nth-child(1) { transform: rotate(-6deg) translateY(-1px); }
+  .wordmark span:nth-child(2) { transform: rotate(3deg) translateY(1px); }
+  .wordmark span:nth-child(3) { transform: rotate(-3deg); }
+  .wordmark span:nth-child(4) { transform: rotate(5deg) translateY(1px); }
+  .w-m, .w-t { color: #e0553d; }
+  .w-c { color: #3b57d1; }
+  .w-a { color: #17a06b; }
+  .brand-sub {
+    display: block;
+    margin: 12px -7px 0; padding: 6px 7px; border-radius: 10px;
+    font-size: 12.5px; color: #2c3648; font-weight: 700; letter-spacing: .3px;
+    text-decoration: none;
+    transition: color .12s ease, box-shadow .12s ease;
+  }
+  .brand-sub:hover {
+    color: var(--accent);
+    box-shadow: 4px 4px 9px var(--sd), -4px -4px 9px var(--sl);
+  }
+  .brand-sub:active {
+    box-shadow: inset 3px 3px 6px var(--sd), inset -3px -3px 6px var(--sl);
+  }
+  .lang-switch {
+    display: inline-flex; align-items: center; gap: 5px;
+    margin: 0; padding: 6px 10px; height: 26px; box-sizing: border-box;
+    border: 0; border-radius: 999px;
+    background: var(--bg); color: var(--accent);
+    font: inherit; font-size: 11.5px; font-weight: 700; line-height: 1;
+    cursor: pointer; width: 100%; justify-content: center; text-align: center;
+    white-space: nowrap;
+    box-shadow: 2px 2px 5px var(--sd), -2px -2px 5px var(--sl);
+  }
+  .lang-switch:hover { color: var(--accent); }
+  .lang-switch:active {
+    box-shadow: inset 3px 3px 6px var(--sd), inset -3px -3px 6px var(--sl);
+  }
+  .lang-globe { flex: 0 0 auto; font-size: 13px; line-height: 1; }
+  .lang-name { flex: 0 0 auto; white-space: nowrap; letter-spacing: 0; }
+  .lang-caret { flex: 0 0 auto; font-size: 8px; line-height: 1; opacity: .75; }
+  .lang-wrap { position: relative; display: inline-flex; width: var(--lang-btn-w, 88px); min-width: 96px; margin: 14px 8px 0; }
+  .lang-menu {
+    position: absolute; top: calc(100% + 6px); left: 0; width: 100%; min-width: 0;
+    flex-direction: column; gap: 0; padding: 0; display: none; z-index: 210;
+    background: var(--bg); border-radius: 999px; overflow: hidden;
+    box-shadow: 4px 4px 12px var(--sd), -4px -4px 12px var(--sl);
+  }
+  .lang-menu.open { display: flex; }
+  .lang-menu-item {
+    display: flex; align-items: center; justify-content: center;
+    border: 0; background: transparent; color: var(--accent);
+    box-shadow: none; width: 100%; height: 26px; box-sizing: border-box;
+    font: inherit; font-size: 11.5px; font-weight: 700; line-height: 1;
+    padding: 6px 13px; border-radius: 999px; cursor: pointer;
+    text-align: center; white-space: nowrap;
+  }
+  .lang-menu-item:hover { background: rgba(120,134,156,.14); box-shadow: none; }
+  .lang-menu-item:active { box-shadow: none; }
+  .about-brand { color: #2c3648; font-weight: 700; }
+  .about-line { display: flex; align-items: baseline; gap: 10px; margin: 12px 0 0; }
+  .about-line .about-anim { margin: 0; }
+
+  /* 关于页：代码结构前的字母跳跃发光 */
+  .about-anim {
+    display: flex; gap: 4px; margin: 10px 0 0;
+    font-family: "McTa Wordmark", "Baloo 2", "Fredoka", "Arial Rounded MT Bold",
+                 "Chalkboard SE", "Comic Sans MS", cursive;
+    font-size: 21px; font-weight: 900; letter-spacing: 1px;
+    user-select: none;
+  }
+  .about-anim span {
+    display: inline-block;
+    -webkit-text-stroke: 1.6px #fff; paint-order: stroke fill;
+    animation: hop 1.6s ease-in-out infinite, glow 1.6s ease-in-out infinite;
+  }
+  .about-anim .w-m, .about-anim .w-t { --glow: 224, 85, 61; }
+  .about-anim .w-c { --glow: 59, 87, 209; }
+  .about-anim .w-a { --glow: 23, 160, 107; }
+  .about-anim span:nth-child(2) { animation-delay: .12s; }
+  .about-anim span:nth-child(3) { animation-delay: .24s; }
+  .about-anim span:nth-child(4) { animation-delay: .36s; }
+  .about-anim.sm { font-size: 15.75px; gap: 3px; margin: 18px 0 4px; }
+  .about-anim.sm + h2.sec-title { margin: 0 0 6px; font-size: 12.5px; letter-spacing: .2px; }
+  .about-anim.sm + h2.sec-title + p { margin: 0; font-size: 12.5px; line-height: 1.7; }
+  @keyframes hop {
+    0%, 100% { transform: translateY(0) scale(1); }
+    32% { transform: translateY(-6px) scale(1.14); }
+    52% { transform: translateY(0) scale(1); }
+  }
+  @keyframes glow {
+    0%, 100% { text-shadow: 0 0 0 rgba(var(--glow), 0); }
+    32% { text-shadow: 0 0 12px rgba(var(--glow), .6), 0 0 4px rgba(var(--glow), .45); }
+  }
+
+  .nav { margin-top: 20px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 14px; margin-bottom: 3px;
+    border-radius: 14px; color: #2c3648;
+    font-size: 15px; cursor: pointer;
+    transition: color .18s ease, box-shadow .18s ease;
+  }
+  .nav-item .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #c3cad7; flex: none; transition: background .18s ease;
+  }
+  .nav-item:hover {
+    color: var(--ink);
+    box-shadow: 5px 5px 10px var(--sd), -5px -5px 10px var(--sl);
+  }
+  .nav-item.active {
+    color: var(--accent); font-weight: 600;
+    box-shadow: inset 5px 5px 10px var(--sd), inset -5px -5px 10px var(--sl);
+  }
+  .nav-item.active .dot { background: var(--accent); }
+
+  .nav-item .chev {
+    margin-left: auto; font-size: 15px; line-height: 1; color: #9aa5b8;
+    transition: transform .2s ease;
+  }
+  .nav-item[aria-expanded="true"] .chev { transform: rotate(90deg); }
+  .nav-sub { display: none; margin-top: -2px; }
+  .nav-sub.open { display: block; animation: fade .2s ease; }
+  .nav-sub .nav-item { --sd: #b8c1cf; --sl: #f7f9fc; padding: 5px 14px 5px 24px; font-size: 14.5px; margin-bottom: 2px; }
+  .nav-sub .nav-item.active { color: #1f3596; }
+  .nav-sub .nav-item.active .dot { background: #1f3596; }
+
+  .side-foot {
+    display: flex; gap: 8px; align-items: center;
+    margin: 6px 12px 0; font-size: 12.5px; color: var(--muted);
+  }
+  .side-foot a { color: var(--accent); text-decoration: none; }
+  .side-foot a:hover { text-decoration: underline; }
+  .license-link { cursor: pointer; }
+  .license-link:hover { text-decoration: underline; }
+  .license-overlay {
+    position: fixed; inset: 0; z-index: 9700;
+    display: flex; align-items: center; justify-content: center; padding: 24px;
+    background: rgba(23, 32, 46, .03);
+    -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
+  }
+  .license-text {
+    margin: 0; position: relative; max-width: min(680px, 94vw); max-height: 80vh; overflow: auto;
+    scrollbar-width: none; -ms-overflow-style: none;
+    white-space: pre-wrap; overflow-wrap: anywhere;
+    padding: 22px 28px; background: transparent; border: 0; box-shadow: none; color: #fff;
+    font-family: ui-monospace, Consolas, "Courier New", monospace;
+    font-size: 13px; line-height: 1.7;
+    text-shadow: 0 0 2px rgba(8,14,26,1), 0 0 10px rgba(8,14,26,.9), 0 0 22px rgba(8,14,26,.6);
+  }
+  .license-text::-webkit-scrollbar { display: none; }
+  .license-line { display: block; min-height: 1.7em; visibility: hidden; }
+  .license-line.shown { visibility: visible; animation: lic-line-in .32s ease-out both; }
+  @keyframes lic-line-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  /* 侧栏：本地模拟终端 */
+  .term-wrap { margin: 22px 4px 0; }
+  .term-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 8px; margin: 0 2px 8px;
+  }
+  .term-wrap:not(.floating) .term-head { cursor: pointer; }
+  .term-head .t { font-size: 13px; font-weight: 600; color: #2c3648; }
+  .term-state { font-size: 11.5px; color: var(--muted); }
+  .term-box {
+    position: relative; overflow: hidden;
+    height: 236px; padding: 12px 12px 10px;
+    border-radius: 14px; background: #10151d;
+    box-shadow: inset 5px 5px 12px #0a0e14, inset -3px -3px 8px #1a2230;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas,
+                 "Liberation Mono", monospace;
+    font-size: 11.5px; line-height: 1.7; color: #c9d4e4;
+    cursor: text; scrollbar-width: thin;
+  }
+  .term-box::-webkit-scrollbar { width: 6px; }
+  .term-box::-webkit-scrollbar-thumb { background: #2b3547; border-radius: 999px; }
+  .term-rain {
+    position: absolute; inset: 0; z-index: 0; pointer-events: none;
+    opacity: .28; transition: opacity .35s ease;
+  }
+  .term-scroll {
+    position: relative; z-index: 1;
+    height: 100%; overflow-y: auto;
+    padding-right: 4px;
+  }
+  .term-scroll::-webkit-scrollbar { width: 6px; }
+  .term-scroll::-webkit-scrollbar-thumb { background: #2b3547; border-radius: 999px; }
+  .term-out, .term-line { position: relative; z-index: 1; }
+  .term-out { margin: 0 0 6px; white-space: pre-wrap; word-break: break-word; }
+  .term-out .p { color: #7ee787; }
+  .term-out .cmd { color: #e6edf7; }
+  .term-out.dim { color: #8b98ad; }
+  .term-out.err { color: #f0a08f; }
+  .term-line { display: flex; gap: 6px; align-items: baseline; }
+  .term-prompt { color: #7ee787; flex: none; }
+  .term-in {
+    flex: 1; min-width: 0; padding: 0; border: 0; outline: 0;
+    background: transparent; color: #e6edf7; font: inherit;
+    caret-color: #7ee787;
+  }
+  .term-in:focus-visible { outline: 0; }
+  .term-line:focus-visible, .term-line:focus { outline: 0; box-shadow: none; }
+
+  /* 终端浮窗：点击终端顶端栏后脱离侧栏，可拖动、缩放、最大化 */
+  .term-head { align-items: center; }
+  .term-title { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .term-tools { display: none; margin-left: auto; gap: 3px; flex: none; }
+  .term-open { display: none; }
+  .term-wrap.floating .term-tools { display: flex; }
+  .term-tools button {
+    width: 24px; height: 24px; padding: 0; border: 0; border-radius: 7px;
+    background: var(--bg); color: #4c5666;
+    font: inherit; font-size: 13px; line-height: 1;
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    box-shadow: 2px 2px 5px var(--sd), -2px -2px 5px var(--sl);
+  }
+  .term-tools button:hover { color: var(--accent); }
+  .term-tools button:active {
+    box-shadow: inset 2px 2px 4px var(--sd), inset -2px -2px 4px var(--sl);
+  }
+  .term-tools .win-glyph { display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
+  .win-glyph svg { display: block; width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .hidden { display: none !important; }
+  /* 最小化：主体隐藏，只留顶栏，停靠页面下方 */
+  .term-wrap.floating.win-min {
+    width: auto !important; height: 40px !important; min-width: 0 !important; min-height: 40px !important;
+    max-width: calc(100vw - 16px) !important; max-height: 40px !important; padding: 6px 10px !important;
+    border-radius: 12px !important; overflow: visible !important; transition: none !important; transform: none !important;
+    white-space: nowrap;
+  }
+  .term-wrap.floating.win-min .term-box,
+  .term-wrap.floating.win-min .resize-handle { display: none !important; }
+  .term-wrap.floating.win-min .term-head { cursor: default !important; margin: 0 !important; }
+  /* 最小化态只保留：最大化 + 还原到侧栏；顶栏文字可点击还原 */
+  .term-wrap.floating.win-min .term-tools button:not([data-term-act="max"]):not([data-term-act="dock"]) { display: none !important; }
+  .term-wrap.floating.win-min .term-title { cursor: pointer !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .term-wrap.floating.win-min .term-title .term-state { display: inline !important; font-size: 11.5px; opacity: .9; }
+  .term-wrap.floating {
+    position: fixed; z-index: 45;
+    display: flex; flex-direction: column;
+    margin: 0; padding: 10px 12px 12px; border-radius: 18px;
+    background: var(--bg);
+    box-shadow: 0 18px 44px rgba(28, 42, 64, .26), 0 2px 8px rgba(28, 42, 64, .14),
+                8px 8px 18px var(--sd), -8px -8px 18px var(--sl);
+    max-width: calc(100vw - 8px); max-height: calc(100vh - 4px);
+  }
+  .term-wrap.floating .term-head { cursor: move; touch-action: none; margin-bottom: 8px; }
+  .term-wrap.floating .term-box { flex: 1 1 auto; height: auto; min-height: 120px; }
+  .term-wrap.dragging { user-select: none; }
+  .term-wrap.floating .term-box { user-select: text; }
+
+  /* 四角/四边缩放手柄 */
+  .term-wrap.floating .resize-handle { position: absolute; z-index: 2; }
+  .term-wrap.floating .rh-t { top: -3px; left: 10px; right: 10px; height: 6px; cursor: ns-resize; }
+  .term-wrap.floating .rh-b { bottom: -3px; left: 10px; right: 10px; height: 6px; cursor: ns-resize; }
+  .term-wrap.floating .rh-l { left: -3px; top: 10px; bottom: 10px; width: 6px; cursor: ew-resize; }
+  .term-wrap.floating .rh-r { right: -3px; top: 10px; bottom: 10px; width: 6px; cursor: ew-resize; }
+  .term-wrap.floating .rh-tl { top: -3px; left: -3px; width: 12px; height: 12px; cursor: nwse-resize; }
+  .term-wrap.floating .rh-tr { top: -3px; right: -3px; width: 12px; height: 12px; cursor: nesw-resize; }
+  .term-wrap.floating .rh-bl { bottom: -3px; left: -3px; width: 12px; height: 12px; cursor: nesw-resize; }
+  .term-wrap.floating .rh-br { bottom: -3px; right: -3px; width: 12px; height: 12px; cursor: nwse-resize; }
+
+  /* ---------- 右侧内容 ---------- */
+  .content { min-width: 0; }
+  .page { display: none; }
+  .page.active { display: block; animation: fade .26s ease; }
+  @keyframes fade {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+  }
+  /* 脚本未能执行时的兜底：至少让概览页可见 */
+  body:not(.js) #page-overview { display: block; }
+
+  .page-head { margin-bottom: 26px; }
+  .eyebrow {
+    display: inline-block; padding: 5px 13px; border-radius: 999px;
+    font-size: 11.5px; font-weight: 600; letter-spacing: .8px;
+    color: var(--accent);
+    box-shadow: inset 4px 4px 8px var(--sd), inset -4px -4px 8px var(--sl);
+  }
+  h1 {
+    font-size: 30px; line-height: 1.25; margin: 16px 0 8px;
+    letter-spacing: -.3px;
+  }
+  #page-overview h1.wordmark { font-size: 30px; }
+  .full-name {
+    margin: 0 0 14px; font-size: 14.5px; color: #2c3648; font-weight: 700; letter-spacing: .2px;
+  }
+  .lede { margin: 0; color: #5b6678; font-size: 15.5px; }
+
+  h2.sec-title {
+    font-size: 15px; margin: 28px 0 12px; color: #4c5666;
+    letter-spacing: .2px;
+  }
+
+  .card {
+    background: var(--bg); border-radius: var(--radius);
+    padding: 22px 24px;
+    box-shadow: 9px 9px 18px var(--sd), -9px -9px 18px var(--sl);
+  }
+  pre {
+    margin: 0; padding: 8px 18px; border-radius: 14px;
+    background: var(--bg); color: #2f3a4a;
+    font-size: 15px; line-height: 1.65;
+    overflow-x: auto;
+    box-shadow: inset 5px 5px 10px var(--sd), inset -5px -5px 10px var(--sl);
+  }
+  pre.help { padding: 16px 18px; line-height: 1.75; }
+  .param-ref { display: grid; gap: 10px; }
+  .param-item { border: 1px solid var(--sd); border-radius: 12px; background: var(--sl); overflow: hidden; }
+  .param-item > summary { cursor: pointer; padding: 10px 16px; font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 600; color: var(--ink); }
+  .param-item > pre.help { margin: 0; border-top: 1px solid var(--sd); border-radius: 0; font-size: 12.5px; }
+  pre .c { color: #8a94a6; }
+  .pre-wrap { position: relative; }
+  .pre-group { display: grid; gap: 10px; }
+  .pre-wrap pre { padding-right: 66px; }
+  .copy-btn {
+    position: absolute; top: 8px; right: 8px;
+    padding: 3px 10px; border: 0; border-radius: 8px;
+    background: var(--bg); color: var(--muted);
+    font: inherit; font-size: 11.5px; line-height: 1.5; cursor: pointer;
+    box-shadow: 3px 3px 6px var(--sd), -3px -3px 6px var(--sl);
+    opacity: 0; transition: opacity .15s ease, color .15s ease;
+  }
+  .pre-wrap:hover .copy-btn, .copy-btn:focus { opacity: 1; }
+  .copy-btn:hover { color: var(--accent); }
+  @media (hover: none) { .copy-btn { opacity: 1; } }
+  .code-copy { cursor: pointer; }
+  .code-copy:hover { color: var(--accent); }
+  .toast {
+    position: fixed; left: 50%; bottom: 30px; z-index: 50;
+    transform: translate(-50%, 10px); opacity: 0; pointer-events: none;
+    padding: 8px 16px; border-radius: 12px;
+    background: var(--bg); color: var(--ink); font-size: 13px;
+    box-shadow: 6px 6px 14px var(--sd), -6px -6px 14px var(--sl);
+    transition: opacity .2s ease, transform .2s ease;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  p code, li code, td code {
+    padding: 1px 7px; border-radius: 7px;
+    background: var(--bg); color: #2f3a4a; font-size: .94em;
+    box-shadow: inset 2px 2px 5px var(--sd), inset -2px -2px 5px var(--sl);
+  }
+
+  ul.plain { margin: 0; padding-left: 20px; color: #55606f; }
+  ul.plain li { margin: 7px 0; }
+  ul.plain b { color: var(--ink); }
+
+  table {
+    width: 100%; border-collapse: collapse; font-size: 13.5px;
+  }
+  th, td { text-align: left; padding: 11px 14px; }
+  th { color: var(--muted); font-weight: 600; font-size: 12.5px; }
+  tbody tr { border-top: 1px solid rgba(120, 132, 154, .14); }
+  td:first-child { white-space: nowrap; }
+
+  .card.table-card { padding: 8px 18px; overflow-x: auto; }
+
+  .site-foot { margin-top: 36px; padding-top: 18px; border-top: 1px solid rgba(120, 132, 154, .16); }
+  .site-foot .about-anim.sm { margin: 0 0 4px; }
+
+  @media (max-width: 900px) {
+    .app { grid-template-columns: 1fr; gap: 22px; padding: 22px 16px 48px; }
+    .sidebar {
+      position: static; max-height: none; padding: 16px;
+      border-radius: 22px;
+    }
+    .brand { padding: 0 4px; }
+    .nav { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .side-foot { display: flex; margin: 12px 4px 0; }
+    .nav-item { margin: 0; white-space: nowrap; padding: 8px 12px; font-size: 13.5px; }
+    .nav-sub { width: 100%; }
+    .nav-sub.open { display: flex; flex-wrap: wrap; gap: 8px; }
+    .nav-sub .nav-item { padding-left: 12px; font-size: 13.5px; }
+    .term-wrap { margin: 22px 4px 0; display: block; }
+    .term-wrap.floating { display: flex; }
+    .term-box { height: 220px; }
+    .term-open { display: none; }
+    h1 { font-size: 26px; }
+  }
+
+  /* mt.server：SSH 端口转发关系图 */
+  .tunnel-card { margin: 16px 0 6px; padding: 18px 20px 14px; }
+  .tunnel-fig { width: 100%; height: auto; display: block; }
+  .tunnel-fig text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif; }
+  .tunnel-fig .t-label { fill: #39424f; font-size: 15px; font-weight: 600; }
+  .tunnel-fig .t-sub { fill: #616d80; font-size: 12.5px; }
+  .tunnel-fig .t-mono { fill: #3b57d1; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px; }
+  .tunnel-card figcaption { margin-top: 8px; text-align: center; color: #616d80; font-size: 13px; }
+  .tunnel-steps { margin: 12px 0 0; padding-left: 22px; }
+  .tunnel-steps li { margin: 6px 0; line-height: 1.75; }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo wordmark" role="img" aria-label="McTa"><span class="w-m">M</span><span class="w-c">c</span><span class="w-t">T</span><span class="w-a">a</span></div>
+      <span class="lang-wrap" id="langWrap"><button type="button" class="lang-switch" id="langToggle" title="切换语言 / Switch language" aria-label="切换语言 / Switch language" aria-haspopup="true" aria-expanded="false"><span class="lang-globe" aria-hidden="true">◎</span><span class="lang-name">中文</span><span class="lang-caret" aria-hidden="true">▼</span></button><span class="lang-menu" id="langMenu" role="menu"><button type="button" class="lang-menu-item" id="langMenuItem" role="menuitem">English</button></span></span>
+      <a class="brand-sub" href="#overview">格塔 · Meta Crystal Toolkit &amp; Analysis</a>
+    </div>
+
+    <nav class="nav">
+      <a class="nav-item" href="#overview" data-page="overview"><span class="dot"></span>概览</a>
+      <a class="nav-item" href="#install" data-page="install"><span class="dot"></span>安装</a>
+      <a class="nav-item" id="startToggle" href="#start" data-page="start" aria-expanded="false" aria-controls="cmdList">
+        <span class="dot"></span>使用<span class="chev">›</span>
+      </a>
+
+      <div class="nav-sub" id="cmdList">
+        <a class="nav-item" href="#spectra" data-page="spectra"><span class="dot"></span>能带与态密度</a>
+        <a class="nav-item" href="#ph" data-page="ph"><span class="dot"></span>mt.ph / mt.ph3</a>
+        <a class="nav-item" href="#seek" data-page="seek"><span class="dot"></span>mt.seek / mt.sqs / mt.skl</a>
+        <a class="nav-item" href="#mc" data-page="mc"><span class="dot"></span>mt.mc</a>
+        <a class="nav-item" href="#sh" data-page="sh"><span class="dot"></span>mt.sh</a>
+        <a class="nav-item" href="#server" data-page="server"><span class="dot"></span>mt.server</a>
+      </div>
+
+      <a class="nav-item" href="#about" data-page="about"><span class="dot"></span>关于</a>
+    </nav>
+
+    <button type="button" class="term-open" id="termOpen" aria-label="打开终端">终端</button>
+
+    <div class="side-foot">
+      <a href="https://github.com/lkccrr/mcta" target="_blank" rel="noopener">GitHub</a><span>·</span>
+      <a href="https://pypi.org/project/mcta/" target="_blank" rel="noopener">PyPI</a><span>·</span>
+      <a class="license-link" id="sideMit" href="#" role="button" tabindex="0" title="查看许可">MIT</a>
+    </div>
+
+    <div class="term-wrap">
+      <div class="term-head">
+        <span class="term-title">
+          <span class="t">终端</span>
+          <span class="term-state">本地模拟</span>
+        </span>
+        <span class="term-tools" role="group">
+          <button type="button" data-term-act="min" title="最小化" aria-label="最小化"><span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></span></button>
+          <button type="button" data-term-act="restore" title="还原" aria-label="还原"><span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 11a9 9 0 1 1 2.6 6.4"/><path d="M3 5v6h6"/></svg></span></button>
+          <button type="button" data-term-act="max" title="放大到整个页面" aria-label="放大到整个页面"><span class="max-icon win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 17 17 7"/><path d="M9 7h8v8"/></svg></span><span class="restore-icon win-glyph hidden" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M17 7 7 17"/><path d="M15 17H7V9"/></svg></span></button>
+          <button type="button" data-term-act="dock" title="还原到侧栏" aria-label="还原到侧栏"><span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/><path d="m14 9-3 3 3 3"/></svg></span></button>
+        </span>
+      </div>
+      <div class="term-box" id="siteTerm">
+        <canvas class="term-rain" aria-hidden="true"></canvas>
+        <div class="term-scroll">
+          <div id="termLog"></div>
+          <div class="term-line">
+            <span class="term-prompt">$</span>
+            <input class="term-in" id="termIn" type="text" autocomplete="off"
+                   autocapitalize="off" spellcheck="false"
+                   aria-label="McTa 命令演示终端">
+          </div>
+        </div>
+      </div>
+      <span class="resize-handle rh-tl"></span><span class="resize-handle rh-t"></span><span class="resize-handle rh-tr"></span>
+      <span class="resize-handle rh-l"></span><span class="resize-handle rh-r"></span>
+      <span class="resize-handle rh-bl"></span><span class="resize-handle rh-b"></span><span class="resize-handle rh-br"></span>
+    </div>
+  </aside>
+
+  <main class="content">
+
+    <!-- 概览 -->
+    <section class="page" id="page-overview">
+      <header class="page-head">
+        <h1 class="wordmark" aria-label="McTa"><span class="w-m">M</span><span class="w-c">c</span><span class="w-t">T</span><span class="w-a">a</span></h1>
+        <p class="full-name">格塔 · Meta Crystal Toolkit &amp; Analysis</p>
+        <p class="lede">
+          <span class="about-brand"><span class="w-m">M</span><span class="w-c">c</span><span class="w-t">T</span><span class="w-a">a</span></span> 把 VASP 与 phonopy 的常见后处理收进一组 <code>mt.*</code> 命令：读原始输出直接出图，
+          参数与风格保持一致。
+        </p>
+      </header>
+
+      <h2 class="sec-title">背景</h2>
+      <ul class="plain">
+        <li><b>起点</b>：能带、态密度、声子谱的读取与绘图散落在多份脚本里，参数与出图风格各不相同。</li>
+        <li><b>做法</b>：统一为一组 <code>mt.*</code> 子命令，读 <code>EIGENVAL</code>、<code>DOSCAR</code>、<code>BAND.dat</code> 等原始输出即可出图。</li>
+        <li><b>范围</b>：电子结构、晶格动力学、结构检索、准随机固溶体与磁性蒙特卡洛；除 <code>mt.seek</code> 联网，<code>mt.server</code> 可连接服务器外都在本地完成。</li>
+      </ul>
+
+      <h2 class="sec-title">用途</h2>
+      <ul class="plain">
+        <li><b>电子结构</b>：<code>mt.band</code> 出能带与投影，<code>mt.dos</code> 出态密度，可计算有效质量。</li>
+        <li><b>晶格动力学</b>：<code>mt.phband</code>、<code>mt.phdos</code> 出谱与态密度；<code>mt.ph</code>、<code>mt.ph3</code> 查词条与流程。</li>
+        <li><b>结构数据</b>：<code>mt.seek</code> 检索并导出结构，<code>mt.sqs</code> 生成准随机固溶体，<code>mt.skl</code> 评估描述符重要性。</li>
+        <li><b>模拟与脚本</b>：<code>mt.mc</code> 跑磁性蒙特卡洛，<code>mt.sh</code> 调用随包脚本，<code>mt.server</code> 运行本地/远程文件服务。</li>
+      </ul>
+
+      <h2 class="sec-title">常用示例</h2>
+      <div class="card table-card">
+        <table>
+          <thead>
+            <tr><th>用途</th><th>命令</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>能带</td><td><code>mt.band -i calc_PBE -d -z</code></td></tr>
+            <tr><td>态密度</td><td><code>mt.dos -i calc -p d -x 0 30</code></td></tr>
+            <tr><td>声子谱</td><td><code>mt.phband -i BAND.dat -l g m k g -d</code></td></tr>
+            <tr><td>声子态密度</td><td><code>mt.phdos -i calc -z -x 0 0.6</code></td></tr>
+            <tr><td>结构检索</td><td><code>mt.seek -c Ti-C -k 3 -n ti-c</code></td></tr>
+            <tr><td>准随机固溶体</td><td><code>mt.sqs -c cell.vasp -a "Cu:0.5,Au:0.5" -x 4,4,4 -n cuau-sqs</code></td></tr>
+            <tr><td>描述符筛选</td><td><code>mt.skl</code></td></tr>
+            <tr><td>磁性蒙特卡洛</td><td><code>mt.mc -x 128 -y 128 -t 0 40 2</code></td></tr>
+            <tr><td>随包脚本</td><td><code>mt.sh kb POSCAR 2 2 1</code></td></tr>
+            <tr><td>文件服务</td><td><code>mt.server</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2 class="sec-title">统一约定</h2>
+      <ul class="plain">
+        <li><b>参数一致</b>：<code>-i</code> 指定输入目录或文件，<code>-o</code> 指定输出，<code>-h</code> 查看全部参数。</li>
+        <li><b>输入原样</b>：只读取 VASP / phonopy 的原始输出，不要求先转格式，也不改动这些文件。</li>
+        <li><b>风格统一</b>：分辨率、字体、刻度方向集中在 <code>~/.config/mcta/config</code>，环境变量优先。</li>
+      </ul>
+
+    </section>
+
+    <!-- 使用 -->
+    <section class="page" id="page-start">
+      <header class="page-head">
+        <span class="eyebrow">USAGE</span>
+        <h1>使用</h1>
+        <p class="lede">进入计算目录后，先看它认得哪些文件，再决定画什么。</p>
+      </header>
+
+      <p style="margin:0 0 10px">运行 <code>mt</code> 总览当前目录，查看可用的计算文件。</p>
+
+      <pre class="help">mt：命令统一入口，负责说明用途并把参数原样转给对应的工具。
+mt &lt; band | dos | phband | phdos | ph | ph3 | seek | skl | sqs | mc | sh | server &gt; [参数]
+等价于 mt.band | mt.dos | mt.phband | mt.phdos | mt.ph | mt.ph3 | mt.seek mt.skl | mt.sqs | mt.sh | mt.server [参数]</pre>
+
+      <h2 class="sec-title">配置入口</h2>
+      <div class="card">
+        <p style="margin:0 0 10px">
+          <b>写法</b>：所有设置都可写成环境变量，或写入 <code>~/.config/mcta/config</code>（<code>KEY=VALUE</code>），
+          环境变量优先。
+        </p>
+        <p style="margin:0 0 10px">
+          <b>图形参数</b>：<code>MT_RESOL</code>、<code>MT_FONT_FAMILY</code>、<code>MT_MATHTEXT_FONTSET</code>、
+          <code>MT_XTICK_DIRECTION</code>、<code>MT_YTICK_DIRECTION</code>。
+        </p>
+        <p style="margin:0 0 10px">
+          <b>结构检索与描述符分析</b>（<code>mt.seek</code> / <code>mt.sqs</code> / <code>mt.skl</code>）：<code>MP_API_KEY</code>（免费的 Materials Project API Key，在线检索必填）、
+          <code>MT_SEEK_HOME</code>、<code>MT_SEEK_CONFIG</code>、<code>MT_SEEK_API_KEY</code>、
+          <code>MT_SEEK_PROVIDER</code>、<code>MT_SEEK_BASE_URL</code>、<code>MT_SEEK_MODEL</code>、
+          <code>MT_SEEK_MAX_TURNS</code>、<code>MT_SEEK_MAX_CAND</code>，含义见 <code>mt.seek -h</code>。
+        </p>
+        <p style="margin:0 0 10px">
+          <b>本地文件与终端服务（mt.server）</b>：<code>MCTA_REMOTE_SOCKET</code>（-c/--socket 默认路径及远端 mt.server Unix socket 路径）、
+          <code>MCTA_REMOTE_RENDER_MIN_MB</code>（-R 启用远端 3D 解析的大小阈值 MB）、
+          <code>MCTA_REMOTE_LIST_TTL</code>（远端目录缓存秒数）、
+          <code>MCTA_RENDER_CACHE_MAX_MB</code>（3D 渲染缓存容量上限 MB）、
+          <code>MCTA_CACHE_FRESH_SECONDS</code>（缓存淘汰保护窗口秒数）、
+          <code>MCTA_RENDER_RETRY_SECONDS</code>（远端渲染失败后的重试间隔秒数）、
+          <code>MCTA_RENDER_TOTAL_SECONDS</code>（单次渲染总时长上限秒数）、
+          <code>MCTA_XFER_CHANNELS</code>（传输通道数，默认 3，第 3 条仅小文件）、<code>MCTA_XFER_LARGE_MB</code>（大文件阈值 MB）、
+          <code>XDG_CACHE_HOME</code>（3D 渲染与 -R 文件缓存根目录，默认 ~/.cache）。
+        </p>
+        <p style="margin:0">
+          <b>其他工具</b>：<code>MT_PH_DOCS</code>、<code>MT_PH3_DOCS</code>、<code>MTSH_SCRIPTS</code>、
+          <code>PBE_PATH</code>、<code>LDA_PATH</code>、<code>GGA_PATH</code>。
+        </p>
+      </div>
+
+      <h2 class="sec-title">命令参数清单</h2>
+      <p style="margin:0 0 10px">展开查看每个命令的完整参数；与虚拟终端中 <code>mt &lt;command&gt; -h</code> 的输出一致。</p>
+      <div id="paramRef" class="param-ref"></div>
+
+    </section>
+
+    <!-- 安装 -->
+    <section class="page" id="page-install">
+      <header class="page-head">
+        <span class="eyebrow">INSTALLATION</span>
+        <h1>安装</h1>
+        <p class="lede">
+          通过 pip 安装，默认只含 numpy、matplotlib、ase、spglib、paramiko（mt.server -R/--ssh 用），其余包按需追加。
+        </p>
+      </header>
+
+      <div class="card table-card">
+        <table>
+          <thead>
+            <tr><th>命令</th><th>启用的入口</th><th>额外依赖</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>pip install mcta</code></td><td>mt、band、dos、phband、phdos、ph、ph3、sh、server</td><td>numpy、matplotlib、ase、spglib、paramiko</td></tr>
+            <tr><td><code>pip install mcta[seek]</code></td><td>mt.seek，同时启用 mt.skl</td><td>pymatgen、mp-api、scikit-learn 等</td></tr>
+            <tr><td><code>pip install mcta[skl]</code></td><td>mt.skl</td><td>scikit-learn、joblib</td></tr>
+            <tr><td><code>pip install mcta[sqs]</code></td><td>mt.sqs</td><td>sqsgenerator</td></tr>
+            <tr><td><code>pip install mcta[mc]</code></td><td>mt.mc</td><td>numba</td></tr>
+            <tr><td><code>pip install mcta[all]</code></td><td>全部</td><td>以上所有</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2 class="sec-title">说明</h2>
+      <p style="margin:0">
+        Python ≥ 3.9。未安装对应可选依赖时，命令会给出提示而不是直接报错。
+      </p>
+
+    </section>
+
+    <!-- 关于 -->
+    <section class="page" id="page-about">
+      <header class="page-head">
+        <span class="eyebrow">ABOUT</span>
+        <h1>关于</h1>
+      </header>
+
+      <div class="about-line">
+        <div class="about-anim" aria-hidden="true"><span class="w-m">M</span><span class="w-c">c</span><span class="w-t">T</span><span class="w-a">a</span></div>
+      </div>
+
+      <h2 class="sec-title">代码结构</h2>
+      <div class="card table-card">
+        <table>
+          <thead>
+            <tr><th>路径</th><th>内容</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>pyproject.toml</code></td><td>打包配置、依赖与命令行入口注册</td></tr>
+            <tr><td><code>index.html</code></td><td>项目主页与说明（中英双语，按浏览器语言自动切换）</td></tr>
+            <tr><td><code>mcta/__init__.py</code></td><td>版本号与包元数据</td></tr>
+            <tr><td><code>mcta/__main__.py</code></td><td>命令行入口：<code>mt</code> 的参数分发与转发、<code>-h</code> 帮助文本与版本输出</td></tr>
+            <tr><td><code>mcta/_flags.py</code></td><td>子命令表、总览；绘图字体、分辨率与刻度配置</td></tr>
+            <tr><td><code>mcta/bandplot/</code></td><td>能带、态密度、声子谱与声子文档（VASP / phonopy / phono3py）</td></tr>
+            <tr><td><code>mcta/seek/</code></td><td>结构检索、SQS、描述符分析与检索代理</td></tr>
+            <tr><td><code>mcta/sqs/</code></td><td>准随机固溶体生成</td></tr>
+            <tr><td><code>mcta/skl/</code></td><td>描述符重要性与粗筛</td></tr>
+            <tr><td><code>mcta/mc/</code></td><td>蒙特卡洛引擎、晶格几何、并行与绘图</td></tr>
+            <tr><td><code>mcta/sh/</code></td><td><code>mt.sh</code> 调度与内置脚本</td></tr>
+            <tr><td><code>mcta/server/</code></td><td>文件服务、中英双语页面、终端与 3D 查看器资源（xterm.js / xterm.css / 3dmol-min.js）</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </section>
+
+    <!-- 能带与态密度 -->
+    <section class="page" id="page-spectra">
+      <header class="page-head">
+        <span class="eyebrow">电子结构 · 晶格动力学</span>
+        <h1>能带与态密度</h1>
+        <p class="lede">
+          四个绘图命令共用同一套参数与出图风格：<code>mt.band</code>、<code>mt.dos</code> 处理电子结构，
+          <code>mt.phband</code>、<code>mt.phdos</code> 处理声子谱。
+        </p>
+      </header>
+
+      <h2 class="sec-title">mt.band · 能带</h2>
+      <p>能带结构绘图：可叠加 DOS、轨道投影与自旋极化镜像图，计算有效质量，并对比两三个计算结果。</p>
+      <pre>mt.band -i calc_PBE -d -z
+mt.band -i calc_PBE -r -p Mo-d
+mt.band -i calc_PBE -m 0.15</pre>
+      <ul class="plain">
+        <li><code>-d</code> 在能带右侧拼接 DOS 面板，<code>-z</code> 生成自旋极化镜像图。</li>
+        <li><code>-p Mo-d</code> 叠加轨道投影，<code>-m 0.15</code> 估算带边有效质量。</li>
+        <li>传入多个目录即可并排比较不同泛函或不同磁序的结果。</li>
+      </ul>
+
+      <h2 class="sec-title">mt.dos · 态密度</h2>
+      <p>独立的态密度图，能量在横轴；可切换为与能带面板一致的纵向排布，支持投影与填充。</p>
+      <pre>mt.dos -i calc -p d -x 0 30
+mt.dos -i calc -o PDOS.png -z</pre>
+      <ul class="plain">
+        <li><code>-p d</code> 绘制 d 轨道投影，<code>-x 0 30</code> 限定能量窗口。</li>
+        <li><code>-z</code> 旋转为纵向排布，与 <code>mt.band</code> 的拼图风格一致。</li>
+      </ul>
+
+      <h2 class="sec-title">mt.phband · 声子能带</h2>
+      <p>声子能带绘图：可附 DOS 面板、对光学支做断轴处理，支持多个 <code>BAND.dat</code> 并排比较。</p>
+      <pre>mt.phband -i BAND.dat -l g m k g -d
+mt.phband -B 23 100 -y -2 110</pre>
+      <ul class="plain">
+        <li><code>-l g m k g</code> 按给定顺序标注高对称点。</li>
+        <li><code>-B 23 100</code> 设置断轴区间，避免低频声学支压扁光学支。</li>
+        <li><code>-d</code> 附上声子态密度，<code>-y</code> 指定频率范围。</li>
+      </ul>
+
+      <h2 class="sec-title">mt.phdos · 声子态密度</h2>
+      <p>读取 phonopy 的 <code>projected_dos.dat</code> 或 <code>total_dos.dat</code>，绘制声子态密度。</p>
+      <pre>mt.phdos -i calc -z -x 0 0.6</pre>
+      <ul class="plain">
+        <li><code>-x 0 0.6</code> 限定频率范围，单位与 phonopy 输出一致。</li>
+        <li><code>-z</code> 切换为纵向排布，方便与 <code>mt.phband</code> 对齐。</li>
+      </ul>
+
+    </section>
+
+    <!-- mt.ph / mt.ph3 -->
+    <section class="page" id="page-ph">
+      <header class="page-head">
+        <span class="eyebrow">命令词库 · 中英文解释</span>
+        <h1>mt.ph / mt.ph3</h1>
+        <p class="lede">
+          查 phonopy 与 phono3py 的用法：<code>w</code> 给英文解释，<code>W</code> 给中文解释，不带词条时列出全部条目。
+        </p>
+      </header>
+      <h2 class="sec-title">常用命令</h2>
+      <pre>mt.ph w
+mt.ph w --dim BAND_LABELS
+mt.ph3 W --br --symfc</pre>
+      <h2 class="sec-title">要点</h2>
+      <ul class="plain">
+        <li><code>mt.ph</code> 覆盖 phonopy，<code>mt.ph3</code> 覆盖 phono3py，词条与本地安装的版本对应。</li>
+        <li>可一次查多个词条，如 <code>BAND_LABELS</code>、<code>--dim</code>、<code>--br</code>。</li>
+        <li>除查词外，也保留扩胞、力常数、能带、热导率等步骤的流程命令。</li>
+      </ul>
+
+    </section>
+
+    <!-- mt.seek / mt.sqs / mt.skl -->
+    <section class="page" id="page-seek">
+      <header class="page-head">
+        <span class="eyebrow">结构数据 · 检索 / 生成 / 分析</span>
+        <h1>mt.seek / mt.sqs / mt.skl</h1>
+        <p class="lede">
+          三者共用同一工作目录：<code>mt.seek</code> 检索并导出结构，<code>mt.sqs</code> 生成准随机固溶体，<code>mt.skl</code> 对导出的清单做描述符分析。
+        </p>
+      </header>
+
+      <h2 class="sec-title">mt.seek · 结构检索</h2>
+      <p style="margin:0 0 10px">从 Materials Project 检索结构，导出 CIF / POSCAR / JSON 与计算模板，并支持对本地数据集去重、筛选与打包。</p>
+      <pre>mt.seek -c Ti-C -k 3 -n ti-c
+mt.seek -r -D 8 -o my-pick</pre>
+      <ul class="plain">
+        <li><code>-c</code> 指定元素组合，<code>-k</code> 限定返回数量，<code>-n</code> 设置数据集名称。</li>
+        <li>需要在配置中提供 <code>MP_API_KEY</code>，这是唯一需要联网的命令。</li>
+      </ul>
+
+      <h2 class="sec-title">mt.sqs · 准随机固溶体</h2>
+      <p style="margin:0 0 10px">读入原胞，按目标成分随机化指定子晶格，输出结构文件与成分统计。</p>
+      <pre>mt.sqs -c cell.vasp -a "Cu:0.5,Au:0.5" -x 4,4,4 -n cuau-sqs</pre>
+      <ul class="plain">
+        <li><code>-a</code> 按 “元素:占比” 描述目标成分，多个元素用逗号分隔。</li>
+        <li><code>-x 4,4,4</code> 指定超胞尺寸，<code>-n</code> 指定输出名称。</li>
+      </ul>
+
+      <h2 class="sec-title">mt.skl · 描述符分析</h2>
+      <p style="margin:0 0 10px">读取工作根下各导出包 <code>&lt;name&gt;/manifest.csv</code>，用随机森林做 <code>ehull</code> 与 <code>band_gap</code> 回归和 5 折交叉验证，结果写入 <code>ml/</code>。</p>
+      <pre>mt.skl
+mt.skl --home proj</pre>
+      <ul class="plain">
+        <li>在工作根目录下扫描 <code>&lt;name&gt;/manifest.csv</code>（由 <code>mt.seek</code> / <code>mt.sqs</code> 就地导出），<code>--home</code> 可改根目录。</li>
+        <li>输出特征重要性与基础评分，适合在建模前做一轮粗筛。</li>
+      </ul>
+
+    </section>
+
+    <!-- mt.mc -->
+    <section class="page" id="page-mc">
+      <header class="page-head">
+        <span class="eyebrow">数值模拟 · 蒙特卡洛</span>
+        <h1>mt.mc</h1>
+        <p class="lede">
+          磁性材料的蒙特卡洛模拟：内置方格、三角、双层、简立方与五种二维 XY 晶格，也可从任意晶体结构建模；支持 Ising、海森堡与 XY 模型、并行链与副本交换。
+        </p>
+      </header>
+      <h2 class="sec-title">常用命令</h2>
+      <pre>mt.mc -x 128 -y 128 -t 0 40 2 -C 6 -S 42
+mt.mc -s POSCAR -A Fe -D 2.7 3.2 -x 2 -y 2 -z 2
+mt.mc -c xy-square -x 64 -y 64 -p 1 -t 5 20 0.5 -S 42</pre>
+      <h2 class="sec-title">要点</h2>
+      <ul class="plain">
+        <li><code>-t 0 40 2</code> 按起始、终止、步长扫描温度，也支持单独列温度点（<code>-t 0 10 20 30</code>）或反向范围（<code>-t 40 0 -2</code>）。</li>
+        <li><code>-C</code>（<code>--chain</code>）设置并行推进的独立蒙特卡洛链数：默认 0 表示自动匹配线程数；值大于 1 时每条链从不同随机初态独立运行，最终取所有链的系综平均，等价于"多次独立重复实验取平均"，显著降低统计噪声。若同时使用 <code>-W</code> 副本交换，链数必须与温度点数相等。</li>
+        <li><code>-S</code>（<code>--seeds</code>）固定随机种子：给定后所有随机数（初态、Metropolis 接受/拒绝）都由该种子决定，在相同输入和代码版本下结果完全可复现，便于论文审稿和调试。默认不指定，每次运行产生不同结果。</li>
+        <li><code>-s POSCAR -A Fe -D 2.7 3.2</code> 从结构建模并设定交换耦合：<code>-A Fe,Co</code> 指定磁性元素（或自动探测 d/f 族），<code>-D 2.7 3.2</code> 按距离分段设置交换积分 <code>-J/-K</code>。</li>
+        <li><code>-c xy-square</code> 启用二维 XY 模型，还有 <code>xy-triangular</code>、<code>xy-honeycomb</code>、<code>xy-kagome</code>、<code>xy-diced</code> 四种构型；用螺旋度模数 Υ 与普适跳变 <code>2kBT/π</code> 的交点确定 BKT 转变温度，并统计最小环上的涡旋密度。<code>-T 10</code> 可在重绘日志时额外画出 10 K 的涡旋状态箭头图。</li>
+      </ul>
+
+    </section>
+
+    <!-- mt.sh -->
+    <section class="page" id="page-sh">
+      <header class="page-head">
+        <span class="eyebrow">脚本助手</span>
+        <h1>mt.sh</h1>
+        <p class="lede">
+          按短名运行随包附带的 bash 脚本：应变扫描、超胞、对称性分析等；本地同名脚本优先于内置脚本。
+        </p>
+      </header>
+      <h2 class="sec-title">常用命令</h2>
+      <pre>mt.sh x POSCAR
+mt.sh kb POSCAR 2 2 1
+mt.sh sy POSCAR</pre>
+      <h2 class="sec-title">要点</h2>
+      <ul class="plain">
+        <li><code>x</code> 应变扫描，<code>kb</code> 构造超胞，<code>sy</code> 做对称性分析。</li>
+        <li>当前目录存在同名脚本时优先使用，便于本地定制。</li>
+      </ul>
+
+    </section>
+
+    <!-- mt.server -->
+    <section class="page" id="page-server">
+      <header class="page-head">
+        <span class="eyebrow">文件与终端 · 浏览器界面</span>
+        <h1>mt.server</h1>
+        <p class="lede">
+          在本地开一个网页服务：浏览目录、编辑文本、查看图片；以当前用户身份运行，文件浏览限定在运行目录内，并在页面里使用和 SSH 一致的交互式终端。加 -R/--ssh 后可直接浏览远程服务器：目录与文件走独立的 SFTP 连接，终端使用另一条 SSH 连接。
+        </p>
+      </header>
+      <h2 class="sec-title">常用命令</h2>
+      <pre>mt.server
+mt.server -p 8080
+mt.server -R u@remote.example:2222 -d /example/project
+mt.server -L 0.0.0.0
+mt.server -f
+mt.server -o run.log
+mt.server -S</pre>
+      <h2 class="sec-title">参数</h2>
+      <ul class="plain">
+        <li><code>-v/-V/--version</code> 显示版本；<code>-h/--help</code> 显示帮助。</li>
+        <li><code>-p/--port</code> 监听端口，默认 <code>9068</code>。</li>
+        <li><code>-d/--run-dir</code> 本地模式指定运行目录（页面起点），默认当前目录；远程模式指定服务器上的目录，路径无效则使用 SSH 默认目录。</li>
+        <li><code>-R/--ssh SPEC</code> 通过 SSH/SFTP 浏览远程服务器，支持 <code>u@h:22</code>、<code>u@h 22</code>、<code>u h 22</code>、<code>h 22</code>、<code>h</code>；用户名默认本机用户、端口默认 22。SSH 端口写在 <code>-R</code> 里，<code>-p</code> 仍是网页端口。启动前先进行非交互探测，优先本地私钥；没有可用密钥或密钥认证失败时直接提示输入密码，不再询问 y/N，自动转前台、<code>getpass</code> 不回显，90 秒未输入超时或按 Ctrl+Z 结束进程，密码不写命令行/环境变量/日志（只在服务内存中保留用于自动重连）。运行时自动补回 <code>diffie-hellman-group14-sha1</code>、<code>diffie-hellman-group1-sha1</code>、<code>ssh-rsa</code>，paramiko 3/5 均可连接老服务器，无需降级；连接断开会自动重建 SSH/SFTP 与终端 shell。</li>
+        <li><code>-D/--dept [RPORT [LPORT]]</code> 配合 <code>-R</code> 使用 SSH 自带 SOCKS5 把本机网络共享给远端：本机 <code>ssh -D</code> 建立 SOCKS5（出口本机），再经 <code>ssh -R</code> 转发到远端回环端口。端口顺序为远端、本地，可跟 0/1/2 个数字，默认均为 <code>9069</code>；远端程序设置 <code>ALL_PROXY=socks5h://127.0.0.1:REMOTE_PORT</code> 即可走本机网络。</li>
+        <li><code>-f/--serve</code> 在当前终端里直接运行服务（默认转入后台）；<code>-S/--stop</code> 停止后台服务，<code>-S --all</code> 停止当前用户所有端口的服务；<code>--status</code> 列出当前用户所有端口上运行的 mt.server。</li>
+        <li><code>-N/--no-token</code> 不启用 token 鉴权，直接用地址和端口访问；<code>-L/--host</code> 监听地址，默认只监听本机 <code>127.0.0.1</code>，也接受 <code>::1</code>、<code>::</code> 等 IPv6 地址。这两项都要在终端输入 <code>yes</code>/<code>YES</code> 才能启动，同时使用时需输入两次。</li>
+        <li><code>-o/--log [PATH]</code> 输出日志文件；默认不写日志。<code>-o</code> 不带参数时写到当前目录的 <code>mcta-server-&lt;port&gt;.log</code>，也可给出目录或文件名，已存在的同名文件会被覆盖。</li>
+        <li>3D 查看器的键粗、深度雾、晶胞棱，可在结构窗口空白处右键打开的“样式设置”弹窗中调整；左下角坐标轴的长度、颜色和样式在坐标轴区域右键调整，它只跟随结构旋转、长度固定。修改即时生效；在原子上右键可单独调整该原子的颜色和大小。</li>
+      </ul>
+      <h2 class="sec-title">要点</h2>
+      <ul class="plain">
+        <li>启动后打印带随机 token 的地址（形如 <code>http://127.0.0.1:9068/?t=…</code>）；所有请求都要校验该 token，每次重启都会换新，旧链接立即失效。链接本身就是访问凭据，请勿分享。</li>
+        <li>不需要登录：服务以当前用户身份运行，文件浏览、编辑与下载限定在运行 <code>mt.server</code> 时所在的目录内（终端仍是完整的 shell，可自行切换目录）。同一端口再次启动会先停止旧服务，残留的 PID 记录会自动清理。</li>
+        <li>默认在后台运行；启动它的终端关闭或退出后，服务会自动停止。需要一直运行时，用 <code>-f</code> 在终端里直接运行，或放进 <code>tmux</code> / <code>screen</code> 中。</li>
+        <li>左侧栏里是真实的 PTY shell，和 SSH 登录一致，也从同一目录起步；终端切换目录时文件列表会同步跟随（起始目录外显示绝对路径），目录每 2 秒自动刷新。</li>
+        <li>使用 <code>-R</code> 时目录列表、上传、下载走三条独立的 SSH/SFTP 连接，终端用另一条 SSH 连接，大文件传输不会阻塞 shell；各链路各自重连，反复切换目录不会累积连接。小文件先下载到本机 ~/.cache/mcta 缓存目录再交给文本查看器 / ASE / 3Dmol，大结构、密度文件可由远端渲染。页面路径和终端 <code>cd</code> 目标始终使用服务器绝对路径，本地缓存目录不会显示或发给 shell。音频/视频按 HTTP Range 从 SFTP 边播边读，只在浏览器保留当前播放缓冲；大于 2 MB 的文本只加载当前视窗附近的行，滚动右侧滚动条时再取对应位置。拖入本地文件或目录可上传到当前路径，文件列表支持多选后打包下载；同一服务器固定使用同一缓存目录，退出服务不删除、下次可复用，仅在缓存目录过大时提示。密码只从终端不回显地读取，不进入命令行、环境变量或日志。</li>
+        <li>文件目录面板顶端可点“浮窗”变成小窗口（初始靠屏幕右侧）；把本地文件或目录拖进面板即可上传到当前路径，勾选多个文件可打包下载。已打开的文件浮窗在切换目录后仍会保留。</li>
+        <li>目录中的图片按数量排列，支持 PNG、JPG/JPEG、GIF、WebP、BMP、ICO、SVG格式，TIF/TIFF 无法预览，按普通文件下载。</li>
+        <li>结构文件与轨迹可直接在浏览器里查看（3Dmol.js）：默认正交投影，可一键切到透视；支持沿 x/y/z 轴按固定角度旋转、按比例缩放、重置视图，以及 1×–8×（默认 4×）分辨率导出 PNG / JPEG / WebP 图片。多帧轨迹可播放、逐帧拖动并选择 0.5×–4× 速度，最多读取 1000 帧（所有帧原子总数上限 500 万）；结构文件上限 256 MB，体数据文件上限 512 MB。</li>
+        <li>默认只监听回环地址；命令以当前用户权限执行，<b>请勿把带 token 的链接或端口暴露到外网</b>。</li>
+      </ul>
+
+      <h2 class="sec-title">远程访问：本地直通</h2>
+      <p style="margin:0 0 6px">
+        远端只需装好 mcta 并开启 SSH，本地用 <code>mt.server -R u@remote.example:2222 -d /example/project</code> 连接即可：本机自动寻找并启动远端的 mt.server，断开后自动停止，无需在远端额外配置或常驻进程。网页服务与浏览器仍在本机；目录浏览、上传下载、终端、3D 渲染各自走独立连接，远端无需开放网页端口；3D 渲染走系统 ssh 转发到远端 Unix socket，失败时自动回退到本地解析。
+      </p>
+      <figure class="card tunnel-card">
+        <svg class="tunnel-fig" viewBox="0 0 720 300" role="img" aria-label="-R 五通道关系示意图">
+          <defs>
+            <marker id="rChanArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M0 0 L10 5 L0 10 z" fill="#3b57d1"/>
+            </marker>
+          </defs>
+          <g>
+            <rect x="24" y="64" width="160" height="96" rx="10" fill="#ffffff" stroke="#c5ccd8" stroke-width="2"/>
+            <rect x="36" y="76" width="136" height="28" rx="5" fill="#f1f4f9" stroke="#c5ccd8"/>
+            <text x="104" y="94" text-anchor="middle" class="t-mono">127.0.0.1:9068</text>
+            <text x="104" y="132" text-anchor="middle" class="t-label">本地浏览器</text>
+            <text x="104" y="216" text-anchor="middle" class="t-label">本机 mt.server</text>
+            <text x="104" y="238" text-anchor="middle" class="t-sub">HTTP + token + 本地缓存</text>
+            <path d="M104 160 V188" stroke="#3b57d1" stroke-width="2.5" marker-end="url(#rChanArrow)"/>
+          </g>
+          <g>
+            <line x1="186" y1="126" x2="226" y2="126" stroke="#3b57d1" stroke-width="2.5" marker-end="url(#rChanArrow)"/>
+            <rect x="230" y="52" width="264" height="168" rx="16" fill="#eef1fc" stroke="#3b57d1" stroke-width="2" stroke-dasharray="7 5"/>
+            <text x="362" y="80" text-anchor="middle" class="t-label">五条独立通道</text>
+            <text x="362" y="108" text-anchor="middle" class="t-mono">HTTP / SFTP 浏览</text>
+            <text x="362" y="134" text-anchor="middle" class="t-mono">SFTP 上传 / 下载</text>
+            <text x="362" y="160" text-anchor="middle" class="t-mono">SSH PTY 终端</text>
+            <text x="362" y="186" text-anchor="middle" class="t-mono">ssh -L → Unix socket</text>
+            <text x="362" y="246" text-anchor="middle" class="t-sub">SSH 加密，远端不开放网页端口</text>
+            <line x1="498" y1="126" x2="536" y2="126" stroke="#3b57d1" stroke-width="2.5" marker-end="url(#rChanArrow)"/>
+          </g>
+          <g>
+            <rect x="540" y="46" width="156" height="204" rx="10" fill="#ffffff" stroke="#c5ccd8" stroke-width="2"/>
+            <rect x="552" y="58" width="132" height="34" rx="5" fill="#f1f4f9" stroke="#c5ccd8"/>
+            <circle cx="565" cy="75" r="4" fill="#3b57d1"/>
+            <text x="618" y="79" text-anchor="middle" class="t-sub">SFTP 目录 / 文件</text>
+            <rect x="552" y="100" width="132" height="34" rx="5" fill="#f1f4f9" stroke="#c5ccd8"/>
+            <circle cx="565" cy="117" r="4" fill="#57a55b"/>
+            <text x="618" y="121" text-anchor="middle" class="t-sub">SSH PTY 终端</text>
+            <rect x="552" y="142" width="132" height="34" rx="5" fill="#f1f4f9" stroke="#c5ccd8"/>
+            <circle cx="565" cy="159" r="4" fill="#e7b13a"/>
+            <text x="618" y="163" text-anchor="middle" class="t-sub">mt.server Unix socket</text>
+            <text x="618" y="206" text-anchor="middle" class="t-label">远程服务器</text>
+            <text x="618" y="228" text-anchor="middle" class="t-sub">u@remote.example:2222</text>
+          </g>
+        </svg>
+        <figcaption>-R 在本机启动网页服务，目录、文件、终端和 3D 渲染分别通过 SSH/SFTP 与 Unix socket 通道访问远程服务器；远端只运行 SSH 服务与可选的 Unix socket 渲染服务。</figcaption>
+      </figure>
+      <ol class="tunnel-steps">
+        <li>本机启动：<code>mt.server -R u@remote.example:2222 -d /example/project</code>，按提示输入密码或使用本地私钥。</li>
+        <li>本机浏览器打开打印出的带 token 地址；页面、token 校验和文件缓存都在本机。</li>
+        <li>远端只需开启 SSH 服务；如需 3D 渲染加速，远端安装同版本 mt.server 并以 <code>--socket</code> 模式运行即可，未安装时自动回退本地解析。</li>
+      </ol>
+      <ul class="plain">
+        <li>通道一：浏览器 ↔ 本机 mt.server 的 HTTP 页面（默认只监听 <code>127.0.0.1</code>，token 校验）。</li>
+        <li>通道二：目录浏览走(paramiko) SSH/SFTP 连接，列表有 1 秒短缓存，上传/删除后自动失效。</li>
+        <li>通道三：上传、下载与文件正文读取默认走三条 SFTP 传输通道；传输通道 1/2 大小文件都能用，第三条只传小文件。每次传输按文件大小和实时负载选通道，并发上传下载会随时切换；文件先缓存到本机 <code>~/.cache/mcta/ssh-*</code> 目录，同一服务器固定目录名、退出不删除可复用，仅在目录过大时提示。</li>
+        <li>通道四：终端是另一条 SSH PTY 连接，与文件传输互不阻塞，断线自动重建。</li>
+        <li>通道五：3D 渲染通过系统 <code>ssh -L</code> 把回环端口转发到远端 <code>mt.server --socket</code> 的 Unix socket；失败或文件较小时回退到 SFTP + 本地解析，渲染结果缓存在 <code>~/.cache/mcta/render-cache</code>。</li>
+      </ul>
+
+      <h2 class="sec-title">远程访问：SSH 端口转发</h2>
+      <p style="margin:0 0 6px">
+        远程服务器不必把网页端口对外开放。先在服务器上进入要浏览的目录运行 mt.server -p 9068，保持默认的 127.0.0.1 监听；再在本地计算机用 SSH 把远程的 9068 端口转发到本地的 9068，本地浏览器就能像访问本地服务一样打开页面。SSH 命令里要写远程登录用户名和 SSH 端口（示例 -p 22 user@remote，22 是 SSH 端口，不是网页端口）。链路全程走 SSH 加密通道，远程网页服务只监听回环地址。
+      </p>
+      <p style="margin:0 0 6px">
+        以上转发可以自动完成：使用 <code>mt.server -R user@host -P 9069 -p 9068</code>，远端 mt.server 只监听回环地址 9069，本地 9068 端口经 <code>ssh -L</code> 转发，<b>强制启用 token</b>；或使用 <code>mt.server -R user@host --socket -p 9068</code>，远端只开 Unix socket（默认 <code>~/.config/mcta/sock/mcta.sock</code>），token 可选，加 <code>-N</code> 则关闭。两种方式都会先在远端检测 mt.server，远端不写日志、输出全部回传本地；本地端口被占用或远端启动失败会报错退出，本地 Ctrl+C 结束时远端进程也会退出。启用 token 时由远端生成本地显示。
+      </p>
+      <figure class="card tunnel-card">
+        <svg class="tunnel-fig" viewBox="0 0 720 280" role="img" aria-label="SSH 端口转发关系示意图">
+          <defs>
+            <marker id="tunnelArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M0 0 L10 5 L0 10 z" fill="#3b57d1"/>
+            </marker>
+          </defs>
+          <g>
+            <rect x="24" y="52" width="188" height="126" rx="12" fill="#ffffff" stroke="#c5ccd8" stroke-width="2"/>
+            <rect x="36" y="64" width="164" height="94" rx="5" fill="#f1f4f9" stroke="#c5ccd8"/>
+            <path d="M36 82 H200" stroke="#c5ccd8"/>
+            <circle cx="46" cy="73" r="3" fill="#e0553d"/>
+            <circle cx="57" cy="73" r="3" fill="#e7b13a"/>
+            <circle cx="68" cy="73" r="3" fill="#57a55b"/>
+            <rect x="80" y="69" width="112" height="9" rx="4.5" fill="#ffffff"/>
+            <text x="118" y="120" text-anchor="middle" class="t-mono">127.0.0.1:9068</text>
+            <path d="M94 178 L118 194 L142 194 L166 178 Z" fill="#ffffff" stroke="#c5ccd8" stroke-width="2"/>
+            <path d="M104 194 H156" stroke="#c5ccd8" stroke-width="3" stroke-linecap="round"/>
+            <text x="118" y="224" text-anchor="middle" class="t-label">本地计算机</text>
+            <text x="118" y="246" text-anchor="middle" class="t-sub">浏览器</text>
+          </g>
+          <g>
+            <line x1="212" y1="110" x2="236" y2="110" stroke="#3b57d1" stroke-width="2.5" marker-end="url(#tunnelArrow)"/>
+            <rect x="240" y="58" width="240" height="104" rx="52" fill="#eef1fc" stroke="#3b57d1" stroke-width="2" stroke-dasharray="7 5"/>
+            <text x="360" y="86" text-anchor="middle" class="t-label">SSH 端口转发</text>
+            <text x="360" y="112" text-anchor="middle" class="t-mono">ssh -L 9068:127.0.0.1:9068</text>
+            <text x="360" y="136" text-anchor="middle" class="t-mono">-p 22 user@remote</text>
+            <line x1="484" y1="110" x2="528" y2="110" stroke="#3b57d1" stroke-width="2.5" marker-end="url(#tunnelArrow)"/>
+            <text x="360" y="190" text-anchor="middle" class="t-sub">加密通道</text>
+          </g>
+          <g>
+            <rect x="532" y="46" width="164" height="140" rx="10" fill="#ffffff" stroke="#c5ccd8" stroke-width="2"/>
+            <rect x="544" y="56" width="140" height="32" rx="5" fill="#f1f4f9" stroke="#c5ccd8"/>
+            <circle cx="558" cy="72" r="4" fill="#57a55b"/>
+            <text x="620" y="76" text-anchor="middle" class="t-mono">ssh user@remote:22</text>
+            <rect x="544" y="94" width="140" height="32" rx="5" fill="#f1f4f9" stroke="#c5ccd8"/>
+            <circle cx="558" cy="110" r="4" fill="#3b57d1"/>
+            <text x="620" y="114" text-anchor="middle" class="t-mono">mt.server :9068</text>
+            <rect x="544" y="132" width="140" height="32" rx="5" fill="#f1f4f9" stroke="#c5ccd8"/>
+            <circle cx="558" cy="148" r="4" fill="#e7b13a"/>
+            <text x="620" y="152" text-anchor="middle" class="t-mono">SFTP / PTY</text>
+            <text x="614" y="218" text-anchor="middle" class="t-label">远程服务器 user@remote:22</text>
+            <text x="614" y="240" text-anchor="middle" class="t-sub">开放 9068 端口（127.0.0.1）</text>
+            <text x="614" y="262" text-anchor="middle" class="t-sub">文件与终端由服务器处理</text>
+          </g>
+        </svg>
+        <figcaption>本地浏览器经 SSH 加密隧道访问远程 mt.server；SSH 用户名与端口写在 ssh 命令中（示例 user@remote:22，22 是 SSH 端口），远程 mt.server 监听 127.0.0.1:9068。</figcaption>
+      </figure>
+      <ol class="tunnel-steps">
+        <li>远程服务器：进入要浏览的目录，前台运行服务并记下 token：<code>ssh -p 22 user@remote</code>，<code>cd /path/to/project</code>，<code>mt.server -f</code>。</li>
+        <li>本地计算机：建立端口转发并保持这个终端开启：<code>ssh -N -L 9068:127.0.0.1:9068 -p 22 user@remote</code>。</li>
+        <li>本地浏览器打开远程打印的带 token 地址：<code>http://127.0.0.1:9068/?t=&lt;token&gt;</code>。</li>
+      </ol>
+      <ul class="plain">
+        <li>第一条命令在远程服务器执行；-f 表示在当前终端前台运行并持续显示地址与 token，关闭终端服务即停止，需要长期运行可放进 tmux 或 screen。</li>
+        <li>第二条命令在本地计算机执行；-N 只建立转发、不启动远程 shell，-p 22 是远程 SSH 端口、user@remote 是登录用户名与主机，-L 9068:127.0.0.1:9068 表示把本机 9068 的请求经 SSH 转到远程服务器的 127.0.0.1:9068。保持这个终端开启。</li>
+        <li>本地浏览器打开远程打印的带 token 地址；token 每次重启都会更换，重启后记得更新链接。</li>
+        <li>本地端口可以换，例如用 -L 18068:127.0.0.1:9068 时访问 http://127.0.0.1:18068/?t=… ；远程服务端口用 -p 修改时，转发目标端口要跟着改。</li>
+        <li>这种方式与 -R 不同：-R 由本机的服务通过 SSH 去浏览远程文件；端口转发则是把远程运行的 mt.server 页面搬到本机浏览器，远程终端与文件仍由服务器上的服务处理。</li>
+      </ul>
+
+    </section>
+
+    <footer class="site-foot">
+      <div class="about-anim sm" aria-hidden="true"><span class="w-m">M</span><span class="w-c">c</span><span class="w-t">T</span><span class="w-a">a</span></div>
+      <h2 class="sec-title">许可</h2>
+      <p style="margin:0">
+        <a class="license-link" id="footMit" href="#" role="button" tabindex="0" title="查看许可">MIT License</a><span> · 源码与问题反馈：</span>
+        <a href="https://github.com/lkccrr/mcta" target="_blank" rel="noopener">GitHub</a> ·
+        <a href="https://pypi.org/project/mcta/" target="_blank" rel="noopener">PyPI</a>
+      </p>
+    </footer>
+
+  </main>
+</div>
+
+<div class="license-overlay hidden" id="licenseOverlay" role="dialog" aria-label="MIT License" aria-modal="false">
+  <pre class="license-text" id="licenseText"></pre>
+</div>
+
+<script>
+  /* ---------- 语言：简体中文 / English ---------- */
+  (function () {
+    /* 英文文案：键为页面里的中文原文（空白已归一） */
+    /* I18N_EN_BEGIN */
+    var EN_DICT = {
+      "格塔 · Meta Crystal Toolkit & Analysis": "Meta Crystal Toolkit & Analysis",
+      "概览": "Overview",
+      "安装": "Installation",
+      "使用": "Usage",
+      "能带与态密度": "Bands & DOS",
+      "关于": "About",
+      "终端": "Terminal",
+      "打开终端": "Open terminal",
+      "本地模拟": "Local demo",
+      "把 VASP 与 phonopy 的常见后处理收进一组": "packs common VASP and phonopy post-processing into one set of",
+      "命令：读原始输出直接出图， 参数与风格保持一致。": "commands: plot straight from raw output, with consistent flags and style.",
+      "背景": "Background",
+      "起点": "Origin",
+      "：能带、态密度、声子谱的读取与绘图散落在多份脚本里，参数与出图风格各不相同。": ": reading and plotting bands, DOS and phonon spectra was scattered across many scripts, each with its own flags and style.",
+      "做法": "Approach",
+      "：统一为一组": ": unified into one set of",
+      "子命令，读": "subcommands that read",
+      "、": ", ",
+      "等原始输出即可出图。": "and other raw outputs, then plot directly.",
+      "范围": "Scope",
+      "：电子结构、晶格动力学、结构检索、准随机固溶体与磁性蒙特卡洛；除": ": electronic structure, lattice dynamics, structure search, SQS and magnetic Monte Carlo; ",
+      "联网，": "requires network access, while ",
+      "可连接服务器外都在本地完成。": "can connect to a remote server; everything else runs locally.",
+      "用途": "What it covers",
+      "电子结构": "Electronic structure",
+      "：": ": ",
+      "出能带与投影，": "plots bands and projections, ",
+      "出态密度，可计算有效质量。": "plots DOS, and effective masses can be computed.",
+      "晶格动力学": "Lattice dynamics",
+      "出谱与态密度；": "plot spectra and DOS; ",
+      "查词条与流程。": "look up entries and workflows.",
+      "结构数据": "Structure data",
+      "检索并导出结构，": "search and export structures, ",
+      "生成准随机固溶体，": "generate SQS supercells, ",
+      "评估描述符重要性。": "rank descriptor importance.",
+      "模拟与脚本": "Simulation & scripting",
+      "跑磁性蒙特卡洛，": "run magnetic Monte Carlo, ",
+      "调用随包脚本，": "call bundled scripts, ",
+      "运行本地/远程文件服务。": "run the local/remote file server.",
+      "常用示例": "Common examples",
+      "命令": "Command",
+      "能带": "Bands",
+      "态密度": "DOS",
+      "声子谱": "Phonon bands",
+      "声子态密度": "Phonon DOS",
+      "结构检索": "Structure search",
+      "准随机固溶体": "SQS",
+      "描述符筛选": "Descriptor screening",
+      "磁性蒙特卡洛": "Magnetic Monte Carlo",
+      "随包脚本": "Bundled script",
+      "文件服务": "File server",
+      "统一约定": "Conventions",
+      "参数一致": "Consistent flags",
+      "指定输入目录或文件，": "sets the input directory or file, ",
+      "指定输出，": "sets the output, ",
+      "查看全部参数。": "shows all options.",
+      "输入原样": "Raw input",
+      "：只读取 VASP / phonopy 的原始输出，不要求先转格式，也不改动这些文件。": ": reads VASP / phonopy output as-is; no format conversion, and these files are never modified.",
+      "风格统一": "Consistent style",
+      "：分辨率、字体、刻度方向集中在": ": resolution, fonts and tick direction are set in",
+      "，环境变量优先。": ", with environment variables taking priority.",
+      "许可": "License",
+      "MIT License · 源码与问题反馈：": "MIT License · Source and issues:",
+      "· 源码与问题反馈：": " · Source and issues:",
+      "进入计算目录后，先看它认得哪些文件，再决定画什么。": "Enter a calculation directory, see which files it recognizes, then decide what to plot.",
+      "运行": "Run",
+      "总览当前目录，查看可用的计算文件。": "to overview the current directory and see which calculation files are available.",
+      "命令统一入口，负责说明用途并把参数原样转给对应的工具。": "is the single entry point: it explains usage and forwards flags unchanged to the matching tool.",
+      "配置入口": "Configuration",
+      "写法": "Format",
+      "：所有设置都可写成环境变量，或写入": ": every setting can be given as an environment variable or written to ",
+      "（": " (",
+      "）， 环境变量优先。": "), environment variables win.",
+      "图形参数": "Plot settings",
+      "。": ".",
+      "结构检索与描述符分析": "Structure search & descriptor analysis",
+      "）：": "): ",
+      "（免费的 Materials Project API Key，在线检索必填）、": "(free Materials Project API key, required for online search), ",
+      "，含义见": "; see ",
+      "其他工具": "Other tools",
+      "通过 pip 安装，默认只含 numpy、matplotlib、ase、spglib、paramiko（mt.server -R/--ssh 用），其余包按需追加。": "Install with pip; the default includes numpy, matplotlib, ase, spglib and paramiko (used by mt.server -R/--ssh); add the rest as needed.",
+      "启用的入口": "Entries enabled",
+      "额外依赖": "Extra dependencies",
+      "mt、band、dos、phband、phdos、ph、ph3、sh、server": "mt, band, dos, phband, phdos, ph, ph3, sh, server",
+      "numpy、matplotlib、ase、spglib": "numpy, matplotlib, ase, spglib",
+      "numpy、matplotlib、ase、spglib、paramiko": "numpy, matplotlib, ase, spglib, paramiko",
+      "mt.seek，同时启用 mt.skl": "mt.seek, also enables mt.skl",
+      "pymatgen、mp-api、scikit-learn 等": "pymatgen, mp-api, scikit-learn, etc.",
+      "scikit-learn、joblib": "scikit-learn, joblib",
+      "全部": "Everything",
+      "以上所有": "All of the above",
+      "说明": "Notes",
+      "Python ≥ 3.9。未安装对应可选依赖时，命令会给出提示而不是直接报错。": "Python ≥ 3.9. If an optional dependency is missing, commands print a hint instead of failing.",
+      "代码结构": "Code structure",
+      "路径": "Path",
+      "内容": "Contents",
+      "打包配置、依赖与命令行入口注册": "Packaging, dependencies and console-script entry points",
+      "项目主页与说明（中英双语，按浏览器语言自动切换）": "Project home page and docs (Chinese/English, switched by browser language)",
+      "版本号与包元数据": "Version and package metadata",
+      "命令行入口：": "CLI entry: ",
+      "的参数分发与转发、": "argument dispatch and forwarding, ",
+      "帮助文本与版本输出": "help text and version output",
+      "子命令表、总览；绘图字体、分辨率与刻度配置": "Subcommand table and overview; plot font, resolution and tick settings",
+      "能带、态密度、声子谱与声子文档（VASP / phonopy / phono3py）": "Bands, DOS, phonon spectra and phonon docs (VASP / phonopy / phono3py)",
+      "结构检索、SQS、描述符分析与检索代理": "Structure search, SQS, descriptor analysis and search agent",
+      "准随机固溶体生成": "SQS generation",
+      "描述符重要性与粗筛": "Descriptor importance and screening",
+      "蒙特卡洛引擎、晶格几何、并行与绘图": "Monte Carlo engine, lattice geometry, parallelism and plotting",
+      "调度与内置脚本": "dispatch and bundled scripts",
+      "文件服务、中英双语页面、终端与 3D 查看器资源（xterm.js / xterm.css / 3dmol-min.js）": "file server, bilingual pages, terminal and 3D viewer assets (xterm.js / xterm.css / 3dmol-min.js)",
+      "电子结构 · 晶格动力学": "Electronic structure · Lattice dynamics",
+      "四个绘图命令共用同一套参数与出图风格：": "Four plotting commands share one set of flags and one visual style: ",
+      "处理电子结构，": "handle electronic structure, ",
+      "处理声子谱。": "handle phonon spectra.",
+      "mt.band · 能带": "mt.band · Bands",
+      "能带结构绘图：可叠加 DOS、轨道投影与自旋极化镜像图，计算有效质量，并对比两三个计算结果。": "Band structure plots: overlay DOS, orbital projections and spin-polarized mirror plots, compute effective masses and compare two or three results.",
+      "在能带右侧拼接 DOS 面板，": "attaches a DOS panel to the right of the bands, ",
+      "生成自旋极化镜像图。": "produces the spin-polarized mirror plot.",
+      "叠加轨道投影，": "overlays orbital projections, ",
+      "估算带边有效质量。": "estimates the band-edge effective mass.",
+      "传入多个目录即可并排比较不同泛函或不同磁序的结果。": "Pass several directories to compare different functionals or magnetic orders side by side.",
+      "mt.dos · 态密度": "mt.dos · DOS",
+      "独立的态密度图，能量在横轴；可切换为与能带面板一致的纵向排布，支持投影与填充。": "Standalone DOS plot with energy on the horizontal axis; can switch to a vertical layout matching the band panel, with projections and fill.",
+      "绘制 d 轨道投影，": "plots the d-orbital projection, ",
+      "限定能量窗口。": "limits the energy window.",
+      "旋转为纵向排布，与": "rotates to a vertical layout, matching",
+      "的拼图风格一致。": "panel style.",
+      "mt.phband · 声子能带": "mt.phband · Phonon bands",
+      "声子能带绘图：可附 DOS 面板、对光学支做断轴处理，支持多个": "Phonon band plots: optional DOS panel and a broken axis for optical branches; multiple ",
+      "并排比较。": "files can be compared side by side.",
+      "按给定顺序标注高对称点。": "labels high-symmetry points in the given order.",
+      "设置断轴区间，避免低频声学支压扁光学支。": "sets the broken-axis range so low-frequency acoustic branches do not squash the optical ones.",
+      "附上声子态密度，": "attaches the phonon DOS, ",
+      "指定频率范围。": "sets the frequency range.",
+      "mt.phdos · 声子态密度": "mt.phdos · Phonon DOS",
+      "读取 phonopy 的": "Read phonopy's",
+      "或": "or",
+      "，绘制声子态密度。": " and plot the phonon DOS.",
+      "限定频率范围，单位与 phonopy 输出一致。": "limits the frequency range; units match phonopy output.",
+      "切换为纵向排布，方便与": "switches to a vertical layout to line up with",
+      "对齐。": "for easy comparison.",
+      "命令词库 · 中英文解释": "Command reference · Chinese / English",
+      "查 phonopy 与 phono3py 的用法：": "Look up phonopy and phono3py usage: ",
+      "给英文解释，": "gives the English explanation, ",
+      "给中文解释，不带词条时列出全部条目。": "gives the Chinese one; without an entry, all entries are listed.",
+      "常用命令": "Common commands",
+      "要点": "Key points",
+      "覆盖 phonopy，": "covers phonopy, ",
+      "覆盖 phono3py，词条与本地安装的版本对应。": "covers phono3py; entries match the locally installed version.",
+      "可一次查多个词条，如": "Look up several entries at once, e.g. ",
+      "除查词外，也保留扩胞、力常数、能带、热导率等步骤的流程命令。": "Besides lookups, it also keeps workflow commands for supercells, force constants, bands and thermal conductivity.",
+      "结构数据 · 检索 / 生成 / 分析": "Structure data · search / generate / analyze",
+      "三者共用同一工作目录：": "All three share one working directory: ",
+      "对导出的清单做描述符分析。": "runs descriptor analysis on the exported manifest.",
+      "mt.seek · 结构检索": "mt.seek · Structure search",
+      "从 Materials Project 检索结构，导出 CIF / POSCAR / JSON 与计算模板，并支持对本地数据集去重、筛选与打包。": "Search structures from Materials Project and export CIF / POSCAR / JSON plus calculation templates; local datasets can be deduplicated, filtered and packaged.",
+      "指定元素组合，": "sets the element combination, ",
+      "限定返回数量，": "limits the number of results, ",
+      "设置数据集名称。": "sets the dataset name.",
+      "需要在配置中提供": "Requires",
+      "，这是唯一需要联网的命令。": ", the only command that needs the network.",
+      "mt.sqs · 准随机固溶体": "mt.sqs · Special quasirandom structures",
+      "读入原胞，按目标成分随机化指定子晶格，输出结构文件与成分统计。": "Read a unit cell, randomize the chosen sublattice to a target composition, and output structure files with composition statistics.",
+      "按 “元素:占比” 描述目标成分，多个元素用逗号分隔。": "describes the target composition as \"element:fraction\" ; separate multiple elements with commas.",
+      "按": "describes the target composition as",
+      "“元素:占比”": "\"element:fraction\"",
+      "描述目标成分，多个元素用逗号分隔。": "; separate multiple elements with commas.",
+      "指定超胞尺寸，": "sets the supercell size, ",
+      "指定输出名称。": "sets the output name.",
+      "mt.skl · 描述符分析": "mt.skl · Descriptor analysis",
+      "读取": "Read",
+      "读取工作根下各导出包": "Reads each bundle manifest under the working root",
+      "，用随机森林做": ", and use a random forest to regress",
+      "与": "and",
+      "回归和 5 折交叉验证，结果写入": "with 5-fold cross-validation; results go to",
+      "在工作根目录下扫描": "Scans",
+      "（由": "(exported by",
+      "就地导出），": "in place), and",
+      "导出），": "), and",
+      "可改根目录。": "changes the root directory.",
+      "输出特征重要性与基础评分，适合在建模前做一轮粗筛。": "Prints feature importance and baseline scores, a useful pre-modelling screen.",
+      "数值模拟 · 蒙特卡洛": "Numerical simulation · Monte Carlo",
+      "磁性材料的蒙特卡洛模拟：内置方格、三角、双层、简立方与五种二维 XY 晶格，也可从任意晶体结构建模；支持 Ising、海森堡与 XY 模型、并行链与副本交换。": "Monte Carlo simulation for magnetic materials: built-in square, triangular, bilayer, simple-cubic and five 2D XY lattices, or build from any crystal structure; supports Ising, Heisenberg and XY models, parallel chains and replica exchange.",
+      "按起始、终止、步长扫描温度，也支持单独列温度点（": "scans temperature by start, stop and step; explicit points (",
+      "）或反向范围（": ") or a reversed range (",
+      "）。": ") also work.",
+      "）设置并行推进的独立蒙特卡洛链数：默认 0 表示自动匹配线程数；值大于 1 时每条链从不同随机初态独立运行，最终取所有链的系综平均，等价于\"多次独立重复实验取平均\"，显著降低统计噪声。若同时使用": ") sets the number of independent Monte Carlo chains advanced in parallel: the default 0 matches the thread count automatically; values above 1 start each chain from a different random state, then average the ensemble over all chains, equivalent to averaging several independent runs, which greatly reduces statistical noise. If ",
+      "副本交换，链数必须与温度点数相等。": "replica exchange is used, the chain count must equal the number of temperature points.",
+      "）固定随机种子：给定后所有随机数（初态、Metropolis 接受/拒绝）都由该种子决定，在相同输入和代码版本下结果完全可复现，便于论文审稿和调试。默认不指定，每次运行产生不同结果。": ") fixes the random seed: once given, every random number (initial states, Metropolis accept/reject) derives from it, so results are fully reproducible for the same input and code version, which helps peer review and debugging. By default no seed is set and each run differs.",
+      "从结构建模并设定交换耦合：": "builds from a structure and sets exchange couplings: ",
+      "启用二维 XY 模型，还有": "enables the 2D XY model; ",
+      "四种构型；用螺旋度模数 Υ 与普适跳变": "are four more lattice geometries; the crossing of helicity modulus Υ with the universal jump ",
+      "的交点确定 BKT 转变温度，并统计最小环上的涡旋密度。": "locates the BKT transition temperature, and vortex density on the smallest loops is also reported. ",
+      "可在重绘日志时额外画出 10 K 的涡旋状态箭头图。": "also draws a vortex-state arrow plot at 10 K when redrawing a log.",
+      "指定磁性元素（或自动探测 d/f 族），": "sets the magnetic elements (or auto-detects d/f elements), ",
+      "按距离分段设置交换积分": "sets exchange integrals by distance shell",
+      "脚本助手": "Script helper",
+      "按短名运行随包附带的 bash 脚本：应变扫描、超胞、对称性分析等；本地同名脚本优先于内置脚本。": "Run bundled bash scripts by short name: strain scans, supercells, symmetry analysis and more; a local script with the same name takes precedence over the built-in one.",
+      "应变扫描，": "strain scans, ",
+      "构造超胞，": "builds supercells, ",
+      "做对称性分析。": "runs symmetry analysis.",
+      "当前目录存在同名脚本时优先使用，便于本地定制。": "A script with the same name in the current directory is used first, which makes local customization easy.",
+      "文件与终端 · 浏览器界面": "Files & terminal · Browser UI",
+      "在本地开一个网页服务：浏览目录、编辑文本、查看图片；以当前用户身份运行，文件浏览限定在运行目录内，并在页面里使用和 SSH 一致的交互式终端。加 -R/--ssh 后可直接浏览远程服务器：目录与文件走独立的 SFTP 连接，终端使用另一条 SSH 连接。": "Start a local web service: browse directories, edit text, view images; it runs as the current user, confines file browsing to the start directory, and provides an interactive terminal identical to SSH in the page. With -R/--ssh it can browse a remote server directly: directories and files use a dedicated SFTP connection, while the terminal uses a separate SSH connection.",
+      "参数": "Options",
+      "显示版本；": "show the version; ",
+      "显示帮助。": "show help.",
+      "监听端口，默认": "listen port, default",
+      "在当前终端里直接运行服务（默认转入后台）；": "run the service in the current terminal (background by default); ",
+      "停止后台服务，": "stop the background service, ",
+      "停止当前用户所有端口的服务；": "stop every server of the current user; ",
+      "列出当前用户所有端口上运行的 mt.server。": "list every mt.server running on any port for the current user.",
+      "不启用 token 鉴权，直接用地址和端口访问；": "disable token authentication and access directly by address and port; ",
+      "监听地址，默认只监听本机": "listen address; by default it only listens on",
+      "，也接受": ", and also accepts ",
+      "等 IPv6 地址。这两项都要在终端输入": "and other IPv6 addresses. Both options require typing",
+      "才能启动，同时使用时需输入两次。": "to start; using both requires two confirmations.",
+      "输出日志文件；默认不写日志。": "write a log file; no log by default. ",
+      "不带参数时写到当前目录的": "without a path writes",
+      "，也可给出目录或文件名，已存在的同名文件会被覆盖。": " in the current directory; a directory or file name may also be given, and an existing file of the same name is overwritten.",
+      "，": ", ",
+      "3D 查看器的键粗、深度雾、晶胞棱，可在结构窗口空白处右键打开的“样式设置”弹窗中调整；左下角坐标轴的长度、颜色和样式在坐标轴区域右键调整，它只跟随结构旋转、长度固定。修改即时生效；在原子上右键可单独调整该原子的颜色和大小。": "In the 3D viewer, bond radius, depth cue and cell edges can be adjusted in the Style settings panel opened by right-clicking empty space. The bottom-left axes (length, color, style) are configured by right-clicking the axes area; they follow rotation only with a fixed length. Changes apply immediately. Right-click an atom to change its color and size individually.",
+      "启动后打印带随机 token 的地址（形如": "On start it prints an address with a random token (like",
+      "）；所有请求都要校验该 token，每次重启都会换新，旧链接立即失效。链接本身就是访问凭据，请勿分享。": "); every request validates that token, it changes on each restart and old links stop working. The link itself is the credential, so do not share it.",
+      "不需要登录：服务以当前用户身份运行，文件浏览、编辑与下载限定在运行": "No login: the service runs as the current user and confines file browsing, editing and download to the directory where",
+      "时所在的目录内（终端仍是完整的 shell，可自行切换目录）。同一端口再次启动会先停止旧服务，残留的 PID 记录会自动清理。": "it was run (the terminal is still a full shell and can change directory). Starting again on the same port stops the old service first, and stale PID records are cleaned up automatically.",
+      "默认在后台运行；启动它的终端关闭或退出后，服务会自动停止。需要一直运行时，用": "Runs in the background by default and stops when the terminal that started it closes or exits. To keep it running, use",
+      "在终端里直接运行，或放进": "to run it in the terminal, or put it in",
+      "中。": "instead.",
+      "左侧栏里是真实的 PTY shell，和 SSH 登录一致，也从同一目录起步；终端切换目录时文件列表会同步跟随（起始目录外显示绝对路径），目录每 2 秒自动刷新。": "The sidebar is a real PTY shell, identical to an SSH login, starting in the same directory; when the terminal changes directory the file list follows (absolute paths outside the start directory), and directories refresh every 2 seconds.",
+      "目录中的图片按数量排列，支持 PNG、JPG/JPEG、GIF、WebP、BMP、ICO、SVG格式，TIF/TIFF 无法预览，按普通文件下载。": "Images in a directory are laid out by count, supporting PNG, JPG/JPEG, GIF, WebP, BMP, ICO and SVG formats; TIF/TIFF cannot be previewed and download as regular files.",
+      "结构文件与轨迹可直接在浏览器里查看（3Dmol.js）：默认正交投影，可一键切到透视；支持沿 x/y/z 轴按固定角度旋转、按比例缩放、重置视图，以及 1×–8×（默认 4×）分辨率导出 PNG / JPEG / WebP 图片。多帧轨迹可播放、逐帧拖动并选择 0.5×–4× 速度，最多读取 1000 帧（所有帧原子总数上限 500 万）；结构文件上限 256 MB，体数据文件上限 512 MB。": "Structure files and trajectories can be viewed directly in the browser (3Dmol.js): orthographic projection by default with one-click perspective; rotate around x/y/z by fixed angles, scale, reset the view, and export PNG / JPEG / WebP at 1×–8× resolution (default 4×). Multi-frame trajectories can be played, scrubbed frame by frame and played at 0.5×–4× speed, reading up to 1000 frames (5 million atoms in total across all frames); structure files are capped at 256 MB and volumetric data at 512 MB.",
+      "命令参数清单": "Command options",
+      "展开查看每个命令的完整参数；与虚拟终端中": "Expand to see the complete options for each command; identical to",
+      "的输出一致。": "in the demo terminal.",
+      "文件目录面板顶端可点“浮窗”变成小窗口（初始靠屏幕右侧）；把本地文件或目录拖进面板即可上传到当前路径，勾选多个文件可打包下载。已打开的文件浮窗在切换目录后仍会保留。": "Click Float at the top of the file panel to turn it into a small window (initially on the right side of the screen); drop local files or folders onto the panel to upload them into the current path, and select multiple files to download them as a ZIP. Open file windows stay open when you change directories.",
+      "本地文件与终端服务（mt.server）": "Local file & terminal service (mt.server)",
+      "远程访问：本地直通": "Remote access: local passthrough",
+      "远端只需装好 mcta 并开启 SSH，本地用": "With mcta installed on the remote host and SSH enabled, simply connect locally with",
+      "连接即可：本机自动寻找并启动远端的 mt.server，断开后自动停止，无需在远端额外配置或常驻进程。网页服务与浏览器仍在本机；目录浏览、上传下载、终端、3D 渲染各自走独立连接，远端无需开放网页端口；3D 渲染走系统 ssh 转发到远端 Unix socket，失败时自动回退到本地解析。": ": the local machine finds and starts the remote mt.server automatically and stops it when the connection drops, with no extra configuration or resident process on the remote host. The web service and browser stay local; directory browsing, uploads/downloads, the terminal and 3D rendering use independent connections, and the remote host needs no open web port. 3D rendering goes through system ssh forwarding to a remote Unix socket and falls back to local parsing on failure.",
+      "本地浏览器": "Local browser",
+      "本机 mt.server": "Local mt.server",
+      "HTTP + token + 本地缓存": "HTTP + token + local cache",
+      "五条独立通道": "Five independent channels",
+      "HTTP / SFTP 浏览": "HTTP / SFTP browsing",
+      "SFTP 上传 / 下载": "SFTP upload / download",
+      "SSH PTY 终端": "SSH PTY terminal",
+      "ssh -L → Unix socket": "ssh -L -> Unix socket",
+      "SSH 加密，远端不开放网页端口": "SSH encrypted; no web port opened remotely",
+      "SFTP 目录 / 文件": "SFTP directories / files",
+      "mt.server Unix socket": "mt.server Unix socket",
+      "远程服务器": "Remote server",
+      "u@remote.example:2222": "u@remote.example:2222",
+      "-R 在本机启动网页服务，目录、文件、终端和 3D 渲染分别通过 SSH/SFTP 与 Unix socket 通道访问远程服务器；远端只运行 SSH 服务与可选的 Unix socket 渲染服务。": "With -R the web service starts locally; directories, files, the terminal and 3D rendering reach the remote host over separate SSH/SFTP and Unix socket channels. The remote host only runs SSH and, optionally, the Unix socket render service.",
+      "本机启动：": "Start locally: ",
+      "，按提示输入密码或使用本地私钥。": "; enter the password when prompted or use a local private key.",
+      "本机浏览器打开打印出的带 token 地址；页面、token 校验和文件缓存都在本机。": "Open the printed token-bearing URL in the local browser; the page, token check and file cache all stay local.",
+      "通道二：目录浏览走(paramiko) SSH/SFTP 连接，列表有 1 秒短缓存，上传/删除后自动失效。": "Channel 2: directory browsing uses a (paramiko) SSH/SFTP connection with a 1-second list cache, invalidated after writes.",
+      "通道四：终端是另一条 SSH PTY 连接，与文件传输互不阻塞，断线自动重建。": "Channel 4: the terminal is a separate SSH PTY connection, independent of file transfers and reconnected automatically.",
+      "远程访问：SSH 端口转发": "Remote access: SSH port forwarding",
+      "远程服务器不必把网页端口对外开放。先在服务器上进入要浏览的目录运行 mt.server -p 9068，保持默认的 127.0.0.1 监听；再在本地计算机用 SSH 把远程的 9068 端口转发到本地的 9068，本地浏览器就能像访问本地服务一样打开页面。SSH 命令里要写远程登录用户名和 SSH 端口（示例 -p 22 user@remote，22 是 SSH 端口，不是网页端口）。链路全程走 SSH 加密通道，远程网页服务只监听回环地址。": "The remote server does not need to expose its web port. Run mt.server -p 9068 on the server in the directory you want to browse and keep the default 127.0.0.1 binding; then on your local machine use SSH to forward the remote port 9068 to local port 9068, and the local browser opens the page just like a local service. Put the remote login user and SSH port in the SSH command (example -p 22 user@remote, where 22 is the SSH port, not the web port). The whole link goes through an encrypted SSH tunnel and the remote web service listens on loopback only.",
+      "本地计算机": "Local computer",
+      "浏览器": "Browser",
+      "SSH 端口转发": "SSH port forwarding",
+      "加密通道": "Encrypted tunnel",
+      "远程服务器": "Remote server",
+      "远程服务器 user@remote:22": "Remote server user@remote:22",
+      "开放 9068 端口（127.0.0.1）": "Port 9068 open (127.0.0.1)",
+      "文件与终端由服务器处理": "Files and terminal handled on the server",
+      "本地浏览器经 SSH 加密隧道访问远程 mt.server，两端端口均为 9068。": "The local browser reaches the remote mt.server through an encrypted SSH tunnel; both ends use port 9068.",
+      "本地浏览器经 SSH 加密隧道访问远程 mt.server；SSH 用户名与端口写在 ssh 命令中（示例 user@remote:22，22 是 SSH 端口），远程 mt.server 监听 127.0.0.1:9068。": "The local browser reaches the remote mt.server through an encrypted SSH tunnel; the SSH user and port go in the ssh command (example user@remote:22, where 22 is the SSH port), and the remote mt.server listens on 127.0.0.1:9068.",
+      "远程服务器：进入要浏览的目录，前台运行服务并记下 token：": "On the remote server: enter the directory to browse, run the service in the foreground and note the token: ",
+      "本地计算机：建立端口转发并保持这个终端开启：": "On the local computer: set up port forwarding and keep this terminal open: ",
+      "本地浏览器打开远程打印的带 token 地址：": "Open the token-bearing address printed on the remote side in the local browser: ",
+      "# 1) 远程服务器：进入要浏览的目录，前台运行服务并记下 token": "# 1) On the remote server: enter the directory to browse, run the service in the foreground and note the token",
+      "# 2) 本地计算机：把远程 9068 转发到本地 9068（保持终端开启）": "# 2) On the local computer: forward remote 9068 to local 9068 (keep this terminal open)",
+      "# 3) 本地浏览器打开（token 用远程打印的那个）": "# 3) Open in the local browser (use the token printed on the remote side)",
+      "第一条命令在远程服务器执行；-f 表示在当前终端前台运行并持续显示地址与 token，关闭终端服务即停止，需要长期运行可放进 tmux 或 screen。": "The first command runs on the remote server; -f runs the service in the foreground and keeps showing the address and token. Closing the terminal stops the service; for long-running use, put it in tmux or screen.",
+      "第二条命令在本地计算机执行；-N 只建立转发、不启动远程 shell，-p 22 是远程 SSH 端口、user@remote 是登录用户名与主机，-L 9068:127.0.0.1:9068 表示把本机 9068 的请求经 SSH 转到远程服务器的 127.0.0.1:9068。保持这个终端开启。": "The second command runs on the local computer; -N only sets up forwarding without starting a remote shell, -p 22 is the remote SSH port and user@remote is the login user and host, and -L 9068:127.0.0.1:9068 forwards local port 9068 over SSH to 127.0.0.1:9068 on the remote server. Keep this terminal open.",
+      "本地浏览器打开远程打印的带 token 地址；token 每次重启都会更换，重启后记得更新链接。": "Open the token-bearing address printed by the remote service in the local browser; the token changes on every restart, so update the link after restarting.",
+      "本地端口可以换，例如用 -L 18068:127.0.0.1:9068 时访问 http://127.0.0.1:18068/?t=… ；远程服务端口用 -p 修改时，转发目标端口要跟着改。": "The local port can be changed, e.g. with -L 18068:127.0.0.1:9068 visit http://127.0.0.1:18068/?t=… ; when you change the remote service port with -p, update the forwarding target port to match.",
+      "这种方式与 -R 不同：-R 由本机的服务通过 SSH 去浏览远程文件；端口转发则是把远程运行的 mt.server 页面搬到本机浏览器，远程终端与文件仍由服务器上的服务处理。": "This differs from -R: with -R, the local service browses remote files over SSH; port forwarding instead brings the remote mt.server page to the local browser, while the remote terminal and files are still handled by the service on the server.",
+      "本地模式指定运行目录（页面起点），默认当前目录；远程模式指定服务器上的目录，路径无效则使用 SSH 默认目录。": "in local mode sets the run directory (page start), current directory by default; in remote mode sets the directory on the server, and an invalid path uses the SSH default directory.",
+      "通过 SSH/SFTP 浏览远程服务器，支持": "browse a remote server over SSH/SFTP, supporting",
+      "；用户名默认本机用户、端口默认 22。SSH 端口写在": "; the user defaults to the local user and the port to 22. The SSH port goes in",
+      "里，": ", and",
+      "仍是网页端口。启动前先进行非交互探测，优先本地私钥；没有可用密钥或密钥认证失败时直接提示输入密码，不再询问 y/N，自动转前台、": "is still the web port. A non-interactive probe runs before startup, preferring local private keys; a password is requested directly when no key is available or key authentication fails (no y/N prompt), switching to the foreground and using",
+      "不回显且不写命令行/环境变量/日志（只在服务内存中保留用于自动重连）。运行时自动补回": "with no echo and without writing it to the command line, environment or logs (kept only in service memory for auto-reconnect). At runtime it restores",
+      "，paramiko 3/5 均可连接老服务器，无需降级；连接断开会自动重建 SSH/SFTP 与终端 shell。": ", so paramiko 3/5 can reach legacy servers without a downgrade; on disconnect the SSH/SFTP connection and terminal shell are rebuilt automatically.",
+      "时目录列表、上传、下载走三条独立的 SSH/SFTP 连接，终端用另一条 SSH 连接，大文件传输不会阻塞 shell；各链路各自重连，反复切换目录不会累积连接。小文件先下载到本机 ~/.cache/mcta 缓存目录再交给文本查看器 / ASE / 3Dmol，大结构、密度文件可由远端渲染。页面路径和终端": "when using it, directory listing, upload and download use three dedicated SSH/SFTP connections while the terminal uses a separate SSH connection, so large transfers never block the shell; each link reconnects on its own and repeated directory switches do not accumulate connections. Small files are downloaded to the local ~/.cache/mcta cache before being handed to the text viewer / ASE / 3Dmol, while large structures and density files can be rendered remotely. Page paths and terminal",
+      "目标始终使用服务器绝对路径，本地缓存目录不会显示或发给 shell。音频/视频按 HTTP Range 从 SFTP 边播边读，只在浏览器保留当前播放缓冲；大于 2 MB 的文本只加载当前视窗附近的行，滚动右侧滚动条时再取对应位置。拖入本地文件或目录可上传到当前路径，文件列表支持多选后打包下载；同一服务器固定使用同一缓存目录，退出服务不删除、下次可复用，仅在缓存目录过大时提示。密码只从终端不回显地读取，90 秒未输入超时或按 Ctrl+Z 结束进程，不进入命令行、环境变量或日志。": "cd targets always use server-side absolute paths; the local cache directory is never shown or passed to the shell. Audio/video stream from SFTP over HTTP Range, keeping only the current playback buffer in the browser; text files over 2 MB load only the lines near the current viewport, and scrolling or dragging the seek bar fetches the corresponding position. Drop local files or folders to upload them into the current path, and select multiple files to download them as a ZIP. The same server reuses one cache directory that is kept on exit, with a warning only when it grows too large; and the password is read from the terminal without echo, with a 90-second timeout (Ctrl+Z ends the process), never entering the command line, environment or logs.",
+      "不回显，90 秒未输入超时或按 Ctrl+Z 结束进程，密码不写命令行/环境变量/日志（只在服务内存中保留用于自动重连）。运行时自动补回": "with no echo, a 90-second timeout (Ctrl+Z ends the process), and no writing to the command line, environment or logs (kept only in service memory for auto-reconnect). At runtime it restores",
+      "目标始终使用服务器绝对路径，本地缓存目录不会显示或发给 shell。音频/视频按 HTTP Range 从 SFTP 边播边读，只在浏览器保留当前播放缓冲；大于 2 MB 的文本只加载当前视窗附近的行，滚动右侧滚动条时再取对应位置。拖入本地文件或目录可上传到当前路径，文件列表支持多选后打包下载；同一服务器固定使用同一缓存目录，退出服务不删除、下次可复用，仅在缓存目录过大时提示。密码只从终端不回显地读取，不进入命令行、环境变量或日志。": "cd targets always use server-side absolute paths; the local cache directory is never shown or passed to the shell. Audio/video stream from SFTP over HTTP Range, keeping only the current playback buffer in the browser; text files over 2 MB load only the lines near the current viewport, and scrolling or dragging the seek bar fetches the corresponding position. Drop local files or folders to upload them into the current path, and select multiple files to download them as a ZIP. The same server reuses one cache directory that is kept on exit, with a warning only when it grows too large; and the password is read from the terminal without echo, never entering the command line, environment or logs.",
+      "（远端 mt.server Unix socket 路径）、": "(remote mt.server Unix socket path),",
+      "（-R 启用远端 3D 解析的大小阈值 MB）、": "(size threshold in MB for remote 3D parsing with -R),",
+      "（远端目录缓存秒数）、": "(remote directory cache TTL in seconds),",
+      "（3D 渲染缓存容量上限 MB）、": "(render cache size cap in MB),",
+      "（远端渲染失败后的重试间隔秒数）、": "(retry interval in seconds after a remote render failure),",
+      "（3D 渲染缓存根目录）。": "(3D render cache root directory).",
+      "时，网页服务与浏览器仍在本机，五条链路分工明确：浏览器访问本机页面；目录浏览、上传下载、终端、3D 渲染各自走独立连接。远端不需要开放网页端口，也不需要常驻一个监听 TCP 的 mt.server；3D 渲染走系统 ssh 转发到远端 Unix socket，失败时自动回退到本地解析。": ", the web service and browser stay on the local machine. Five links have separate roles: the browser opens the local page, while directory browsing, uploads/downloads, the terminal and 3D rendering use independent connections. The remote host needs no open web port and no mt.server listening on TCP; 3D rendering goes through system ssh forwarding to a remote Unix socket and falls back to local parsing on failure.",
+      "远端只需开启 SSH 服务；如需 3D 渲染加速，远端安装同版本 mt.server 并以": "The remote host only needs SSH; for faster 3D rendering, install the same mt.server version there and run it with",
+      "模式运行即可，未安装时自动回退本地解析。": "mode; without it, rendering falls back to local parsing.",
+      "通道一：浏览器 ↔ 本机 mt.server 的 HTTP 页面（默认只监听": "Channel 1: browser ↔ local mt.server HTTP page (binds",
+      "，token 校验）。": ", with token verification).",
+      "通道五：3D 渲染通过系统": "Channel 5: 3D rendering uses system",
+      "把回环端口转发到远端": "to forward a loopback port to the remote",
+      "的 Unix socket；失败或文件较小时回退到 SFTP + 本地解析，渲染结果缓存在": "Unix socket of mt.server --socket; on failure or for small files it falls back to SFTP plus local parsing, with results cached in",
+      "默认只监听回环地址；命令以当前用户权限执行，": "Listens on loopback only by default; commands run with the current user's privileges, so ",
+      "请勿把带 token 的链接或端口暴露到外网": "never expose a token-bearing link or port to the internet",
+      "以上转发可以自动完成：使用": "Forwarding can be automated: use ",
+      "，远端 mt.server 只监听回环地址 9069，本地 9068 端口经": ", the remote mt.server listens only on loopback port 9069 and local port 9068 is forwarded via ",
+      "转发，": " to it, ",
+      "强制启用 token": "token mandatory",
+      "；或使用": "; or use ",
+      "，远端只开 Unix socket（默认": ", the remote host opens only a Unix socket (default ",
+      "），token 可选，加": "); token is optional and adding ",
+      "则关闭。两种方式都会先在远端检测 mt.server，远端不写日志、输出全部回传本地；本地端口被占用或远端启动失败会报错退出，本地 Ctrl+C 结束时远端进程也会退出。启用 token 时由远端生成本地显示。": " disables it. Both modes first check that remote mt.server exists, write no remote log and show all output locally; they fail with a clear error if the local port is busy or the remote service cannot start, and stop the remote process when the local tunnel exits with Ctrl+C. With token enabled it is generated on the remote host for local display.",
+      "配合": "with ",
+      "使用 SSH 自带 SOCKS5 把本机网络共享给远端：本机": "uses SSH's built-in SOCKS5 to share the local network with the remote host: a local ",
+      "建立 SOCKS5（出口本机），再经": "opens SOCKS5 (exiting locally), then ",
+      "转发到远端回环端口。端口顺序为远端、本地，可跟 0/1/2 个数字，默认均为": "forwards it to a remote loopback port. Ports are given in the order remote, local; 0, 1 or 2 numbers may follow, both defaulting to ",
+      "；远端程序设置": "; on the remote host set ",
+      "即可走本机网络。": " to use the local network.",
+      "（-c/--socket 默认路径及远端 mt.server Unix socket 路径）、": "(default path for -c/--socket and the remote mt.server Unix socket), ",
+      "（缓存淘汰保护窗口秒数）、": "(recent-entry prune protection window in seconds), ",
+      "（单次渲染总时长上限秒数）、": "(total time cap for one render request), ",
+      "（传输通道数，默认 3，第 3 条仅小文件）、": "(number of transfer channels, default 3; channel 3 carries small files only), ",
+      "（大文件阈值 MB）、": "(large-file threshold in MB), ",
+      "（3D 渲染与 -R 文件缓存根目录，默认 ~/.cache）。": "(root of the 3D render cache and -R file cache, default ~/.cache).",
+      "通道三：上传、下载与文件正文读取默认走三条 SFTP 传输通道；传输通道 1/2 大小文件都能用，第三条只传小文件。每次传输按文件大小和实时负载选通道，并发上传下载会随时切换；文件先缓存到本机": "Channel 3: uploads, downloads and file reads use three SFTP transfer channels by default; channels 1/2 accept any file size while the third carries small files only. Each transfer picks a channel by size and live load, so concurrent uploads and downloads switch channels as load changes; files are cached locally under ",
+      "目录，同一服务器固定目录名、退出不删除可复用，仅在目录过大时提示。": ", with a fixed directory name per server; the cache survives exit and is reused, with a warning only when it grows too large.",
+    };
+    /* I18N_EN_END */
+
+    /* 使用页里的 mt -h 输出（中文版在 HTML 里） */
+    var HELP_PRE_EN = [
+      "mt: the single entry point - explains what each tool does and forwards options unchanged.",
+      "mt < band | dos | phband | phdos | ph | ph3 | seek | skl | sqs | mc | sh | server > [args]",
+      "equivalent to mt.band | mt.dos | mt.phband | mt.phdos | mt.ph | mt.ph3 | mt.seek mt.skl | mt.sqs | mt.sh | mt.server [args]"
+    ].join("\n");
+
+    /* URL 参数强制切换语言：?lang=en / ?lang=zh */
+    function urlLang() {
+      var p = new URLSearchParams(location.search);
+      var v = (p.get("lang") || p.get("hl") || "").toLowerCase();
+      if (v.indexOf("en") === 0) return "en";
+      if (v.indexOf("zh") === 0) return "zh";
+      return "";
+    }
+
+    /* 用户手动选择过则记住 */
+    function savedLang() {
+      try {
+        var v = localStorage.getItem("mcta-lang");
+        return v === "en" || v === "zh" ? v : "";
+      } catch (e) { return ""; }
+    }
+    function saveLang(v) {
+      try { localStorage.setItem("mcta-lang", v); } catch (e) { /* 隐私模式下忽略 */ }
+    }
+
+    /* 浏览器语言：只有简体中文显示中文，其余都显示英文 */
+    function browserZh() {
+      var tags = (navigator.languages && navigator.languages.length)
+        ? navigator.languages : [navigator.language || ""];
+      var tag = String(tags[0] || "").toLowerCase();
+      return tag === "zh" || /^zh-(cn|sg|hans)\b/.test(tag);
+    }
+
+    var lang = urlLang() || savedLang() || (browserZh() ? "zh" : "en");
+    if (urlLang()) saveLang(lang);
+    window.MCTA_LANG = lang;
+    document.documentElement.lang = lang === "en" ? "en" : "zh-CN";
+
+    /* 语言按钮与下拉项宽度跟随侧栏 McTa 动画字符，略宽 10px */
+    (function syncLangWidth() {
+      function apply() {
+        var logo = document.querySelector('.brand .logo');
+        var wrap = document.getElementById('langWrap');
+        if (!logo || !wrap || !logo.offsetWidth) return;
+        wrap.style.setProperty('--lang-btn-w', (Math.ceil(logo.offsetWidth) + 10) + 'px');
+      }
+      window.__mctaSyncLangWidth = apply;
+      apply();
+      window.addEventListener('resize', apply);
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(apply);
+    })();
+
+    /* 语言切换：按钮显示当前语言，下拉只列出可切换到的另一种语言 */
+    var langBtn = document.getElementById("langToggle");
+    if (langBtn) {
+      var langName = langBtn.querySelector(".lang-name");
+      var langMenu = document.getElementById("langMenu");
+      var langItem = document.getElementById("langMenuItem");
+      var nextLang = lang === "zh" ? "en" : "zh";
+      if (langName) langName.textContent = lang === "en" ? "English" : "中文";
+      if (langItem) langItem.textContent = nextLang === "en" ? "English" : "中文";
+      langBtn.setAttribute("lang", lang === "zh" ? "zh-CN" : "en");
+      langBtn.title = nextLang === "en" ? "Switch to English" : "切换到中文";
+      langBtn.setAttribute("aria-label", langBtn.title);
+      function switchLang() {
+        saveLang(nextLang);
+        var url = new URL(location.href);
+        url.searchParams.delete("hl");
+        url.searchParams.set("lang", nextLang);
+        location.href = url.toString();
+      }
+      langBtn.addEventListener("click", function () {
+        if (!langMenu) { switchLang(); return; }
+        langMenu.classList.toggle("open");
+        langBtn.setAttribute("aria-expanded", langMenu.classList.contains("open") ? "true" : "false");
+      });
+      if (langItem) langItem.addEventListener("click", function (e) {
+        e.stopPropagation(); switchLang();
+      });
+      document.addEventListener("click", function (e) {
+        if (!langMenu) return;
+        if (langMenu.contains(e.target) || langBtn.contains(e.target)) return;
+        langMenu.classList.remove("open");
+        langBtn.setAttribute("aria-expanded", "false");
+      });
+    }
+
+    if (lang !== "en") return;
+
+    /* MIT / MIT License 的悬停提示随页面语言切换 */
+    ["sideMit", "footMit"].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.title = "View license";
+    });
+
+    document.title = "McTa · Meta Crystal Toolkit & Analysis";
+    var EN_DESC = "McTa (Meta Crystal Toolkit & Analysis) collects common VASP and phonopy post-processing into mt.* commands: plot bands, DOS and phonon spectra directly from raw output, plus structure search, SQS, descriptor analysis and magnetic Monte Carlo.";
+    ["meta[name=description]", "meta[property='og:description']", "meta[name='twitter:description']"].forEach(function (sel) {
+      var el = document.querySelector(sel);
+      if (el) el.setAttribute("content", EN_DESC);
+    });
+    var ogLocale = document.querySelector("meta[property='og:locale']");
+    if (ogLocale) ogLocale.setAttribute("content", "en_US");
+    var ogAlt = document.querySelector("meta[property='og:locale:alternate']");
+    if (ogAlt) ogAlt.setAttribute("content", "zh_CN");
+    document.querySelectorAll('a[target="_blank"]').forEach(function (a) {
+      a.rel = "noopener noreferrer";
+    });
+
+    var helpPre = document.querySelector("#page-start pre.help");
+    if (helpPre) helpPre.textContent = HELP_PRE_EN;
+
+    var DEV = location.protocol === "file:" || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+    var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
+    var node;
+    while ((node = walker.nextNode())) {
+      var parent = node.parentNode;
+      if (!parent) continue;
+      if (parent.closest && parent.closest(".lang-wrap")) continue;
+      var tag = parent.nodeName;
+      if (tag === "SCRIPT" || tag === "STYLE" || tag === "PRE" || tag === "CODE" || tag === "KBD" || tag === "SAMP") continue;
+      var raw = node.nodeValue;
+      var key = raw.replace(/\s+/g, " ").trim();
+      if (!Object.prototype.hasOwnProperty.call(EN_DICT, key)) {
+        /* 中文原文改动而词典未同步时，开发环境给出提示，避免静默漏译 */
+        if (DEV && /[\u4e00-\u9fff]/.test(key)) console.warn("[i18n] missing EN:", key);
+        continue;
+      }
+      var tr = EN_DICT[key];
+      if (!tr) continue;
+      var lead = /^\s/.test(raw) && !/^\s/.test(tr) ? " " : "";
+      var trail = /\s$/.test(raw) && !/\s$/.test(tr) ? " " : "";
+      node.nodeValue = lead + tr + trail;
+    }
+
+    var termIn = document.getElementById("termIn");
+    if (termIn) termIn.setAttribute("aria-label", "McTa command demo terminal");
+    /* 控件提示与无障碍标签：这些属性不经过文本节点翻译，单独映射 */
+    var ATTR_EN = {
+      "查看许可": "View license",
+      "打开终端": "Open terminal",
+      "最小化": "Minimize",
+      "还原": "Restore",
+      "放大到整个页面": "Maximize to full page",
+      "还原到侧栏": "Restore to sidebar",
+      "-R 五通道关系示意图": "Diagram of the five -R channels",
+      "SSH 端口转发关系示意图": "Diagram of SSH port forwarding"
+    };
+    document.querySelectorAll("[title],[aria-label]").forEach(function (el) {
+      ["title", "aria-label"].forEach(function (a) {
+        var v = el.getAttribute(a);
+        if (v && Object.prototype.hasOwnProperty.call(ATTR_EN, v)) el.setAttribute(a, ATTR_EN[v]);
+      });
+    });
+  })();
+
+  (function () {
+    document.body.classList.add('js');
+    const pages = Array.prototype.slice.call(document.querySelectorAll('.page'));
+    const items = Array.prototype.slice.call(document.querySelectorAll('[data-page]'));
+    const toggle = document.getElementById('startToggle');
+    const cmdList = document.getElementById('cmdList');
+    const subNames = Array.prototype.map.call(cmdList.querySelectorAll('.nav-item'), function (el) {
+      return el.dataset.page;
+    });
+
+    function setGroup(open) {
+      cmdList.classList.toggle('open', open);
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+
+    function activate(name) {
+      let target = document.getElementById('page-' + name);
+      if (!target) {
+        name = 'overview';
+        target = document.getElementById('page-overview');
+      }
+      const inSub = subNames.indexOf(name) !== -1;
+      pages.forEach(function (p) { p.classList.toggle('active', p === target); });
+      items.forEach(function (i) {
+        const on = i.dataset.page === name;
+        i.classList.toggle('active', on);
+        if (on) i.setAttribute('aria-current', 'page');
+        else i.removeAttribute('aria-current');
+      });
+      toggle.classList.toggle('active', inSub);
+      if (inSub) setGroup(true);
+      else if (name !== 'start') setGroup(false);
+      if (location.hash !== '#' + name) {
+        history.replaceState(null, '', '#' + name);
+      }
+      window.scrollTo(0, 0);
+    }
+
+    toggle.addEventListener('click', function () {
+      setGroup(!cmdList.classList.contains('open'));
+    });
+
+    items.forEach(function (item) {
+      item.addEventListener('click', function (e) {
+        e.preventDefault();
+        activate(item.dataset.page);
+      });
+    });
+
+    window.addEventListener('hashchange', function () {
+      activate(location.hash.slice(1));
+    });
+
+    activate(location.hash.slice(1) || 'overview');
+  })();
+
+  /* ---------- 侧栏：本地模拟终端 ---------- */
+  (function () {
+    const box = document.getElementById('siteTerm');
+    const log = document.getElementById('termLog');
+    const input = document.getElementById('termIn');
+    if (!box || !log || !input) return;
+    const scrollWrap = box.querySelector('.term-scroll');
+    const rainCanvas = box.querySelector('.term-rain');
+
+    /* ---- 字符雨特效 ---- */
+    const rainCtx = rainCanvas ? rainCanvas.getContext('2d') : null;
+    let rainRaf = null;
+    let rainActive = false;
+    let rainVisible = true;
+    let rainStep = null;
+    let rainLast = 0;
+    let rainLastTick = 0;
+    let rainPaused = false;
+    let rainResize = null;
+    let rainDisabled = false;
+
+    function setupRain() {
+      if (!rainCtx) return;
+      // 高分屏画布像素翻倍是卡顿来源之一，上限压到 1.5。
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      const w = rainCanvas.clientWidth;
+      const h = rainCanvas.clientHeight;
+      rainCanvas.width = Math.round(w * dpr);
+      rainCanvas.height = Math.round(h * dpr);
+      rainCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const chars = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789=<>+-*/|\\#@$%&';
+      const fontSize = 13;
+      const cols = Math.floor(w / fontSize);
+      const drops = new Array(cols).fill(1).map(() => Math.random() * -20);
+
+      function step() {
+        rainCtx.fillStyle = 'rgba(16, 21, 29, 0.09)';
+        rainCtx.fillRect(0, 0, w, h);
+        rainCtx.font = fontSize + 'px ui-monospace, Menlo, Consolas, monospace';
+        for (let i = 0; i < cols; i++) {
+          const ch = chars[Math.floor(Math.random() * chars.length)];
+          const x = i * fontSize;
+          const y = drops[i] * fontSize;
+          rainCtx.fillStyle = 'rgba(126, 231, 135, 0.85)';
+          rainCtx.fillText(ch, x, y);
+          if (y > h && Math.random() > 0.975) drops[i] = 0;
+          drops[i]++;
+        }
+      }
+      return step;
+    }
+
+    function canRain() {
+      // 字符雨只在侧栏终端显示；浮窗（含最小化停靠）不呈现。
+      // 不再用 elementFromPoint 做遮挡检测：它会强制同步布局，在滚动/浮层堆叠时
+      // 反复触发布局抖动，是卡顿主因。可见性改由 IntersectionObserver + 浮窗状态
+      // + document.hidden + 交互暂停统一表达，覆盖/LICENSE 浮层下照常运行。
+      const wrap = box.closest('.term-wrap');
+      if (wrap && wrap.classList.contains('floating')) return false;
+      // 用户执行过一次命令后永久关闭；点击目录自动 cd 不算。
+      if (rainDisabled) return false;
+      return !!rainCtx && !rainPaused && !document.hidden && rainVisible;
+    }
+
+    function frame(ts) {
+      if (!rainActive) return;
+      if (!rainLast || ts - rainLast >= 60) {
+        rainLast = ts;
+        try { rainStep(); rainLastTick = Date.now(); }
+        catch (err) { stopRain(); rainLastTick = 0; return; } // 异常后停止，不再往下排队 RAF
+      }
+      rainRaf = requestAnimationFrame(frame);
+    }
+
+    function startRain() {
+      if (rainActive || !canRain()) return;
+      let next;
+      try { next = setupRain(); } catch (err) { return; }
+      rainStep = next;
+      rainActive = true;
+      rainCanvas.style.opacity = '';
+      rainLast = 0;
+      rainLastTick = Date.now();
+      rainRaf = requestAnimationFrame(frame);
+    }
+
+    function stopRain() {
+      if (!rainCtx) return;
+      rainActive = false;
+      rainCanvas.style.opacity = '0';
+      if (rainRaf) { cancelAnimationFrame(rainRaf); rainRaf = null; }
+    }
+
+    // 卡死自恢复：RAF 停摆、绘制抛错、暂停标记残留时强制重建。
+    function kickRain() {
+      stopRain();
+      rainLastTick = 0;
+      startRain();
+    }
+    setInterval(function () {
+      const now = Date.now();
+      if (rainDisabled) { stopRain(); return; }
+      if (!canRain()) {
+        if (rainPaused && !rainResize) rainPaused = false;
+        return;
+      }
+      if (!rainActive || !rainLastTick || now - rainLastTick > 1500) kickRain();
+    }, 1000);
+
+    function syncRain() {
+      if (canRain()) startRain(); else stopRain();
+    }
+    // 全局 pointer/scroll 高频事件节流：避免每次事件都 setState 造成抖动。
+    let rainSyncTimer = null;
+    function scheduleSync() {
+      if (rainSyncTimer) return;
+      rainSyncTimer = setTimeout(function () { rainSyncTimer = null; syncRain(); }, 120);
+    }
+    ['pointerdown', 'click', 'scroll'].forEach(function (evt) {
+      document.addEventListener(evt, scheduleSync, true);
+    });
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) stopRain(); else startRain();
+    });
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (entries) {
+        rainVisible = entries[0].isIntersecting;
+        if (rainVisible) startRain(); else stopRain();
+      }, { threshold: 0.01 }).observe(box);
+    }
+    // 统一暂停入口：模式切换、浮窗缩放、页面缩放、终端交互都走这里；结束后按当前终端尺寸重建。
+    function pauseRain(ms) {
+      const wait = typeof ms === 'number' && ms > 0 ? ms : 180;
+      rainPaused = true;
+      stopRain();
+      clearTimeout(rainResize);
+      rainResize = setTimeout(function () {
+        rainResize = null;
+        rainPaused = false;
+        startRain();
+      }, wait);
+    }
+    function pauseRainForResize() { pauseRain(180); }
+    // 用户真正输入命令并回车后关闭字符雨；点击页面目录自动切换目录不会调用这里。
+    function disableRain() {
+      if (rainDisabled) return;
+      rainDisabled = true;
+      clearTimeout(rainResize);
+      rainResize = null;
+      rainPaused = false;
+      stopRain();
+    }
+    window.addEventListener('resize', pauseRainForResize);
+    if ('ResizeObserver' in window) {
+      let roFirst = true;
+      new ResizeObserver(function () {
+        if (roFirst) { roFirst = false; return; }
+        pauseRainForResize();
+      }).observe(box);
+    }
+    // 鼠标选择、键盘输入期间暂停字符雨，停止操作后自动恢复。
+    box.addEventListener('pointerdown', function () { pauseRain(500); }, true);
+    box.addEventListener('pointermove', function (e) { if (e.buttons) pauseRain(500); }, true);
+    box.addEventListener('pointerup', function () { pauseRain(500); }, true);
+    box.addEventListener('keydown', function () { pauseRain(500); }, true);
+    box.addEventListener('input', function () { pauseRain(500); }, true);
+    startRain();
+    window.__mctaRainKick = kickRain;
+    window.__mctaRainDisable = disableRain;
+    window.__mctaRainState = function () {
+      return { active: rainActive, paused: rainPaused, disabled: rainDisabled, lastTick: rainLastTick, canRun: canRain() };
+    };
+
+    /* ---- 终端逻辑 ---- */
+
+    const MT_HELP_ZH = `用法：mt <命令> [参数...]   参数原样转给该命令，如 mt ph -h
+
+  mt                    总览：命令的用途、常用示例与当前目录的建议
+  mt band      [参数]   等价于 mt.band      [参数]
+  mt dos       [参数]   等价于 mt.dos       [参数]
+  mt phband    [参数]   等价于 mt.phband    [参数]
+  mt phdos     [参数]   等价于 mt.phdos     [参数]
+  mt ph        [参数]   等价于 mt.ph        [参数]
+  mt ph3       [参数]   等价于 mt.ph3       [参数]
+  mt seek/sqs/skl [参数]   分别等价于 mt.seek / mt.sqs / mt.skl
+  mt mc        [参数]   等价于 mt.mc        [参数]
+  mt sh        [参数]   等价于 mt.sh        [参数]
+  mt server    [参数]   等价于 mt.server    [参数]
+
+  环境变量（也可写入 ~/.config/mcta/config，KEY=VALUE；环境变量优先）：
+    绘图          MT_FONT_FAMILY、MT_MATHTEXT_FONTSET、MT_RESOL、MT_XTICK_DIRECTION、MT_YTICK_DIRECTION
+    结构检索      MP_API_KEY、MT_SEEK_HOME、MT_SEEK_CONFIG、MT_SEEK_API_KEY、MT_SEEK_PROVIDER、MT_SEEK_BASE_URL、MT_SEEK_MODEL、MT_SEEK_MAX_TURNS、MT_SEEK_MAX_CAND
+    mt.server     MCTA_REMOTE_SOCKET、MCTA_REMOTE_RENDER_MIN_MB、MCTA_REMOTE_LIST_TTL、MCTA_RENDER_CACHE_MAX_MB、MCTA_CACHE_FRESH_SECONDS、MCTA_RENDER_RETRY_SECONDS、MCTA_RENDER_TOTAL_SECONDS、MCTA_XFER_CHANNELS、MCTA_XFER_LARGE_MB、XDG_CACHE_HOME
+    其他工具      MT_PH_DOCS、MT_PH3_DOCS、MTSH_SCRIPTS、PBE_PATH、LDA_PATH、GGA_PATH
+
+  -v, -V, --version     显示版本号（各子命令同样支持）`;
+
+    /* 兜底值与当前 mcta/__init__.py 一致；file:// 打开或 fetch 失败时 -v 仍显示正确版本 */
+    let VERSION = 'McTa (Meta Crystal Toolkit & Analysis) 0.0.33';
+
+    /* 版本号以 mcta/__init__.py 为准；站点与包同根目录时可直接读取 */
+    fetch('mcta/__init__.py').then(function (r) {
+      return r.ok ? r.text() : '';
+    }).then(function (src) {
+      const m = src.match(/__version__\s*=\s*["']([^"']+)["']/);
+      if (!m) return;
+      VERSION = 'McTa (Meta Crystal Toolkit & Analysis) ' + m[1];
+      const initFile = FILE_TEXT['/home/demo/mcta/mcta/__init__.py'];
+      if (initFile) initFile[2] = '__version__ = "' + m[1] + '"';
+    }).catch(function () { /* 本地 file:// 打开时无法读取，回退 dev */ });
+
+    const HELP_ZH = {
+  band: `mt.band — 电子能带 / 态密度
+
+  -h -H --help     显示帮助
+  -v -V --version  显示版本
+  -i --input       输入目录或 .dat 文件（默认当前目录）
+  -o --outpt       输出图片名
+  -S --figsz       图片尺寸：宽 高
+  -y --vrang       能量 / 频率范围
+  -x --horiz       态密度范围 electrons/eV
+  -p --parts       投影分量 s p d，或 元素-s,p,d
+  -e --elems       投影图例名
+  -G --legnd       图例文字
+  -a --legndx      图例水平偏移，1.0 = 图宽 10%
+  -A --legndy      图例垂直偏移，1.0 = 图高 10%
+  -C --color       线色：b/g/r/c/m/y/k 或 (r,g,b)
+  -k --style       线型：solid/dashed/dashdot/dotted
+  -w --width       线宽，默认 0.8
+  -z --alpha       填充透明度，默认 0.2
+  -n --exchg       交换坐标轴
+  -D --divid       上下自旋分图显示
+  -m --emass       有效质量，默认 0.15
+  -r --projs       投影能带（PROCAR）
+  -l --label       高对称点标签，如 X S Y K M
+  --klabels        KLABELS 文件名，默认 KLABELS
+  -d --dospl       并排附加态密度（无值则自动探测）
+  -W --ratio       态密度子图宽度比例
+  --vasp           （旧）同 -i，兼容保留
+  --no-shift       不按费米能级平移能量
+  --keep-weights   保留非零权重 k 点（HSE 网格）
+  --export-dat     同时导出 vaspkit BAND.dat/KLABELS/PDOS
+  --no-mirror      自旋向下 DOS 保持为正
+`,
+
+  dos: `mt.dos — 态密度（DOS / PDOS）
+
+  -h -H --help     显示帮助
+  -v -V --version  显示版本
+  -i --input       输入目录或 .dat 文件（默认当前目录）
+  -o --outpt       输出图片名
+  -S --figsz       图片尺寸：宽 高
+  -y --energ       能量范围，默认 -5 5 eV
+  -x --horiz       态密度范围 electrons/eV
+  -p --parts       投影分量 s p d，或 元素-s,p,d
+  -e --elems       投影图例名
+  -G --legnd       图例文字
+  -a --legndx      图例水平偏移，1.0 = 图宽 10%
+  -A --legndy      图例垂直偏移，1.0 = 图高 10%
+  -C --color       线色：b/g/r/c/m/y/k 或 (r,g,b)
+  -k --style       线型：solid/dashed/dashdot/dotted
+  -w --width       线宽，默认 0.8
+  -z --alpha       填充透明度，默认 0.2
+  -n --exchg       交换坐标轴
+  --no-mirror      自旋向下 DOS 保持为正
+  --no-shift       不按费米能级平移能量
+`,
+
+  phband: `mt.phband — 声子能带
+
+  -h -H --help     显示帮助
+  -v -V --version  显示版本
+  -i --input       输入目录或 .dat 文件（默认当前目录）
+  -o --outpt       输出图片名
+  -S --figsz       图片尺寸：宽 高
+  -y --vrang       能量 / 频率范围
+  -x --horiz       态密度范围 electrons/eV
+  -e --elems       投影图例名
+  -G --legnd       图例文字
+  -a --legndx      图例水平偏移，1.0 = 图宽 10%
+  -A --legndy      图例垂直偏移，1.0 = 图高 10%
+  -C --color       线色：b/g/r/c/m/y/k 或 (r,g,b)
+  -k --style       线型：solid/dashed/dashdot/dotted
+  -w --width       线宽，默认 0.8
+  -z --alpha       填充透明度，默认 0.2
+  -n --exchg       交换坐标轴
+  -B --brkax       断轴：起点 终点
+  --hratios        断轴高度比例，默认 0.2
+  -j --bconf       band.conf 文件名 / 写出 band.conf
+  -l --label       高对称点标签，如 X S Y K M
+  -d --dospl       并排附加态密度（无值则自动探测）
+  -W --ratio       态密度子图宽度比例
+`,
+
+  phdos: `mt.phdos — 声子态密度
+
+  -h -H --help     显示帮助
+  -v -V --version  显示版本
+  -i --input       输入目录或 .dat 文件（默认当前目录）
+  -o --outpt       输出图片名
+  -S --figsz       图片尺寸：宽 高
+  -y --freqs       频率范围（THz）
+  -x --horiz       态密度范围 electrons/eV
+  -e --elems       投影图例名
+  -G --legnd       图例文字
+  -a --legndx      图例水平偏移，1.0 = 图宽 10%
+  -A --legndy      图例垂直偏移，1.0 = 图高 10%
+  -C --color       线色：b/g/r/c/m/y/k 或 (r,g,b)
+  -k --style       线型：solid/dashed/dashdot/dotted
+  -w --width       线宽，默认 0.8
+  -z --alpha       填充透明度，默认 0.2
+  -n --exchg       交换坐标轴
+`,
+
+  ph: `mt.ph — phonopy 声子流程引导
+  子命令  supercell fs fc band dos tprop symmetry born qha gruneisen w / W（查本地用法）
+
+  -h -H --help     显示帮助
+  -v -V --version  显示版本
+  -Y --yesal       跳过命令执行确认
+  -R --dryrn       只打印命令，不执行
+  -s --dimns       超胞维数，1-3 个整数
+  -c --cells       原胞文件（自动探测 POSCAR-unitcell/CONTCAR/POSCAR）
+  -x --xname       力文件名
+  --rd --random    随机方向位移
+  --amplitude      位移幅度（Å）
+  --tolerance      对称等价容差（Å）
+  --random-seed    随机种子
+  --pa             原胞矩阵 "a b c; d e f; g h i" 或 auto
+  --symfc          用 symfc 算力常数
+  --alm            用 ALM 算力常数
+  --fc-calc-opt    传给力常数计算器的选项，如 cutoff=5
+  -n --fdirs       位移目录 / 后缀 / 范围，如 001-003
+  -b --bconf       band.conf 文件名 / 写出 band.conf
+  -d --mconf       写出 mesh.conf
+  -B --bfile       band.conf 名
+  -D --mfile       mesh.conf 名
+  -p --bpath       BAND 路径（分数坐标，配 -b）
+  -l --xlabl       BAND_LABELS（配 -b）
+  -N --point       每段 BAND_POINTS，默认 101
+  -m --mgrid       DOS / kappa 网格
+`,
+
+  ph3: `mt.ph3 — phono3py 热导率流程
+  子命令  supercell cf3 cf2 cfs fs2f2 kappa kaccum kdeplot w / W
+
+  -h -H --help     显示帮助
+  -v -V --version  显示版本
+  -Y --yesal       跳过命令执行确认
+  -R --dryrn       只打印命令，不执行
+  -s --dimns       超胞维数，1-3 个整数
+  -S --dimf2       fc2 超胞维数（同 -s 语法）
+  -c --cells       原胞文件（自动探测 POSCAR-unitcell/CONTCAR/POSCAR）
+  -x --xname       力文件名
+  -m --mgrid       kappa 网格，默认 11 11 11
+  -n --fdirs       位移目录 / 后缀 / 范围，如 001-003
+  -k --kfile       kappa-m*.hdf5（kaccum/kdeplot 输入）
+  --rd             随机方向位移
+  --rd-fc2         fc2 随机位移（需 -S）
+  --random-seed    随机种子
+  --amplitude      位移幅度（Å）
+  --sp --save-params写出 phono3py_params.yaml
+  --cfz            扣除残余力
+  --cutoff-pair    位移原子对截断距离
+  --cfs --create-force-sets由 FORCES_FC3 生成 FORCE_SETS
+  --fs2f2 --force-sets-to-forces-fc2由 FORCE_SETS 生成 FORCES_FC2
+`,
+
+  seek: `mt.seek — Materials Project 结构检索与策展
+
+  -h -H --help     显示帮助
+  -v -V --version  显示版本
+  --offline        离线自检（内置结构）
+  -c --chems       化学体系，如 Ti-C
+  -f --frmla       化学式，如 MoS2
+  -I --mpids       直接指定 mp_id，可多个
+  -n --names       导出包名称（默认按输入自动生成）
+  -k --topks       检索取前 k 个（默认 3）
+  -Q --refsh       忽略本地检索缓存，强制重新查询 MP
+  -F --formt       结构格式：cif,poscar,json,xyz
+  --job-template   同时生成 INCAR/KPOINTS/slurm 模板（赝势目录可用时含 POTCAR）
+  -t --tasks       自然语言任务（LLM 模式）
+  -p --provs       LLM 引擎，默认 openai
+  -L --lists       列出历史导出包
+  --home           工作根目录，默认当前目录
+
+  本地策展（筛选 / 去重 / 补下载）：
+  -d --dsets       查看本地数据集概况（条数、维度、磁性、稳定性）
+  -w --where       规则筛选，如 ehull<=0.05 and is_2d
+  -r --dedup       结构级去重（同式不同相保留）
+  -D --diver       sklearn 多样性挑选 K 个（最远点采样）
+  --outliers       IsolationForest 标出离群结构（仅提示不删除）
+  -u --curat       自然语言策展要求（LLM 转成筛选计划）
+  -T --topup       再下载 N 个（需 -c/-f；大写 -T，小写 -t 是 --tasks）
+  -m --maxeh       补下载的 ehull 上限，默认 0.05 eV/atom
+  -o --outdr       策展包名称，默认 curated-MMDD-HHMM
+  -R --dryrn       只预览不导出
+`,
+
+  skl: `mt.skl — 用 scikit-learn 分析结构清单
+
+  扫描工作根下 <name>/manifest.csv（mt.seek 就地导出），随机森林回归 ehull 与带隙，结果写入 <home>/ml/。
+
+  -h -H --help     显示帮助
+  -v -V --version  显示版本
+  --home           工作根目录，默认当前目录
+`,
+
+  sqs: `mt.sqs — 自定义晶胞 → 准随机固溶体（SQS）
+
+  -h -H --help     显示帮助
+  -v -V --version  显示版本
+  -c --cells       原胞文件（自动探测 POSCAR-unitcell/CONTCAR/POSCAR）
+  --host           参与随机化的元素位点
+  -a --alloy       合金成分，如 Cu:0.5,Au:0.5
+  -x --supcl       扩胞倍数，默认 3,3,3
+  --iterations     SQS 搜索迭代次数，默认 100000
+  --number         导出候选数，默认 1
+  -s --seeds       随机种子
+  -n --names       导出包名称
+  -F --formt       结构格式：cif,poscar,json,xyz
+  --job-template   同时生成 INCAR/KPOINTS/slurm 模板
+  -R --dryrn       只搜索、不写盘、不打包，打印候选 objective 预览
+  --home           工作根目录，默认当前目录
+`,
+
+  mc: `mt.mc — 磁性蒙特卡洛模拟
+
+  -h -H --help     显示帮助
+  -v -V --version  显示版本
+  -x -X --sizex    x 方向尺寸/超胞倍数，默认 32
+  -y -Y --sizey    y 方向尺寸/超胞倍数，默认 32
+  -z -Z --sizez    z 方向尺寸/超胞倍数，默认 32
+  -e --equil       平衡步数，默认 1000
+  -w --works       统计步数，默认 1000
+  -a --aniso       各向异性（矢量自旋）
+  -p --param       交换耦合参数，按通道顺序
+  -J --parax       矢量自旋 x 方向交换参数
+  -K --paray       矢量自旋 y 方向交换参数
+  -t --temps       温度序列，如 -t 0 40 2
+  -i --inits       初态：fm / afm1…afm5 / random
+  -c --confg       晶格：square/triangular/bilayer-*/simple-cubic
+  -s --struc       结构文件（POSCAR/CIF，ASE 可读）
+  -A --magat       磁性元素，如 Fe,Co
+  -D --cutof       结构模式各通道距离上限（Å）
+  --mom            原子磁矩标称值，默认 2
+  --ini            结构模式自旋初态 fm/afm/random 或 ±1 列表
+  -N --thrds       numba 线程数，0=自动
+  -C --chain       并行链数，0=同线程数
+  -S --seeds       随机种子
+  -W --swaps       回火交换间隔 sweep 数（0=关闭）
+  -R --dryrn       不自动绘图（只跑模拟并写日志）；默认结束后绘图
+  -l --label       高对称点标签，如 X S Y K M
+  -o --plots       由日志文件重新绘图
+  -T --vtemp       XY 涡旋箭头图温度（K）
+  -I --imgfm       输出图片格式，默认 png
+`,
+
+  sh: `mt.sh — 执行内置、自定义或随包脚本
+  mt.sh                  列出可用脚本及来源
+  mt.sh NAME [args...]   执行 NAME 脚本（如 mt.sh xy），参数原样转发
+  查找顺序：./NAME.sh → $MTSH_SCRIPTS → 随包 scripts/；NAME 只是脚本名，不接受路径
+`,
+
+  server: `mt.server — 本地文件服务、结构查看与终端
+
+usage: mt.server [-v] [-h] [-p PORT] [-c [PATH]] [-f] [-o [PATH]] [-d PATH]
+                 [-R u@h [...]] [-i KEY] [-P PORT] [-D [[...]]] [-N] [-L HOST]
+                 [-Y] [--status] [-S] [--all] [--no-hup]
+
+本地文件服务：浏览目录、编辑文本、查看图片，并提供 SSH 级终端。
+
+options:
+  -v, -V, --version     显示版本并退出
+  -h, -H, --help        显示帮助并退出
+  -p PORT, --port PORT  监听端口，默认 9068；远程转发模式下为本地转发监听端口
+  -c [PATH], --socket [PATH]
+                        本地与 -p 互斥，后跟路径；配合 -R 为远端 Unix socket 路径，并转发本地端口
+  -f, --serve           前台运行（在当前终端直接提供服务，不转入后台）
+  -o [PATH], --log [PATH]
+                        日志文件（默认不输出）；与 -f 同用时终端显示交互提示，启动/错误写日志
+  -d PATH, --run-dir PATH
+                        本地模式为运行目录（默认当前目录）；远程模式为服务器目录
+  -R u@h [ ...], --ssh u@h [ ...]
+                        远程模式；配合 -P 或 -c 时把远端网页服务转回本地端口
+  -i KEY, --ident KEY   配合 -R：指定 SSH 私钥文件；默认使用 ssh-agent 与 ~/.ssh 下的密钥
+  -P PORT, --rmt-port PORT
+                        配合 -R：远端端口，转回本地 -p；远端只监听回环地址，强制启用 token
+  -D [ [ ...]], --dept [ [ ...]]
+                        配合 -R：共享本机网络给远端；可跟 （远端、本地），默认 9069
+  -N, --no-token        不启用 token 鉴权（需输入 yes 确认），直接用地址和端口访问
+  -L HOST, --host HOST  监听地址，默认 127.0.0.1；对外监听（如 0.0.0.0）需输入 yes 确认
+  -Y, --yes             跳过危险启动选项的输入确认（配合 -L 非回环地址或 -N 使用）
+  --status              列出本用户所有端口与 Unix socket 上运行的 mt.server
+  -S, --stop            停止后台服务（含 -c 的 Unix socket 服务）
+  --all                 配合 -S 使用：停止本用户所有端口与 Unix socket 上运行的 mt.server
+  --no-hup              忽略 SIGHUP，不跟随启动终端退出；只能用 -S 或 -S --all 终止
+`,
+};
+
+    const MT_HELP_EN = `Usage: mt <command> [options...]   options are forwarded unchanged, e.g. mt ph -h
+
+  mt                    Overview: purpose, common examples and next steps for this directory
+  mt band      [args]   same as mt.band      [args]
+  mt dos       [args]   same as mt.dos       [args]
+  mt phband    [args]   same as mt.phband    [args]
+  mt phdos     [args]   same as mt.phdos     [args]
+  mt ph        [args]   same as mt.ph        [args]
+  mt ph3       [args]   same as mt.ph3       [args]
+  mt seek/sqs/skl [args]   same as mt.seek / mt.sqs / mt.skl
+  mt mc        [args]   same as mt.mc        [args]
+  mt sh        [args]   same as mt.sh        [args]
+  mt server    [args]   same as mt.server    [args]
+
+  Environment variables (also accepted in ~/.config/mcta/config as KEY=VALUE; env wins):
+    Plot             MT_FONT_FAMILY, MT_MATHTEXT_FONTSET, MT_RESOL, MT_XTICK_DIRECTION, MT_YTICK_DIRECTION
+    Structure search MP_API_KEY, MT_SEEK_HOME, MT_SEEK_CONFIG, MT_SEEK_API_KEY, MT_SEEK_PROVIDER, MT_SEEK_BASE_URL, MT_SEEK_MODEL, MT_SEEK_MAX_TURNS, MT_SEEK_MAX_CAND
+    mt.server        MCTA_REMOTE_SOCKET, MCTA_REMOTE_RENDER_MIN_MB, MCTA_REMOTE_LIST_TTL, MCTA_RENDER_CACHE_MAX_MB, MCTA_CACHE_FRESH_SECONDS, MCTA_RENDER_RETRY_SECONDS, MCTA_RENDER_TOTAL_SECONDS, MCTA_XFER_CHANNELS, MCTA_XFER_LARGE_MB, XDG_CACHE_HOME
+    Other tools      MT_PH_DOCS, MT_PH3_DOCS, MTSH_SCRIPTS, PBE_PATH, LDA_PATH, GGA_PATH
+
+  -v, -V, --version     show the version (supported by every subcommand)`;
+
+    const HELP_EN = {
+  band: `mt.band — electronic bands / DOS
+
+  -h -H --help     show help
+  -v -V --version  show version
+  -i --input       input directory or .dat files (default: current)
+  -o --outpt       output figure filename
+  -S --figsz       figure size: width height
+  -y --vrang       energy / frequency range
+  -x --horiz       DOS range, electrons/eV
+  -p --parts       projections: s p d, or Element-s,p,d
+  -e --elems       PDOS legend labels
+  -G --legnd       legend labels
+  -a --legndx      shift legend horizontally; 1.0 = 10% of figure width, positive = right
+  -A --legndy      shift legend vertically; 1.0 = 10% of figure height, positive = up
+  -C --color       line color: b/g/r/c/m/y/k or (r,g,b)
+  -k --style       linestyle: solid/dashed/dashdot/dotted
+  -w --width       line width, default 0.8
+  -z --alpha       fill opacity, default 0.2
+  -n --exchg       exchange the axes
+  -D --divid       plot the up and down spin in divided subplot
+  -m --emass       calculate the effective masses, default: 0.15
+  -r --projs       plot the projected band structure
+  -l --label       high-symmetry labels, e.g. X S Y K M
+  --klabels        filename of KLABELS, default: KLABELS
+  -d --dospl       also plot DOS (from DOSCAR or PDOS*.dat/TDOS.dat); no value means auto-...
+  -W --ratio       width ratio for DOS subplot
+  --vasp           (legacy) same as -i DIR; kept for backward compatibility
+  --no-shift       keep raw energies (do not shift by E-fermi)
+  --keep-weights   keep the k points with a non-zero weight (e.g
+  --export-dat     also write vaspkit-style BAND.dat/KLABELS/PDOS files into DIR (default:...
+  --no-mirror      keep the spin-down DOS positive (default: spin-up > 0, spin-down < 0)
+`,
+
+  dos: `mt.dos — density of states (DOS / PDOS)
+
+  -h -H --help     show help
+  -v -V --version  show version
+  -i --input       input directory or .dat files (default: current)
+  -o --outpt       output figure filename
+  -S --figsz       figure size: width height
+  -y --energ       energy range, default -5 5 eV
+  -x --horiz       DOS range, electrons/eV
+  -p --parts       projections: s p d, or Element-s,p,d
+  -e --elems       PDOS legend labels
+  -G --legnd       legend labels
+  -a --legndx      shift legend horizontally; 1.0 = 10% of figure width, positive = right
+  -A --legndy      shift legend vertically; 1.0 = 10% of figure height, positive = up
+  -C --color       line color: b/g/r/c/m/y/k or (r,g,b)
+  -k --style       linestyle: solid/dashed/dashdot/dotted
+  -w --width       line width, default 0.8
+  -z --alpha       fill opacity, default 0.2
+  -n --exchg       exchange the axes
+  --no-mirror      keep the spin-down DOS positive (default: spin-up > 0, spin-down < 0)
+  --no-shift       keep raw energies (do not shift by E-fermi)
+`,
+
+  phband: `mt.phband — phonon bands
+
+  -h -H --help     show help
+  -v -V --version  show version
+  -i --input       input directory or .dat files (default: current)
+  -o --outpt       output figure filename
+  -S --figsz       figure size: width height
+  -y --vrang       energy / frequency range
+  -x --horiz       DOS range, electrons/eV
+  -e --elems       PDOS legend labels
+  -G --legnd       legend labels
+  -a --legndx      shift legend horizontally; 1.0 = 10% of figure width, positive = right
+  -A --legndy      shift legend vertically; 1.0 = 10% of figure height, positive = up
+  -C --color       line color: b/g/r/c/m/y/k or (r,g,b)
+  -k --style       linestyle: solid/dashed/dashdot/dotted
+  -w --width       line width, default 0.8
+  -z --alpha       fill opacity, default 0.2
+  -n --exchg       exchange the axes
+  -B --brkax       broken axis: start, end
+  --hratios        height ratio for broken axis, default: 0.2
+  -j --bconf       filename of band setting file, default: band.conf
+  -l --label       high-symmetry labels, e.g. X S Y K M
+  -d --dospl       also plot Phonon DOS from .dat file; for a standalone DOS figure use mt...
+  -W --ratio       width ratio for DOS subplot, default 0.5
+`,
+
+  phdos: `mt.phdos — phonon density of states
+
+  -h -H --help     show help
+  -v -V --version  show version
+  -i --input       input directory or .dat files (default: current)
+  -o --outpt       output figure filename
+  -S --figsz       figure size: width height
+  -y --freqs       frequency range (THz)
+  -x --horiz       DOS range, electrons/eV
+  -e --elems       PDOS legend labels
+  -G --legnd       legend labels
+  -a --legndx      shift legend horizontally; 1.0 = 10% of figure width, positive = right
+  -A --legndy      shift legend vertically; 1.0 = 10% of figure height, positive = up
+  -C --color       line color: b/g/r/c/m/y/k or (r,g,b)
+  -k --style       linestyle: solid/dashed/dashdot/dotted
+  -w --width       line width, default 0.8
+  -z --alpha       fill opacity, default 0.2
+  -n --exchg       exchange the axes
+`,
+
+  ph: `mt.ph — phonopy workflow helper
+  subcommands  supercell fs fc band dos tprop symmetry born qha gruneisen w / W (local reference)
+
+  -h -H --help     show help
+  -v -V --version  show version
+  -Y --yesal       do not ask before running commands
+  -R --dryrn       only print the commands, do not run them
+  -s --dimns       supercell dimension, 1-3 integers, default "1 1 1"
+  -c --cells       unit cell file (auto-detected)
+  -x --xname       forces file; alone -> --fc route (file or dir), with -n -> name inside...
+  --rd --random    random displacements; number of supercells or 'auto' (bare --rd = auto)...
+  --amplitude      displacement amplitude (Å); phonopy default if omitted
+  --tolerance      symmetry-equivalence tolerance (Å)
+  --random-seed    random seed for reproducible random displacements
+  --pa             primitive matrix in the form of 'a b c; d e f; g h i' or 'auto' (phonop...
+  --symfc          use symfc to compute force constants (required for --rd random displace...
+  --alm            use ALM to compute force constants (alternative to --symfc)
+  --fc-calc-opt    options passed to the force constants calculator, e.g
+  -n --fdirs       displaced dirs / suffixes / ranges (implied fs), e.g
+  -b --bconf       write band.conf (name from -B)
+  -d --mconf       write mesh.conf (name from -D)
+  -B --bfile       band.conf name (written by -b, read by mt.ph band)
+  -D --mfile       mesh.conf name (written by -d, read by mt.ph dos)
+  -p --bpath       BAND path in fractional coordinates (with -b)
+  -l --xlabl       BAND_LABELS of the path (with -b)
+  -N --point       BAND_POINTS per segment, default: 101 (with -b)
+  -m --mgrid       mesh grid for DOS, e.g
+`,
+
+  ph3: `mt.ph3 — phono3py thermal conductivity workflow
+  subcommands  supercell cf3 cf2 cfs fs2f2 kappa kaccum kdeplot w / W
+
+  -h -H --help     show help
+  -v -V --version  show version
+  -Y --yesal       do not ask before running commands
+  -R --dryrn       only print the commands, do not run them
+  -s --dimns       fc3 supercell dims, 1-3 ints, default "2 2 2"; -s 2 2 2 / 2x2x2 / 2,2,2
+  -S --dimf2       fc2 supercell dims, same syntax as -s (omit = same size as fc3)
+  -c --cells       unit cell file (auto-detect POSCAR- unitcell/CONTCAR/POSCAR)
+  -x --xname       forces file in each displacement dir (default vasprun.xml)
+  -m --mgrid       mesh grid for kappa, 1-3 ints, default "11 11 11"
+  -n --fdirs       displacement dirs / suffixes / ranges, e.g
+  -k --kfile       kappa-m*.hdf5 for kaccum/kdeplot (auto-detected)
+  --rd             random-direction displacements instead of -d (use with --symfc at kappa...
+  --rd-fc2         fc2 random displacements (needs -S/--dimf2)
+  --random-seed    random seed for --rd/--rd-fc2
+  --amplitude      displacement distance in Angstrom (VASP 0.03)
+  --sp --save-paramswrite phono3py_params.yaml instead of FORCES_FC3 (cf3 only)
+  --cfz            subtract residual forces (undisplaced-supercell force file)
+  --cutoff-pair    cutoff distance between displaced-atom pairs (setup option; on v3/v4 it...
+  --cfs --create-force-setsFORCE_SETS from FORCES_FC3 (-S: from FORCES_FC2)
+  --fs2f2 --force-sets-to-forces-fc2FORCES_FC2 from FORCE_SETS
+`,
+
+  seek: `mt.seek — Materials Project structure search and curation
+
+  -h -H --help     show help
+  -v -V --version  show version
+  --offline        offline self-check (built-in structure)
+  -c --chems       chemical system, e.g. Ti-C
+  -f --frmla       formula, e.g. MoS2
+  -I --mpids       specify mp_id directly, multiple allowed
+  -n --names       export package name (generated from input by default)
+  -k --topks       keep top k results (default 3)
+  -Q --refsh       ignore the local retrieval cache and force a new Materials Project query
+  -F --formt       structure formats: cif,poscar,json,xyz
+  --job-template   INCAR/KPOINTS/slurm templates; POTCAR via mt.sh po when a pseudopotential dir is set
+  -t --tasks       natural-language task (LLM mode)
+  -p --provs       LLM engine (default openai; use ollama/vllm locally)
+  -L --lists       list previously exported bundles
+  --home           working root, default current directory
+
+  Local curation (filter / dedup / top-up):
+  -d --dsets       local dataset overview (count, dimensionality, magnetism, stability)
+  -w --where       rule filter, e.g. ehull<=0.05 and is_2d
+  -r --dedup       structure-level dedup (keep same formula, different phases)
+  -D --diver       scikit-learn diversity pick of K (farthest-point sampling)
+  --outliers       IsolationForest outliers (report only, no deletion)
+  -u --curat       natural-language curation request (LLM turns it into a filter plan)
+  -T --topup       download N more (needs -c/-f; uppercase -T, lowercase -t is --tasks)
+  -m --maxeh       ehull upper bound for top-up, default 0.05 eV/atom
+  -o --outdr       curated bundle name, default curated-MMDD-HHMM
+  -R --dryrn       preview only, no export
+`,
+
+  skl: `mt.skl — analyse a structure manifest with scikit-learn
+
+  Scans <name>/manifest.csv bundles written in place by mt.seek under the working root;
+  random-forest regression for ehull and band gap, output under <home>/ml/.
+
+  -h -H --help     show help
+  -v -V --version  show version
+  --home           working root, default current directory
+`,
+
+  sqs: `mt.sqs — custom cell to special quasirandom structure (SQS)
+
+  -h -H --help     show help
+  -v -V --version  show version
+  -c --cells       input cell file (POSCAR / CONTCAR / CIF / JSON or any format pymatgen can read)
+  --host           sites to randomize. Omit for a single-element cell (auto-detected); for multi-element cells specify explicitly, otherwise sublattices such as O/S may be randomized by mistake.
+  -a --alloy       alloy composition as "element:fraction", e.g. Cu:0.5,Au:0.5; Cu,Au splits equally (scaled to the target atom count), Cu:27,Au:27 sets counts directly...
+  -x --supcl       supercell size, e.g. 3,3,3 or 3 or 2x2x1 (default 3,3,3)
+  --iterations     SQS search iterations (default 100000; min 1000, max 50000000)
+  --number         export K distinct candidates, sorted by objective (default 1)
+  -s --seeds       random seed
+  -n --names       export package name
+  -F --formt       structure formats: cif,poscar,json,xyz
+  --job-template   also generate INCAR / KPOINTS / slurm templates (POTCAR when a pseudopotential directory is available)
+  -R --dryrn       search only: print candidate objectives without writing or packing anything
+  --home           working root, default current directory
+`,
+
+  mc: `mt.mc — magnetic Monte Carlo simulation
+
+  -h -H --help     show help
+  -v -V --version  show version
+  -x -X --sizex    lattice size / supercell repeats along x (default 32)
+  -y -Y --sizey    lattice size / supercell repeats along y (default 32)
+  -z -Z --sizez    lattice size / supercell repeats along z (default 32; ignored for 2D)
+  -e --equil       
+  -w --works       
+  -a --aniso       
+  -p --param       exchange coupling parameters in channel order; with vector spins, -J/-K means the z direction
+  -J --parax       vector-spin exchange parameter along x; falls back to -p if unset
+  -K --paray       vector-spin exchange parameter along y; falls back to -p if unset
+  -t --temps       
+  -i --inits       
+  -c --confg       
+  -s --struc       structure file (POSCAR/CIF, any ASE-readable format); when given, neighbors are built automatically and -c is ignored
+  -A --magat       magnetic elements separated by spaces or commas (e.g. Fe Co or Fe,Co); d/f-block elements are detected by default
+  -D --cutof       structure mode: per-channel distance limits (A), e.g. 3.0 3.6 4.2
+  --mom            nominal moments, default 2
+  --ini            initial state fm/afm/random or +/-1 list
+  -N --thrds       numba threads; 0 = auto (about 3/5 of physical cores, capped at the physical core count)
+  -C --chain       number of independent parallel chains (multi-core acceleration); 0 means same as thread count; in annealing mode chains = temperature points
+  -S --seeds       random seed
+  -W --swaps       sweeps between adjacent-temperature configuration swaps (0 = off; chains = temperature points)
+  -R --dryrn       do not plot automatically (simulation and logs only); plots are generated by default
+  -l --label       high-symmetry labels, e.g. X S Y K M
+  -o --plots       plot from a log file
+  -T --vtemp       temperature (K) for XY vortex-state arrow plots; defaults to the highest temperature
+  -I --imgfm       output image format (any matplotlib format such as png/pdf/svg/jpg/tif); falls back to png on failure
+`,
+
+  sh: `mt.sh — run built-in, custom or bundled scripts
+  mt.sh                  list available scripts and their source
+  mt.sh NAME [args...]   run NAME.sh (e.g. mt.sh xy), forwarding arguments
+  Lookup order: ./NAME.sh -> $MTSH_SCRIPTS -> bundled scripts/; NAME is a script name, not a path
+`,
+
+  server: `mt.server — local file service, structure viewer and terminal
+
+usage: mt.server [-v] [-h] [-p PORT] [-c [PATH]] [-f] [-o [PATH]] [-d PATH]
+                 [-R u@h [...]] [-i KEY] [-P PORT] [-D [[...]]] [-N] [-L HOST]
+                 [-Y] [--status] [-S] [--all] [--no-hup]
+
+Local file service: browse directories, edit text, view images, and provide an SSH-level terminal.
+
+options:
+  -v, -V, --version     show version and exit
+  -h, -H, --help        show help and exit
+  -p PORT, --port PORT  listening port, default 9068; local forward listen port in remote forward mode
+  -c [PATH], --socket [PATH]
+                        exclusive with -p locally, followed by a path; with -R, remote Unix socket path and forward a local port
+  -f, --serve           run in the foreground (serve directly in the current terminal)
+  -o [PATH], --log [PATH]
+                        log file (none by default); with -f, the terminal keeps interactive prompts while startup/errors go to the log
+  -d PATH, --run-dir PATH
+                        local: run directory (default current directory); remote: directory on the server
+  -R u@h [ ...], --ssh u@h [ ...]
+                        remote mode; with -P or -c, forward the remote web service to a local port
+  -i KEY, --ident KEY   with -R: SSH private key file (default: ssh-agent and ~/.ssh keys)
+  -P PORT, --rmt-port PORT
+                        with -R: remote port forwarded to local -p; remote listens on loopback only, token mandatory
+  -D [ [ ...]], --dept [ [ ...]]
+                        with -R: share the local network with the remote host; optional (remote, local) ports, both default to 9069
+  -N, --no-token        disable token auth (requires typing yes), access by address and port only
+  -L HOST, --host HOST  bind address, default 127.0.0.1; non-loopback binding (e.g. 0.0.0.0) requires typing yes
+  -Y, --yes             skip confirmation for risky options (with non-loopback -L or -N)
+  --status              list all mt.server instances on ports and Unix sockets under this user
+  -S, --stop            stop background services (including -c Unix socket services)
+  --all                 used with -S: stop all mt.server instances on ports and Unix sockets under this user
+  --no-hup              ignore SIGHUP and keep running after the launching terminal exits; only -S or -S --all can stop it
+`,
+};
+
+    const IS_EN = document.documentElement.lang === 'en';
+    const MT_HELP = IS_EN ? MT_HELP_EN : MT_HELP_ZH;
+    const HELP = IS_EN ? HELP_EN : HELP_ZH;
+
+    /* 静态参数清单：直接复用虚拟终端的 HELP，保证两处永不漂移 */
+    (function () {
+      const host = document.getElementById("paramRef");
+      if (!host) return;
+      const order = ["band", "dos", "phband", "phdos", "ph", "ph3", "seek", "sqs", "skl", "mc", "sh", "server"];
+      const frag = document.createDocumentFragment();
+      order.forEach(function (key) {
+        const text = HELP[key];
+        if (!text) return;
+        const box = document.createElement("details");
+        box.className = "param-item";
+        const sum = document.createElement("summary");
+        sum.textContent = "mt." + key;
+        const pre = document.createElement("pre");
+        pre.className = "help";
+        pre.textContent = text;
+        box.appendChild(sum);
+        box.appendChild(pre);
+        frag.appendChild(box);
+      });
+      host.appendChild(frag);
+    })();
+
+    /* ---- 虚拟工作目录与常见 bash 命令（静态模拟） ---- */
+    const HOME = '/home/demo';
+    const NL = String.fromCharCode(10);
+    let cwd = '/home/demo/mcta';
+
+    const FS = {
+      '/home/demo': ['mcta/'],
+      '/home/demo/mcta': ['LICENSE', 'README.md', 'index.html', 'mcta/', 'pyproject.toml'],
+      '/home/demo/mcta/mcta': ['__init__.py', '__main__.py', '_flags.py', 'bandplot/', 'mc/', 'seek/', 'server/', 'sh/', 'skl/', 'sqs/'],
+      '/home/demo/mcta/mcta/server': ['3Dmol.LICENSE.txt', '3dmol-min.js', '__init__.py', '_handlers.py', '_remote.py', '_structure.py', '_terminal.py', 'xterm.css', 'xterm.js'],
+      '/home/demo/mcta/mcta/bandplot': ['dos.py', 'mass.py', 'ph.py', 'ph3.py', 'ph3doc.py', 'phdoc.py', 'phdos.py', 'phono3py_docs.json', 'phonopy_docs.json', 'plots.py', 'pplots.py', 'projected.py', 'readdata.py', 'vaspread.py', 'wrapper.py'],
+      '/home/demo/mcta/mcta/mc': ['engine.py', 'geometry/', 'parallel.py', 'plots.py', 'wrapper.py', 'xy_engine.py'],
+      '/home/demo/mcta/mcta/mc/geometry': ['__init__.py', 'bilayer_aa.py', 'bilayer_ab.py', 'bilayer_ab_u_3.py', 'from_structure.py', 'simple_cubic.py', 'square.py', 'triangular.py', 'xy_geometry.py'],
+      '/home/demo/mcta/mcta/seek': ['agent.py', 'cli.py', 'config.py', 'curate.py', 'llm.py', 'ml.py', 'sqs.py', 'state.py', 'tools.py'],
+      '/home/demo/mcta/mcta/sh': ['cli.py', 'scripts/'],
+      '/home/demo/mcta/mcta/sh/scripts': ['ck.sh', 'cp.sh', 'en.sh', 'ex.sh', 'gr.sh', 'ig.sh', 'il.sh', 'kb.sh', 'kg.sh', 'make_supercell.py', 'md.sh', 'mv.sh', 'po.sh', 'pr.sh', 're.sh', 'sh.sh', 'su.sh', 'sy.sh', 'symmetry_info.py', 'x.sh', 'xy.sh', 'y.sh', 'z2.sh', 'z2_convert.py'],
+      '/home/demo/mcta/mcta/skl': ['__init__.py', 'cli.py'],
+      '/home/demo/mcta/mcta/sqs': ['__init__.py', 'cli.py']
+    };
+
+    const FILE_TEXT = {
+      '/home/demo/mcta/README.md': ['# mcta', '', 'McTa (Meta Crystal Toolkit & Analysis).', '', 'pip install mcta', 'mt -h'],
+      '/home/demo/mcta/pyproject.toml': ['[build-system]', 'requires = ["setuptools>=77", "wheel"]', '', '[project]', 'name = "mcta"', 'requires-python = ">=3.9"', 'dynamic = ["version"]'],
+      '/home/demo/mcta/mcta/__init__.py': ['"""McTa —— Meta Crystal Toolkit & Analysis"""', '', '__version__ = "0.0.33"', '', '', 'def version_string() -> str:', '    """统一的 -V 输出格式。"""'],
+      '/home/demo/mcta/mcta/server/__init__.py': ['"""mt.server：CLI、进程管理与服务入口"""', '', 'from mcta import version_string', 'from ._handlers import _Server, _make_handler', 'from ._structure import ( ... )', 'from ._terminal import ( ... )'],
+      '/home/demo/mcta/mcta/server/_handlers.py': ['"""HTTP 路由、文件服务与内嵌页面（PAGE）"""', '', 'PAGE = """<!doctype html>..."""', '', 'class _Server(BaseHTTPRequestHandler):', '    def do_GET(self): ...'],
+      '/home/demo/mcta/mcta/server/_remote.py': ['"""mt.server 的 SSH/SFTP 后端（-R/--ssh）"""', '', 'def parse_ssh_spec(parts): ...', 'def connect(spec, password=None): ...', 'class RemoteFS:', '    def list_entries(self, path): ...', 'class _RemoteTerminal:', '    def _open_channel(self): ...'],
+      '/home/demo/mcta/mcta/server/_structure.py': ['"""结构识别与解析：VASP / LAMMPS / 轨迹 / 电荷密度"""', '', 'def _is_structure(path): ...', 'def _read_atoms(path): ...', 'def _read_frames(path): ...'],
+      '/home/demo/mcta/mcta/server/_terminal.py': ['"""PTY 会话：token、环境变量与命令执行"""', '', '_CONF = {}', 'class _Terminal: ...', 'def _terminal_for(session_id): ...']
+    };
+
+    const MAN_BRIEF = {
+      ls: 'ls - list directory contents',
+      cd: 'cd - change the working directory',
+      pwd: 'pwd - print name of current/working directory',
+      cat: 'cat - concatenate files and print on standard output',
+      echo: 'echo - display a line of text',
+      grep: 'grep - print lines that match patterns',
+      git: 'git - the stupid content tracker',
+      python: 'python - Python interpreter',
+      mt: 'mt - McTa command line toolkit, run mt -h'
+    };
+
+    function absPath(arg) {
+      let p = arg || '';
+      if (!p) return cwd;
+      if (p === '~') p = HOME;
+      else if (p.indexOf('~/') === 0) p = HOME + p.slice(1);
+      if (p.charAt(0) !== '/') p = (cwd === '/' ? '' : cwd) + '/' + p;
+      const out = [];
+      p.split('/').forEach(function (seg) {
+        if (!seg || seg === '.') return;
+        if (seg === '..') { out.pop(); return; }
+        out.push(seg);
+      });
+      return '/' + out.join('/');
+    }
+
+    function shortPath(p) {
+      return p.indexOf(HOME) === 0 ? '~' + p.slice(HOME.length) : p;
+    }
+
+    function runBash(head, rest) {
+      if (head === 'pwd') { print(cwd); return true; }
+
+      if (head === 'cd') {
+        const target = rest.length ? absPath(rest[0]) : HOME;
+        if (FS[target]) cwd = target;
+        else if (FILE_TEXT[target]) print('cd: ' + rest[0] + ': Not a directory', 'err');
+        else print('cd: ' + (rest[0] || target) + ': No such file or directory', 'err');
+        return true;
+      }
+
+      if (head === 'ls' || head === 'll' || head === 'dir') {
+        const args = rest.filter(function (a) { return a.charAt(0) !== '-'; });
+        const target = absPath(args[0]);
+        const list = FS[target];
+        if (!list) {
+          if (FILE_TEXT[target]) { print(args[0] || target); return true; }
+          print('ls: cannot access ' + (args[0] || target) + ': No such file or directory', 'err');
+          return true;
+        }
+        if (head === 'll') print('total ' + list.length);
+        if (list.length) print(list.join('  '));
+        return true;
+      }
+
+      if (head === 'cat') {
+        if (!rest.length) { print('cat: missing operand', 'err'); return true; }
+        rest.forEach(function (a) {
+          if (a.charAt(0) === '-') return;
+          const p = absPath(a);
+          if (FILE_TEXT[p]) print(FILE_TEXT[p].join(NL));
+          else if (FS[p]) print('cat: ' + a + ': Is a directory', 'err');
+          else print('cat: ' + a + ': No such file or directory', 'err');
+        });
+        return true;
+      }
+
+      if (head === 'grep') {
+        if (rest.length < 2) { print('usage: grep PATTERN FILE', 'err'); return true; }
+        const lines = FILE_TEXT[absPath(rest[rest.length - 1])];
+        if (!lines) { print('grep: ' + rest[rest.length - 1] + ': No such file or directory', 'err'); return true; }
+        const pat = rest[0].toLowerCase();
+        const hit = lines.filter(function (l) { return l.toLowerCase().indexOf(pat) >= 0; });
+        if (hit.length) print(hit.join(NL));
+        return true;
+      }
+
+      if (head === 'echo') { print(rest.join(' ')); return true; }
+      if (head === 'whoami') { print('demo'); return true; }
+      if (head === 'hostname') { print('mcta-demo'); return true; }
+      if (head === 'id') { print('uid=1000(demo) gid=1000(demo) groups=1000(demo)'); return true; }
+      if (head === 'date') { print(new Date().toString()); return true; }
+      if (head === 'nproc') { print('8'); return true; }
+
+      if (head === 'uname') {
+        print(rest.indexOf('-a') >= 0
+          ? 'Linux mcta-demo 6.8.0-mcta #1 SMP PREEMPT_DYNAMIC x86_64 GNU/Linux'
+          : 'Linux');
+        return true;
+      }
+
+      if (head === 'uptime') {
+        print(' ' + new Date().toTimeString().slice(0, 8) + ' up 3 days,  2:14,  1 user,  load average: 0.08, 0.12, 0.10');
+        return true;
+      }
+
+      if (head === 'df') {
+        print('Filesystem      Size  Used Avail Use% Mounted on');
+        print('/dev/sda1        98G   42G   51G  46% /');
+        print('tmpfs           7.8G     0  7.8G   0% /dev/shm');
+        return true;
+      }
+
+      if (head === 'free') {
+        print('               total        used        free      shared  buff/cache   available');
+        print('Mem:            15Gi       6.1Gi       4.2Gi       312Mi       5.0Gi       8.9Gi');
+        print('Swap:          2.0Gi          0B       2.0Gi');
+        return true;
+      }
+
+      if (head === 'ps') {
+        print('    PID TTY          TIME CMD');
+        print('   1024 pts/0    00:00:00 bash');
+        print('   1187 pts/0    00:00:01 python3 -m mcta server');
+        print('   1201 pts/0    00:00:00 ps');
+        return true;
+      }
+
+      if (head === 'top') {
+        print('top - ' + new Date().toTimeString().slice(0, 8) + ' up 3 days,  2:14,  1 user,  load average: 0.08, 0.12, 0.10');
+        print('Tasks:  87 total,   1 running,  86 sleeping,   0 stopped,   0 zombie');
+        print('%Cpu(s):  2.3 us,  0.7 sy,  0.0 ni, 96.8 id,  0.2 wa');
+        print('MiB Mem :  16000.0 total,   4300.2 free,   6240.8 used,   5459.0 buff/cache');
+        return true;
+      }
+
+      if (head === 'which') {
+        if (!rest.length) { print('which: missing operand', 'err'); return true; }
+        rest.forEach(function (name) {
+          if (name.indexOf('mt') === 0) print('/usr/local/bin/' + name);
+          else if (name === 'python' || name === 'python3') print('/usr/bin/python3');
+          else if (name === 'pip' || name === 'pip3') print('/usr/local/bin/pip');
+          else if (name === 'git') print('/usr/bin/git');
+          else if (name === 'ls' || name === 'cat' || name === 'grep') print('/usr/bin/' + name);
+        });
+        return true;
+      }
+
+      if (head === 'python' || head === 'python3') {
+        if (rest.indexOf('-V') >= 0 || rest.indexOf('--version') >= 0) print('Python 3.12.4');
+        else print(IS_EN ? 'Static demo: interactive Python is not available here.' : '静态演示：这里不提供可交互的 Python。', 'dim');
+        return true;
+      }
+
+      if (head === 'pip' || head === 'pip3') {
+        if (rest.indexOf('-V') >= 0 || rest.indexOf('--version') >= 0) {
+          print('pip 24.0 from /usr/local/lib/python3.12/site-packages/pip (python 3.12)');
+        } else if (rest[0] === 'install') {
+          print(IS_EN ? 'Static demo: packages cannot be installed here; run pip install mcta locally.' : '静态演示：这里不能安装软件包；请在本机执行 pip install mcta。', 'dim');
+        } else {
+          print(IS_EN ? 'Static demo: pip is read-only here.' : '静态演示：这里的 pip 是只读的。', 'dim');
+        }
+        return true;
+      }
+
+      if (head === 'git') {
+        const sub = rest[0] || '';
+        if (sub === '--version' || sub === 'version') print('git version 2.43.0');
+        else if (sub === 'status') {
+          print('On branch main');
+          print('Changes not staged for commit:');
+          print('  modified:   index.html');
+          print('  modified:   mcta/__init__.py');
+          print('  modified:   mcta/server/__init__.py');
+          print(NL + 'Untracked files:');
+          print('  (use "git add <file>..." to include in what will be committed)');
+          print('        mcta/server/_handlers.py');
+          print('        mcta/server/_structure.py');
+          print('        mcta/server/_terminal.py');
+          print(NL + 'no changes added to commit (use "git add" and/or "git commit -a")');
+        } else if (sub === 'log') {
+          print('fea443a Update band plots');
+          print('885c60d Refine docs');
+          print('476fd2c Initial commit');
+        } else if (sub === 'branch') {
+          print('* main');
+        } else {
+          print(IS_EN ? 'git: static demo supports --version, status, log and branch only.' : 'git：静态演示仅支持 --version、status、log 与 branch。', 'dim');
+        }
+        return true;
+      }
+
+      if (head === 'man') {
+        const page = rest[0] || '';
+        if (MAN_BRIEF[page]) {
+          print('NAME');
+          print('    ' + MAN_BRIEF[page]);
+          return true;
+        }
+        print('No manual entry for ' + (page || '(none)'), 'err');
+        return true;
+      }
+
+      if (head === 'history') {
+        hist.forEach(function (h, i) { print(String(i + 1) + '  ' + h); });
+        return true;
+      }
+
+      if (head === 'env' || head === 'printenv') {
+        print('SHELL=/bin/bash');
+        print('USER=demo');
+        print('HOME=' + HOME);
+        print('PWD=' + cwd);
+        print('LANG=' + (IS_EN ? 'en_US.UTF-8' : 'zh_CN.UTF-8'));
+        print('PATH=/usr/local/bin:/usr/bin:/bin');
+        print('MP_API_KEY=***');
+        return true;
+      }
+
+      if (head === 'sudo') {
+        print('sudo: this demo shell has no privileges', 'err');
+        return true;
+      }
+
+      if (head === 'exit' || head === 'logout') {
+        print(IS_EN ? 'This is a browser demo terminal; there is nothing to exit.' : '这是网页演示终端，无需退出。', 'dim');
+        return true;
+      }
+
+      if (head === 'rm' || head === 'mv' || head === 'cp' || head === 'mkdir' || head === 'touch' || head === 'chmod') {
+        print(head + ': Read-only file system (static demo)', 'err');
+        return true;
+      }
+
+      return false;
+    }
+
+    function scroll() { scrollWrap.scrollTop = scrollWrap.scrollHeight; }
+
+
+    function echo(cmd) {
+      const line = document.createElement('div');
+      line.className = 'term-out';
+      const p = document.createElement('span');
+      p.className = 'p';
+      p.textContent = shortPath(cwd) + ' $ ';
+      const c = document.createElement('span');
+      c.className = 'cmd';
+      c.textContent = cmd;
+      line.appendChild(p);
+      line.appendChild(c);
+      log.appendChild(line);
+      scroll();
+    }
+
+    function print(text, cls) {
+      const div = document.createElement('div');
+      div.className = 'term-out' + (cls ? ' ' + cls : '');
+      div.textContent = text;
+      log.appendChild(div);
+      scroll();
+    }
+
+    function isHelp(s) { return s === '-h' || s === '-H' || s === '--help'; }
+
+    function isVersion(s) { return s === '-v' || s === '-V' || s === '--version' || s === 'version'; }
+
+    /* 支持引号参数，如 cat "my notes.txt" */
+    function splitArgs(s) {
+      const out = [];
+      let cur = '', quote = '';
+      for (let i = 0; i < s.length; i++) {
+        const ch = s[i];
+        if (quote) {
+          if (ch === quote) quote = '';
+          else cur += ch;
+        } else if (ch === '"' || ch === "'") {
+          quote = ch;
+        } else if (/\s/.test(ch)) {
+          if (cur) { out.push(cur); cur = ''; }
+        } else {
+          cur += ch;
+        }
+      }
+      if (cur) out.push(cur);
+      return out;
+    }
+
+    function run(raw) {
+      const cmd = raw.trim();
+      if (!cmd) return;
+      echo(cmd);
+      const parts = splitArgs(cmd);
+      const head = parts[0];
+      const rest = parts.slice(1);
+
+      if (head === 'clear') { log.textContent = ''; return; }
+      if (isVersion(head)) { print(VERSION); return; }
+      if (head === 'help' || head === '?' || head === 'mt') {
+        if (head === 'mt' && rest.length && isVersion(rest[0])) { print(VERSION); return; }
+        if (head === 'mt' && rest.length && !isHelp(rest[0])) {
+          const key = rest[0].replace(/^\./, '');
+          if (HELP[key]) { print(HELP[key]); return; }
+          print(IS_EN
+            ? 'mt: command not found: "' + rest[0] + '", try mt -h'
+            : 'mt: 未找到命令“' + rest[0] + '”，试试 mt -h', 'err');
+          return;
+        }
+        print(MT_HELP);
+        return;
+      }
+      if (head.indexOf('mt.') === 0) {
+        const key = head.slice(3);
+        if (!HELP[key]) {
+          print(IS_EN
+            ? 'mt: command not found: "' + head + '", try mt -h'
+            : 'mt: 未找到命令“' + head + '”，试试 mt -h', 'err');
+          return;
+        }
+        if (rest.length && isVersion(rest[0])) { print(VERSION); return; }
+        if (rest.length && !isHelp(rest[0])) {
+          print(IS_EN
+            ? 'Static demo: only help output is available, try ' + head + ' -h'
+            : '静态演示：仅支持查看参数，试试 ' + head + ' -h', 'err');
+          return;
+        }
+        print(HELP[key]);
+        return;
+      }
+      if (runBash(head, rest)) return;
+      print(IS_EN
+        ? 'Command not found: "' + head + '", try mt -h or mt.band -h'
+        : '未找到命令“' + head + '”，试试 mt -h 或 mt.band -h', 'err');
+    }
+
+    const hist = [];
+    let pos = 0;
+
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        const value = input.value;
+        input.value = '';
+        if (value.trim()) {
+          hist.push(value);
+          // 用户主动输入并回车执行命令后关闭字符雨；点击目录自动 cd 不会走到这里。
+          disableRain();
+        }
+        pos = hist.length;
+        run(value);
+      } else if (e.key === 'ArrowUp') {
+        if (!hist.length) return;
+        e.preventDefault();
+        pos = Math.max(0, pos - 1);
+        input.value = hist[pos];
+      } else if (e.key === 'ArrowDown') {
+        if (!hist.length) return;
+        e.preventDefault();
+        pos = Math.min(hist.length, pos + 1);
+        input.value = pos === hist.length ? '' : hist[pos];
+      }
+    });
+
+    /* ---- Tab 补全：命令 / 参数 / 路径 ---- */
+    const TAB_COMMANDS = (function () {
+      const names = ['mt', 'help', 'clear', 'exit', 'logout'];
+      Object.keys(HELP).forEach(function (k) { names.push('mt.' + k); });
+      Object.keys(MAN_BRIEF).forEach(function (n) { if (names.indexOf(n) < 0) names.push(n); });
+      ['pwd', 'ls', 'll', 'dir', 'head', 'tail', 'whoami', 'hostname', 'id', 'date',
+       'nproc', 'uname', 'uptime', 'df', 'free', 'ps', 'top', 'which', 'python',
+       'python3', 'pip', 'pip3', 'git', 'man', 'history', 'env', 'printenv', 'sudo',
+       'rm', 'mv', 'cp', 'mkdir', 'touch', 'chmod', 'ssh', 'grep', 'find'
+      ].forEach(function (n) { if (names.indexOf(n) < 0) names.push(n); });
+      return names;
+    })();
+    const TAB_PATH_CMDS = /^(cd|ls|ll|dir|cat|grep|man|head|tail)$/;
+
+    function tabOptions(key) {
+      const opts = [];
+      (HELP[key] || '').split('\n').forEach(function (line) {
+        const m = line.match(/^\s{2,}(-{1,2}[\w-]+(?:\s+-{1,2}[\w-]+)*)/);
+        if (!m) return;
+        m[1].split(/\s+/).forEach(function (o) {
+          if (o.charAt(0) === '-' && opts.indexOf(o) < 0) opts.push(o);
+        });
+      });
+      return opts;
+    }
+
+    function tabPathCandidates(token) {
+      const slash = token.lastIndexOf('/');
+      const dirPart = slash >= 0 ? token.slice(0, slash + 1) : '';
+      const base = slash >= 0 ? token.slice(slash + 1) : token;
+      const list = FS[absPath(dirPart || '.')];
+      if (!list) return [];
+      return list.filter(function (n) { return n.indexOf(base) === 0; })
+                 .map(function (n) { return dirPart + n; });
+    }
+
+    function tabCommonPrefix(arr) {
+      let p = arr[0] || '';
+      for (let i = 1; i < arr.length && p; i++) {
+        let j = 0;
+        while (j < p.length && j < arr[i].length && p[j] === arr[i][j]) j++;
+        p = p.slice(0, j);
+      }
+      return p;
+    }
+
+    input.addEventListener('keydown', function (e) {
+      if (e.key !== 'Tab' || e.ctrlKey || e.altKey || e.metaKey) return;
+      const value = input.value;
+      const caret = typeof input.selectionStart === 'number' ? input.selectionStart : value.length;
+      const before = value.slice(0, caret);
+      const m = before.match(/(^|\s)([^\s]*)$/);
+      const token = m ? m[2] : '';
+      const start = caret - token.length;
+      const words = before.trim() ? before.trim().split(/\s+/) : [];
+      const first = words[0] || '';
+      const isArg = words.length > (token ? 1 : 0);
+      let cands = [];
+
+      if (token.charAt(0) === '-') {
+        let key = first.replace(/^mt\./, '');
+        if (first === 'mt' && words.length > 2) key = words[1].replace(/^mt\./, '');
+        cands = HELP[key] ? tabOptions(key) : ['-h', '-H', '--help', '-v', '-V', '--version'];
+      } else if (!isArg) {
+        cands = TAB_COMMANDS;
+      } else if (first === 'mt') {
+        const typed = words.length - (token ? 1 : 0);
+        cands = typed <= 1 ? Object.keys(HELP)
+              : (HELP[words[1]] ? tabOptions(words[1]) : ['-h', '-H', '--help']);
+      } else if (first.indexOf('mt.') === 0) {
+        cands = tabOptions(first.slice(3));
+      } else if (TAB_PATH_CMDS.test(first) || token.charAt(0) === '/' ||
+                 token.indexOf('/') >= 0 || token.indexOf('~') === 0 ||
+                 token.indexOf('.') === 0) {
+        cands = tabPathCandidates(token);
+      }
+      cands = cands.filter(function (c) { return c.indexOf(token) === 0; });
+      if (!cands.length) return;
+      e.preventDefault();
+
+      if (cands.length === 1) {
+        const ins = cands[0];
+        const tail = ins.charAt(ins.length - 1) === '/' ? '' : ' ';
+        input.value = value.slice(0, start) + ins + tail + value.slice(caret);
+        const p = start + ins.length + tail.length;
+        if (input.setSelectionRange) input.setSelectionRange(p, p);
+        return;
+      }
+      const prefix = tabCommonPrefix(cands);
+      if (prefix.length > token.length && !(token === '' && prefix === '-')) {
+        input.value = value.slice(0, start) + prefix + value.slice(caret);
+        if (input.setSelectionRange) input.setSelectionRange(start + prefix.length, start + prefix.length);
+        return;
+      }
+      print(shortPath(cwd) + ' $ ' + value, 'dim');
+      print(cands.join('  '), 'dim');
+    });
+
+    /* ---- 浮动窗口：拖动、缩放、停靠、最小化 ---- */
+    const wrap = box.closest('.term-wrap');
+    const head = wrap ? wrap.querySelector('.term-head') : null;
+    const tools = wrap ? wrap.querySelector('.term-tools') : null;
+    const handles = wrap ? wrap.querySelectorAll('.resize-handle') : [];
+    const UI_KEY = 'mcta-term-ui';
+    const TR = IS_EN ? {
+      min: 'Minimize', max: 'Maximize', restore: 'Restore', restoreSize: 'Restore size',
+      dock: 'Dock to sidebar', hint: 'Click the terminal header to open a floating window',
+      copied: 'Selection copied', pasted: 'Pasted from clipboard',
+      empty: 'Clipboard is empty', denied: 'Clipboard access denied'
+    } : {
+      min: '最小化', max: '最大化', restore: '还原', restoreSize: '还原大小',
+      dock: '还原到侧栏', hint: '点击终端顶端栏可浮动为小窗口',
+      copied: '已复制选中文字', pasted: '已粘贴剪切板内容',
+      empty: '剪切板为空', denied: '无法读取剪切板'
+    };
+    const dockParent = wrap ? wrap.parentNode : null;
+    const dockNext = wrap ? wrap.nextSibling : null;
+    let uiMode = 'dock';        // 'dock' | 'float'
+    let maximized = false;
+    let minimized = false;
+    let prevRect = null;
+    let drag = null;
+    let resize = null;
+    let uiState = {};
+
+    // 最小化停靠：只留顶栏，停靠页面下方
+    const MIN_DOCK_Z = 9000; // 最小化图标顶层：高于普通浮窗/toast(50)，低于确认框
+    function dockMinLeft() {
+      const w = wrap.getBoundingClientRect().width || 220;
+      return Math.round(Math.min(Math.max(8, 8), Math.max(8, window.innerWidth - w - 8)));
+    }
+
+    try { uiState = JSON.parse(localStorage.getItem(UI_KEY) || '{}') || {}; }
+    catch (e) { uiState = {}; }
+
+    function saveUI(patch) {
+      Object.keys(patch).forEach(function (k) { uiState[k] = patch[k]; });
+      try { localStorage.setItem(UI_KEY, JSON.stringify(uiState)); } catch (e) { /* 忽略隐私模式 */ }
+    }
+
+    function toast(msg) {
+      if (window.mctaToast) window.mctaToast(msg);
+    }
+
+    function currentRect() {
+      const r = wrap.getBoundingClientRect();
+      return { x: r.left, y: r.top, w: r.width, h: r.height };
+    }
+
+    function clampRect(r) {
+      const maxW = Math.max(260, window.innerWidth - 8);
+      const maxH = Math.max(170, window.innerHeight - 4);
+      r.w = Math.min(Math.max(260, r.w || 520), maxW);
+      r.h = Math.min(Math.max(170, r.h || 380), maxH);
+      // 约束顶栏边沿的中心点：上边沿中心 (x+w/2, y)、下边沿中心 (x+w/2, y+HEAD) 留在页面内。
+      const HEAD = 44;
+      r.x = Math.min(Math.max(-r.w / 2, r.x || 0), window.innerWidth - r.w / 2);
+      r.y = Math.min(Math.max(0, r.y || 0), Math.max(0, window.innerHeight - HEAD));
+      return r;
+    }
+
+    function applyRect(r) {
+      wrap.style.left = Math.round(r.x) + 'px';
+      wrap.style.top = Math.round(r.y) + 'px';
+      wrap.style.width = Math.round(r.w) + 'px';
+      wrap.style.height = Math.round(r.h) + 'px';
+    }
+
+    function maxRect() {
+      // 与 mt.server 内置页面浮窗一致：顶端紧贴页面，底部留 4px。
+      return { x: 4, y: 0, w: window.innerWidth - 8, h: window.innerHeight - 4 };
+    }
+
+    function defaultRect() {
+      const w = Math.min(560, Math.max(300, window.innerWidth - 32));
+      const h = Math.min(420, Math.max(240, window.innerHeight - 120));
+      return clampRect({ x: 20, y: window.innerHeight - h - 20, w: w, h: h });
+    }
+
+    function refreshRain() {
+      // 侧栏/浮窗切换、最小化还原后暂停并按新尺寸重建。
+      pauseRain(180);
+    }
+
+    function syncTools() {
+      if (tools) {
+        const labels = {
+          min: TR.min,
+          restore: TR.restore,
+          max: maximized ? TR.restoreSize : TR.max,
+          dock: TR.dock
+        };
+        Array.prototype.forEach.call(tools.querySelectorAll('button[data-term-act]'), function (b) {
+          const label = labels[b.getAttribute('data-term-act')];
+          if (!label) return;
+          b.title = label;
+          b.setAttribute('aria-label', label);
+        });
+        // 最大化按钮与文件浮窗同款：⬀/⬃ 双图标切换
+        const maxBtn = tools.querySelector('button[data-term-act="max"]');
+        if (maxBtn) {
+          const mi = maxBtn.querySelector('.max-icon');
+          const ri = maxBtn.querySelector('.restore-icon');
+          if (mi && ri) {
+            mi.classList.toggle('hidden', maximized);
+            ri.classList.toggle('hidden', !maximized);
+          }
+        }
+      }
+      // 提示只挂在终端顶栏：悬停终端内部不再出现“点击终端顶端栏可浮动为小窗口”。
+      if (wrap) wrap.title = '';
+      if (head) head.title = uiMode === 'float' ? '' : TR.hint;
+    }
+
+    function showHandles(show) {
+      const display = show ? 'block' : 'none';
+      Array.prototype.forEach.call(handles, function (h) { h.style.display = display; });
+    }
+
+    function floatAt(rect) {
+      if (!wrap) return;
+      if (uiMode !== 'float') {
+        document.body.appendChild(wrap);
+        wrap.classList.add('floating');
+        uiMode = 'float';
+      }
+      wrap.classList.remove('win-min');
+      wrap.style.zIndex = ''; // 退出最小化：回到默认浮窗层级
+      applyRect(clampRect({ x: rect.x, y: rect.y, w: rect.w, h: rect.h }));
+      maximized = false;
+      minimized = false;
+      prevRect = null;
+      showHandles(true);
+      syncTools();
+      refreshRain();
+    }
+
+    function dock() {
+      if (!wrap || uiMode !== 'float') return;
+      wrap.classList.remove('floating', 'win-min');
+      wrap.style.zIndex = '';
+      wrap.style.left = wrap.style.top = wrap.style.width = wrap.style.height = '';
+      showHandles(false);
+      if (dockParent) {
+        dockParent.insertBefore(wrap, dockNext && dockNext.parentNode === dockParent ? dockNext : null);
+      }
+      uiMode = 'dock';
+      maximized = false;
+      minimized = false;
+      prevRect = null;
+      saveUI({ mode: 'dock', x: null, y: null, w: null, h: null, max: false, restore: null, min: false });
+      syncTools();
+      refreshRain();
+    }
+
+    function minimizeWin() {
+      if (uiMode !== 'float' || minimized) return;
+      let r = currentRect();
+      if (maximized && prevRect) { applyRect(prevRect); r = currentRect(); }
+      minimized = true;
+      maximized = false;
+      prevRect = null;
+      wrap.classList.add('win-min');
+      wrap.style.zIndex = String(MIN_DOCK_Z); // 最小化图标显示在最顶层
+      showHandles(false);
+      wrap.style.left = dockMinLeft() + 'px';
+      wrap.style.top = Math.max(0, window.innerHeight - 44 - 8) + 'px';
+      saveUI({ mode: 'float', min: true, x: r.x, y: r.y, w: r.w, h: r.h, max: false, restore: null });
+      syncTools();
+      refreshRain();
+    }
+
+    function restoreWin() {
+      if (uiMode !== 'float') { floatAt(uiState.w ? uiState : defaultRect()); return; }
+      if (!minimized) { floatAt(defaultRect()); return; }
+      minimized = false;
+      wrap.classList.remove('win-min');
+      const saved = (typeof uiState.w === 'number' && uiState.w > 0)
+        ? { x: uiState.x, y: uiState.y, w: uiState.w, h: uiState.h } : null;
+      floatAt(saved || defaultRect());
+      saveUI({ min: false });
+    }
+
+    function resetToDefault() {
+      floatAt(defaultRect());
+    }
+
+    function persistRect() {
+      if (uiMode !== 'float' || minimized) return;
+      const r = currentRect();
+      saveUI({
+        mode: 'float', min: false, x: r.x, y: r.y, w: r.w, h: r.h,
+        max: maximized, restore: maximized ? prevRect : null
+      });
+    }
+
+    function toggleMax() {
+      if (uiMode !== 'float') return;
+      if (minimized) restoreWin();
+      if (maximized) {
+        maximized = false;
+        if (prevRect) applyRect(clampRect(prevRect));
+        prevRect = null;
+      } else {
+        prevRect = currentRect();
+        maximized = true;
+        applyRect(maxRect());
+      }
+      persistRect();
+      syncTools();
+      refreshRain();
+    }
+
+    /* 按钮事件 */
+    if (tools) {
+      tools.addEventListener('click', function (e) {
+        const btn = e.target.closest('button[data-term-act]');
+        if (!btn) return;
+        e.stopPropagation();
+        const act = btn.getAttribute('data-term-act');
+        if (act === 'dock') { if (uiMode === 'float') dock(); return; }
+        if (uiMode !== 'float') floatAt(uiState.w ? uiState : defaultRect());
+        if (act === 'max') { toggleMax(); return; }
+        if (act === 'min') { minimizeWin(); return; }
+        if (act === 'restore') { restoreWin(); return; }
+      });
+    }
+
+    if (wrap) {
+      wrap.addEventListener('click', function (e) {
+        if (e.target.closest && e.target.closest('.term-head')) return;
+        if (e.target !== input && String(window.getSelection()) === '') input.focus();
+      });
+    }
+
+    /* 标题栏拖动 */
+    if (head) {
+      head.addEventListener('pointerdown', function (e) {
+        if (e.target.closest('button') || minimized) return;
+        if (uiMode !== 'float') floatAt(uiState.w ? uiState : defaultRect());
+        const r = currentRect();
+        drag = { dx: e.clientX - r.x, dy: e.clientY - r.y, w: r.w, h: r.h, id: e.pointerId };
+        try { head.setPointerCapture(e.pointerId); } catch (err) { /* 忽略 */ }
+        wrap.classList.add('dragging');
+      });
+      head.addEventListener('pointermove', function (e) {
+        if (!drag) return;
+        e.preventDefault();
+        const r = clampRect({
+          x: e.clientX - drag.dx, y: e.clientY - drag.dy, w: drag.w, h: drag.h
+        });
+        wrap.style.left = Math.round(r.x) + 'px';
+        wrap.style.top = Math.round(r.y) + 'px';
+        maximized = false;
+      });
+      const endDrag = function () {
+        if (!drag) return;
+        try { head.releasePointerCapture(drag.id); } catch (err) { /* 忽略 */ }
+        drag = null;
+        wrap.classList.remove('dragging');
+        persistRect();
+        syncTools();
+      };
+      head.addEventListener('pointerup', endDrag);
+      head.addEventListener('pointercancel', endDrag);
+      // 最小化态点击顶栏文字还原（跳过按钮）
+      head.addEventListener('click', function (e) {
+        if (!minimized || e.target.closest('button')) return;
+        e.stopPropagation();
+        restoreWin();
+      });
+    }
+
+    /* 四角/四边拖拽调整大小 */
+    Array.prototype.forEach.call(handles, function (h) {
+      h.addEventListener('pointerdown', function (e) {
+        if (minimized) return;
+        e.stopPropagation();
+        pauseRain(300);
+        maximized = false; prevRect = null;
+        const r = currentRect();
+        const cls = h.className;
+        let sx = e.clientX, sy = e.clientY;
+        resize = {
+          startX: sx, startY: sy,
+          x: r.x, y: r.y, w: r.w, h: r.h,
+          edgeT: cls.indexOf('rh-t') >= 0 && cls.indexOf('rh-tr') < 0 && cls.indexOf('rh-tl') < 0,
+          edgeB: cls.indexOf('rh-b') >= 0 && cls.indexOf('rh-br') < 0 && cls.indexOf('rh-bl') < 0,
+          edgeL: cls.indexOf('rh-l') >= 0 && cls.indexOf('rh-tl') < 0 && cls.indexOf('rh-bl') < 0,
+          edgeR: cls.indexOf('rh-r') >= 0 && cls.indexOf('rh-tr') < 0 && cls.indexOf('rh-br') < 0,
+          cornerTL: cls.indexOf('rh-tl') >= 0,
+          cornerTR: cls.indexOf('rh-tr') >= 0,
+          cornerBL: cls.indexOf('rh-bl') >= 0,
+          cornerBR: cls.indexOf('rh-br') >= 0,
+          id: e.pointerId
+        };
+        try { h.setPointerCapture(e.pointerId); } catch (err) { /* 忽略 */ }
+        wrap.classList.add('dragging');
+      });
+      h.addEventListener('pointermove', function (e) {
+        if (!resize) return;
+        e.preventDefault();
+        pauseRain(300);
+        const dx = e.clientX - resize.startX;
+        const dy = e.clientY - resize.startY;
+        let x = resize.x, y = resize.y, w = resize.w, h = resize.h;
+        if (resize.edgeR || resize.cornerTR || resize.cornerBR) w = resize.w + dx;
+        if (resize.edgeL || resize.cornerTL || resize.cornerBL) { w = resize.w - dx; x = resize.x + dx; }
+        if (resize.edgeB || resize.cornerBL || resize.cornerBR) h = resize.h + dy;
+        if (resize.edgeT || resize.cornerTL || resize.cornerTR) { h = resize.h - dy; y = resize.y + dy; }
+        const r = clampRect({ x: x, y: y, w: w, h: h });
+        wrap.style.left = Math.round(r.x) + 'px';
+        wrap.style.top = Math.round(r.y) + 'px';
+        wrap.style.width = Math.round(r.w) + 'px';
+        wrap.style.height = Math.round(r.h) + 'px';
+      });
+      const endResize = function () {
+        if (!resize) return;
+        try { h.releasePointerCapture(resize.id); } catch (err) { /* 忽略 */ }
+        resize = null;
+        wrap.classList.remove('dragging');
+        persistRect();
+      };
+      h.addEventListener('pointerup', endResize);
+      h.addEventListener('pointercancel', endResize);
+    });
+
+    window.addEventListener('resize', function () {
+      if (uiMode !== 'float') return;
+      if (minimized) {
+        wrap.style.left = dockMinLeft() + 'px';
+        wrap.style.top = Math.max(0, window.innerHeight - 44 - 8) + 'px';
+        return;
+      }
+      if (maximized) applyRect(maxRect());
+      else applyRect(clampRect(currentRect()));
+    });
+
+    /* ---- 选中即复制、右键粘贴 ---- */
+    function legacyCopy(text) {
+      const active = document.activeElement;
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.cssText = 'position:fixed;top:-1000px;opacity:0';
+      document.body.appendChild(ta);
+      ta.select();
+      let ok = false;
+      try { ok = document.execCommand('copy'); } catch (err) { ok = false; }
+      ta.remove();
+      if (active && active.focus) {
+        try { active.focus(); } catch (err) { /* 忽略 */ }
+      }
+      return ok;
+    }
+
+    function copySelection() {
+      const sel = window.getSelection();
+      if (!sel || sel.isCollapsed || !sel.rangeCount) return;
+      const text = String(sel);
+      if (!text) return;
+      let node = sel.getRangeAt(0).commonAncestorContainer;
+      if (node.nodeType !== 1) node = node.parentNode;
+      if (!box.contains(node)) return;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function () {
+          toast(TR.copied);
+        }, function () {
+          if (legacyCopy(text)) toast(TR.copied);
+        });
+      } else if (legacyCopy(text)) {
+        toast(TR.copied);
+      }
+    }
+
+    function insertText(text) {
+      const value = String(text).replace(/\r?\n/g, ' ');
+      const start = input.selectionStart == null ? input.value.length : input.selectionStart;
+      const end = input.selectionEnd == null ? input.value.length : input.selectionEnd;
+      input.value = input.value.slice(0, start) + value + input.value.slice(end);
+      const caret = start + value.length;
+      input.focus();
+      try { input.setSelectionRange(caret, caret); } catch (e) { /* 忽略 */ }
+    }
+
+    document.addEventListener('mouseup', function () {
+      setTimeout(copySelection, 0);
+    });
+
+    box.addEventListener('contextmenu', function (e) {
+      e.preventDefault();
+      if (!(navigator.clipboard && navigator.clipboard.readText)) {
+        toast(TR.denied);
+        return;
+      }
+      navigator.clipboard.readText().then(function (text) {
+        if (!text) { toast(TR.empty); return; }
+        insertText(text);
+        toast(TR.pasted);
+      }, function () {
+        toast(TR.denied);
+      });
+    });
+
+    /* 移动端：term-wrap 默认隐藏，用独立按钮打开浮动终端 */
+    const termOpen = document.getElementById('termOpen');
+    if (termOpen) {
+      termOpen.addEventListener('click', function () {
+        floatAt(uiState.w ? uiState : defaultRect());
+        input.focus();
+      });
+    }
+
+    syncTools();
+    if (uiState.mode === 'float') {
+      const saved = {
+        x: typeof uiState.x === 'number' ? uiState.x : window.innerWidth - 580,
+        y: typeof uiState.y === 'number' ? uiState.y : window.innerHeight - 460,
+        w: uiState.w || 560,
+        h: uiState.h || 420
+      };
+      if (uiState.min) {
+        floatAt(saved);
+        minimizeWin();
+      } else {
+        floatAt(saved);
+        if (uiState.max) {
+          maximized = true;
+          prevRect = uiState.restore || null;
+          applyRect(maxRect());
+          syncTools();
+        }
+      }
+    }
+
+    print(IS_EN ? 'McTa virtual terminal · static demo' : 'McTa 虚拟终端 · 静态演示', 'dim');
+    print(IS_EN ? 'Type mt -h for options, or try ls, pwd, cd, cat README.md; Tab completes commands, options and paths'
+                : '输入 mt -h 查看参数，或试试 ls、pwd、cd、cat README.md；Tab 可补全命令、参数与路径', 'dim');
+  })();
+
+  (function () {
+    const letters = Array.prototype.slice.call(document.querySelectorAll('.wordmark span'));
+
+    function rand(min, max) {
+      return Math.random() * (max - min) + min;
+    }
+
+    function pop(el) {
+      const rot = (Math.random() < 0.5 ? -1 : 1) * rand(12, 30);
+      const scale = rand(0.72, 1.45);
+      const skew = rand(-12, 12);
+      const dx = rand(-4, 4);
+      const dy = rand(-4, 4);
+
+      el.style.transition = 'transform .3s cubic-bezier(.34, 1.56, .64, 1)';
+      el.style.transform =
+        'translate(' + dx.toFixed(1) + 'px, ' + dy.toFixed(1) + 'px) ' +
+        'rotate(' + rot.toFixed(1) + 'deg) scale(' + scale.toFixed(2) + ') ' +
+        'skew(' + skew.toFixed(1) + 'deg)';
+
+      clearTimeout(el._timer);
+      el._timer = setTimeout(function () {
+        el.style.transition = 'transform .5s cubic-bezier(.34, 1.56, .64, 1)';
+        el.style.transform = '';
+      }, 420);
+    }
+
+    letters.forEach(function (el) {
+      el.addEventListener('mouseenter', function () { pop(el); });
+      el.addEventListener('click', function () { pop(el); });
+    });
+  })();
+
+  (function () {
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.setAttribute('role', 'status');
+    toast.setAttribute('aria-live', 'polite');
+    document.body.appendChild(toast);
+    let toastTimer = null;
+
+    function showToast(msg) {
+      toast.textContent = msg;
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(function () { toast.classList.remove('show'); }, 1400);
+    }
+
+    function copyText(text, onDone) {
+      function fallback() {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); onDone(); } catch (e) { /* 忽略不支持的环境 */ }
+        document.body.removeChild(ta);
+      }
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(onDone, fallback);
+      } else {
+        fallback();
+      }
+    }
+
+    /* 供终端浮窗复用 */
+    window.mctaToast = showToast;
+    window.mctaCopy = copyText;
+
+    /* 多行代码块拆成单行，各自复制 */
+    const IS_EN = document.documentElement.lang === 'en';
+    Array.prototype.forEach.call(document.querySelectorAll('.content pre:not(.help)'), function (pre) {
+      const lines = pre.textContent.split('\n').map(function (s) {
+        return s.trim();
+      }).filter(Boolean);
+
+      if (lines.length > 1) {
+        const group = document.createElement('div');
+        group.className = 'pre-group';
+        pre.parentNode.insertBefore(group, pre);
+        lines.forEach(function (line) {
+          const one = document.createElement('pre');
+          one.textContent = line;
+          group.appendChild(one);
+        });
+        pre.parentNode.removeChild(pre);
+      }
+    });
+
+    /* 每个代码块一个复制按钮（使用页的 mt -h 输出除外） */
+    Array.prototype.forEach.call(document.querySelectorAll('.content pre:not(.help)'), function (pre) {
+      const text = pre.textContent;
+      const wrap = document.createElement('div');
+      wrap.className = 'pre-wrap';
+      pre.parentNode.insertBefore(wrap, pre);
+      wrap.appendChild(pre);
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'copy-btn';
+      btn.textContent = IS_EN ? 'Copy' : '复制';
+
+      btn.addEventListener('click', function () {
+        copyText(text, function () {
+          btn.textContent = IS_EN ? 'Copied' : '已复制';
+          setTimeout(function () { btn.textContent = IS_EN ? 'Copy' : '复制'; }, 1200);
+        });
+      });
+
+      wrap.appendChild(btn);
+    });
+
+    /* 安装页的 pip 命令、概览页的示例命令：点击即复制 */
+    Array.prototype.forEach.call(document.querySelectorAll('#page-install td code, #page-overview td code'), function (code) {
+      const text = code.textContent;
+      if (code.closest('#page-install') && text.indexOf('pip install') !== 0) return;
+      code.classList.add('code-copy');
+      code.title = IS_EN ? 'Click to copy' : '点击复制';
+      code.addEventListener('click', function () {
+        copyText(text, function () { showToast((IS_EN ? 'Copied ' : '已复制 ') + text); });
+      });
+    });
+  })();
+
+  /* ---------- MIT License：打字机浮层 ---------- */
+  (function () {
+    const LICENSE_LINES = [
+      "MIT License",
+      "",
+      "Copyright (c) 2026 Kan",
+      "",
+      "Permission is hereby granted, free of charge, to any person obtaining a copy",
+      "of this software and associated documentation files (the \"Software\"), to deal",
+      "in the Software without restriction, including without limitation the rights",
+      "to use, copy, modify, merge, publish, distribute, sublicense, and/or sell",
+      "copies of the Software, and to permit persons to whom the Software is",
+      "furnished to do so, subject to the following conditions:",
+      "",
+      "The above copyright notice and this permission notice shall be included in all",
+      "copies or substantial portions of the Software.",
+      "",
+      "THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR",
+      "IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,",
+      "FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE",
+      "AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER",
+      "LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,",
+      "OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE",
+      "SOFTWARE."
+    ];
+    const LICENSE_TEXT = LICENSE_LINES.join("\n");
+    const overlay = document.getElementById('licenseOverlay');
+    const out = document.getElementById('licenseText');
+    if (!overlay || !out) return;
+    let timer = null;
+    function hide() {
+      if (timer) { clearInterval(timer); timer = null; }
+      overlay.classList.add('hidden');
+    }
+    function show(ev) {
+      if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+      if (timer) { clearInterval(timer); timer = null; }
+      // 先把全部行放进 DOM 并隐藏，首行从一开始就在全文显示时的最终位置。
+      out.textContent = '';
+      const frag = document.createDocumentFragment();
+      LICENSE_LINES.forEach(function (line) {
+        const span = document.createElement('span');
+        span.className = 'license-line';
+        span.textContent = line;
+        frag.appendChild(span);
+      });
+      out.appendChild(frag);
+      const rows = out.querySelectorAll('.license-line');
+      out.scrollTop = 0;
+      overlay.classList.remove('hidden');
+      let i = 0;
+      function reveal() {
+        if (i >= rows.length) { clearInterval(timer); timer = null; return; }
+        const row = rows[i];
+        row.classList.add('shown');
+        // 仅当屏幕放不下时，才向上移动到刚显示的行。
+        const bottom = row.offsetTop + row.offsetHeight;
+        if (bottom > out.scrollTop + out.clientHeight) out.scrollTop = bottom - out.clientHeight;
+        else if (row.offsetTop < out.scrollTop) out.scrollTop = row.offsetTop;
+        i += 1;
+      }
+      reveal();
+      if (i < rows.length) timer = setInterval(reveal, 80);
+    }
+    ['sideMit', 'footMit'].forEach(function (id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener('click', show);
+      el.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') show(e);
+      });
+    });
+    overlay.addEventListener('click', hide);
+    document.addEventListener('click', function (ev) {
+      if (overlay.classList.contains('hidden')) return;
+      if (ev.target.closest && ev.target.closest('.license-link')) return;
+      hide();
+    });
+    document.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Escape' && !overlay.classList.contains('hidden')) hide();
+    });
+  })();
+</script>
+
+</body>
+</html>

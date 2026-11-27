@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23f1f4f9'/%3E%3Ctext x='32' y='45' text-anchor='middle' font-family='Arial,Helvetica,sans-serif' font-size='36' font-weight='700' fill='%23e0553d'%3EM%3C/text%3E%3C/svg%3E">
+<title>McTa 文件服务</title>
+<link rel="stylesheet" href="/assets/xterm.css">
+<link rel="stylesheet" href="/assets/app.css">
+</head>
+<body>
+<div class="app">
+  <aside class="side card">
+    <div class="brand">
+      <div class="logo wordmark" role="img" aria-label="McTa"><span class="w-m">M</span><span class="w-c">c</span><span class="w-t">T</span><span class="w-a">a</span></div>
+      <span class="lang-wrap" id="langWrap"><button type="button" class="lang-switch" id="langToggle" title="切换语言 / Switch language" aria-label="切换语言 / Switch language" aria-haspopup="true" aria-expanded="false"><span class="lang-globe" aria-hidden="true">◎</span><span class="lang-name">中文</span><span class="lang-caret" aria-hidden="true">▼</span></button><span class="lang-menu" id="langMenu" role="menu"><button type="button" class="lang-menu-item" id="langMenuItem" role="menuitem">English</button></span></span>
+    </div>
+    <a class="cn" href="https://lkccrr.github.io/mcta/" target="_blank" rel="noopener noreferrer">格塔 · Meta Crystal Toolkit &amp; Analysis</a>
+    <a class="service" href="https://lkccrr.github.io/mcta/#server" target="_blank" rel="noopener noreferrer">mt.server</a>
+
+    <div class="side-info"><span class="meta" id="rootLabel">运行目录</span><code class="root" id="rootPath">读取中…</code></div>
+    <div class="side-info"><span class="meta">运行账户</span><span class="account" id="authText"></span></div>
+
+    <div class="path-row">
+      <input class="path-note" id="pathNote" type="text" spellcheck="false" autocomplete="off" title="输入路径后回车切换目录" aria-label="输入路径后回车切换目录">
+      <button class="path-go" id="pathGo" type="button" title="进入" aria-label="进入"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 10 5 14l4 4"/><path d="M5 14h9a5 5 0 0 0 5-5V6"/></svg></button>
+    </div>
+
+    <div class="side-foot">
+      <a href="https://github.com/lkccrr/mcta" target="_blank" rel="noopener noreferrer">GitHub</a><span>·</span>
+      <a href="https://pypi.org/project/mcta/" target="_blank" rel="noopener noreferrer">PyPI</a><span>·</span>
+      <a class="license-link" id="sideMit" href="#" role="button" tabindex="0" title="查看许可">MIT</a>
+    </div>
+
+    <div class="term-wrap">
+      <div class="term-head">
+        <span class="term-title">
+          <span class="t">终端</span>
+          <span class="muted" id="termState" aria-live="polite">连接中…</span>
+        </span>
+        <span class="term-tools" role="group" aria-label="终端窗口">
+          <button type="button" data-term-act="min" title="最小化" aria-label="最小化"><span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></span></button>
+          <button type="button" data-term-act="restore" title="还原" aria-label="还原"><span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 11a9 9 0 1 1 2.6 6.4"/><path d="M3 5v6h6"/></svg></span></button>
+          <button type="button" data-term-act="max" title="放大到整个页面" aria-label="放大到整个页面"><span class="max-icon win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 17 17 7"/><path d="M9 7h8v8"/></svg></span><span class="restore-icon win-glyph hidden" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M17 7 7 17"/><path d="M15 17H7V9"/></svg></span></button>
+          <button type="button" data-term-act="dock" title="还原到侧栏" aria-label="还原到侧栏"><span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/><path d="m14 9-3 3 3 3"/></svg></span></button>
+        </span>
+      </div>
+      <div class="term-box" id="termBox">
+        <canvas class="term-rain" id="termRain" aria-hidden="true"></canvas>
+        <div class="term-hint" id="termHint">正在连接终端…</div>
+      </div>
+      <span class="resize-handle rh-tl"></span><span class="resize-handle rh-t"></span><span class="resize-handle rh-tr"></span>
+      <span class="resize-handle rh-l"></span><span class="resize-handle rh-r"></span>
+      <span class="resize-handle rh-bl"></span><span class="resize-handle rh-b"></span><span class="resize-handle rh-br"></span>
+    </div>
+
+  </aside>
+
+  <main>
+    <section class="card" id="browser">
+      <div class="head" title="点击顶栏可浮动为小窗口"><span class="crumb-min-label" id="crumbMinLabel">目录</span><div class="crumbs" id="crumbs"></div><span class="crumb-min-path" id="crumbMinPath"></span><div class="head-btns">
+        <button id="btnDownloadSel" class="new-btn icon-btn" type="button" disabled title="下载选中文件" aria-label="下载选中文件"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/></svg><span class="ic-badge" id="downloadBadge"></span></button>
+        <button id="btnNewDir" class="new-btn icon-btn" type="button" title="新建目录" aria-label="新建目录"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 11v6M9 14h6"/></svg></button>
+        <button id="btnNewText" class="new-btn icon-btn" type="button" title="新建文本" aria-label="新建文本"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg></button>
+        <span class="browser-tools" role="group" aria-label="目录窗口">
+          <button type="button" data-browser-act="min" title="最小化" aria-label="最小化"><span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></span></button>
+          <button type="button" data-browser-act="restore" title="还原" aria-label="还原"><span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 11a9 9 0 1 1 2.6 6.4"/><path d="M3 5v6h6"/></svg></span></button>
+          <button type="button" data-browser-act="max" title="放大到整个页面" aria-label="放大到整个页面"><span class="max-icon win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 17 17 7"/><path d="M9 7h8v8"/></svg></span><span class="restore-icon win-glyph hidden" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M17 7 7 17"/><path d="M15 17H7V9"/></svg></span></button>
+          <button type="button" data-browser-act="dock" title="还原到页面" aria-label="还原到页面"><span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/><path d="m14 9-3 3 3 3"/></svg></span></button>
+        </span>
+      </div></div>
+      <div class="browser-body">
+        <div class="drop-row" id="dropRow" title="拖入文件或目录以上传"></div>
+        <div class="gallery hidden" id="gallery"></div>
+        <div class="meta hidden" id="othersLabel">其他文件</div>
+        <div id="fileTable" class="file-grid"></div>
+        <div class="empty hidden" id="empty">此目录为空</div>
+      </div>
+      <span class="browser-rh brh-tl"></span><span class="browser-rh brh-t"></span><span class="browser-rh brh-tr"></span>
+      <span class="browser-rh brh-l"></span><span class="browser-rh brh-r"></span>
+      <span class="browser-rh brh-bl"></span><span class="browser-rh brh-b"></span><span class="browser-rh brh-br"></span>
+    </section>
+
+    <footer class="foot">
+      <div class="foot-anim" aria-hidden="true"><span class="w-m">M</span><span class="w-c">c</span><span class="w-t">T</span><span class="w-a">a</span></div>
+      <p class="foot-title">许可</p>
+      <p><a class="license-link" id="footMit" href="#" role="button" tabindex="0" title="查看许可">MIT License</a><span> · 源码与问题反馈：</span>
+        <a href="https://github.com/lkccrr/mcta" target="_blank" rel="noopener noreferrer">GitHub</a> ·
+        <a href="https://pypi.org/project/mcta/" target="_blank" rel="noopener noreferrer">PyPI</a>
+      </p>
+    </footer>
+  </main>
+</div>
+<div class="mol-mask hidden" id="molView" data-base-id="molView">
+  <div class="mol-win">
+    <div class="mol-head">
+      <h2 id="molName"></h2>
+      <div class="mol-head-edit-actions">
+        <button id="molUndoEdit" class="win-icon" type="button" title="撤销" aria-label="撤销" disabled>
+          <span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></span>
+        </button>
+        <button id="molRedoEdit" class="win-icon" type="button" title="恢复" aria-label="恢复" disabled>
+          <span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/></svg></span>
+        </button>
+      </div>
+      <button id="molArchive" class="win-icon" type="button" title="存档" aria-label="存档" disabled><span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/></svg></span></button>
+      <button id="molSaveImage" class="win-icon" type="button" title="保存图片到电脑" aria-label="保存图片到电脑"><span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="15" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 14-5-5-9 9"/><path d="M19 15v5"/><path d="m16 18 3 3 3-3"/></svg></span></button>
+      <button id="molSave" class="win-icon" type="button" title="下载到电脑" aria-label="下载到电脑">
+        <span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/></svg></span>
+      </button>
+      <button class="min-btn win-icon" type="button" title="最小化" aria-label="最小化"><span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></span></button>
+      <button class="restore-btn win-icon" type="button" title="还原" aria-label="还原"><span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 11a9 9 0 1 1 2.6 6.4"/><path d="M3 5v6h6"/></svg></span></button>
+      <button class="max-btn win-icon" type="button" title="放大到整个页面" aria-label="放大到整个页面">
+        <span class="max-icon win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 17 17 7"/><path d="M9 7h8v8"/></svg></span>
+        <span class="restore-icon win-glyph hidden" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M17 7 7 17"/><path d="M15 17H7V9"/></svg></span>
+      </button>
+      <button id="btnMolClose" class="win-icon close-icon" type="button" title="关闭" aria-label="关闭">
+        <span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span>
+      </button>
+    </div>
+    <div class="mol-canvas" id="molCanvas"></div>
+    <div class="mol-tools" id="molTools">
+      <span class="mol-loading hidden" id="molLoading">正在渲染…</span>
+      <button id="molCancelLoad" class="tool-icon hidden" type="button" title="取消加载" aria-label="取消加载">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+      <button id="molPanToggle" class="tool-icon" type="button" title="左键平移" aria-label="左键平移" aria-pressed="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 11V5.5a1.5 1.5 0 0 1 3 0V10"/><path d="M11 10V4.5a1.5 1.5 0 0 1 3 0V10"/><path d="M14 10V6a1.5 1.5 0 0 1 3 0v7"/><path d="M17 11a1.5 1.5 0 0 1 3 0v4c0 4-2.6 6-6 6h-2c-2 0-3.2-1-4.4-2.6L4 14.2a1.6 1.6 0 0 1 2.4-2.1L8 13.5V11"/></svg>
+      </button>
+      <span class="mol-dd" data-direction="up">
+        <button id="molAxisBtn" class="mol-dd-btn" type="button" title="旋转轴" aria-haspopup="listbox">Z轴 ▲</button>
+        <ul class="mol-dd-menu" id="molAxisMenu" role="listbox">
+          <li role="option" data-value="x">X 轴</li>
+          <li role="option" data-value="y">Y 轴</li>
+          <li role="option" data-value="z" aria-selected="true">Z 轴</li>
+        </ul>
+      </span>
+      <span class="mol-dd" data-direction="up">
+        <button id="molAngleBtn" class="mol-dd-btn" type="button" title="旋转角度" aria-haspopup="listbox">30° ▲</button>
+        <ul class="mol-dd-menu" id="molAngleMenu" role="listbox">
+          <li role="option" data-value="custom" class="mol-angle-custom"><span class="mol-angle-custom-text">自定义</span><span class="mol-angle-custom-edit hidden"><input id="molAngleCustomInput" type="number" min="1" max="360" step="1" title="自定义旋转角度（1-360 度）" aria-label="自定义旋转角度（1-360 度）"><button id="molAngleCustomOk" type="button" title="确定" aria-label="确定">✓</button></span></li>
+          <li role="option" data-value="5">5°</li>
+          <li role="option" data-value="10">10°</li>
+          <li role="option" data-value="15">15°</li>
+          <li role="option" data-value="30" aria-selected="true">30°</li>
+          <li role="option" data-value="45">45°</li>
+          <li role="option" data-value="90">90°</li>
+          <li role="option" data-value="180">180°</li>
+        </ul>
+      </span>
+      <button id="molRotL" class="tool-icon" type="button" title="逆时针旋转" aria-label="逆时针旋转"><span class="tool-glyph" aria-hidden="true">↺</span></button>
+      <button id="molRotR" class="tool-icon" type="button" title="顺时针旋转" aria-label="顺时针旋转"><span class="tool-glyph" aria-hidden="true">↻</span></button>
+      <span class="mol-dd" data-direction="up">
+        <button id="molZoomStepBtn" class="mol-dd-btn" type="button" title="缩放比例" aria-haspopup="listbox">1.25× ▲</button>
+        <ul class="mol-dd-menu" id="molZoomStepMenu" role="listbox">
+          <li role="option" data-value="1.1">1.1×</li>
+          <li role="option" data-value="1.25" aria-selected="true">1.25×</li>
+          <li role="option" data-value="1.5">1.5×</li>
+          <li role="option" data-value="2">2×</li>
+        </ul>
+      </span>
+      <button id="molZoomIn" class="tool-icon" type="button" title="放大" aria-label="放大">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16 16l5 5M8 11h6M11 8v6"/></svg>
+      </button>
+      <button id="molZoomOut" class="tool-icon" type="button" title="缩小" aria-label="缩小">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16 16l5 5M8 11h6"/></svg>
+      </button>
+      <button id="molSelectAtoms" class="tool-icon" type="button" title="选中原子" aria-label="选中原子" aria-pressed="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1" stroke-dasharray="2 2"/><rect x="14" y="14" width="7" height="7" rx="1" stroke-dasharray="2 2"/><path d="M10 10l4 4"/></svg>
+      </button>
+      <button id="molAddAtom" class="tool-icon" type="button" title="增加原子" aria-label="增加原子">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="9" r="3"/><path d="M9 3v2M9 13v2M3 9h2M13 9h2"/><path d="M18 17v6M15 20h6"/></svg>
+      </button>
+      <button id="molMeasureToggle" class="tool-icon" type="button" title="测量模式" aria-label="测量模式" aria-pressed="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15.5 15.5 4 20 8.5 8.5 20z"/><path d="M8 11l2 2M11 8l2 2M14 5l2 2"/></svg>
+      </button>
+      <button id="molPickClear" class="tool-icon" type="button" title="清除选中" aria-label="清除选中">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/></svg>
+      </button>
+      <div id="molViewCtlSource" class="hidden">
+        <button id="molProj" class="tool-icon" type="button" title="视角：正交" aria-label="视角：正交">
+          <svg id="molProjOrtho" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 3 8v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg>
+          <svg id="molProjPersp" class="hidden" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16v11H4z"/><path d="M4 9l5-5h6l5 5"/><path d="M9 9v11M15 9v11"/></svg>
+        </button>
+        <button id="molFaceX" class="tool-icon" type="button" title="正对X" aria-label="正对X"><span class="tool-glyph" aria-hidden="true">🅧</span></button>
+        <button id="molFaceY" class="tool-icon" type="button" title="正对Y" aria-label="正对Y"><span class="tool-glyph" aria-hidden="true">🅨</span></button>
+        <button id="molFaceZ" class="tool-icon" type="button" title="正对Z" aria-label="正对Z"><span class="tool-glyph" aria-hidden="true">🅩</span></button>
+      </div>
+      <button id="molFit" class="tool-icon" type="button" title="自适应" aria-label="自适应">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/><path d="M12 8v8M8 12h8"/></svg>
+      </button>
+      <button id="molReset" class="tool-icon" type="button" title="重置" aria-label="重置">
+        <span class="tool-glyph" aria-hidden="true">🔄︎</span>
+      </button>
+      <span class="mol-density-group hidden" id="molDensityGroup">
+        <span class="mol-dd" data-direction="up">
+          <button id="molDensityKindBtn" class="mol-dd-btn hidden" type="button" title="密度类型" aria-haspopup="listbox"></button>
+          <ul class="mol-dd-menu" id="molDensityKindMenu" role="listbox"></ul>
+        </span>
+        <!-- 等值面与透明度已移入“等值面设置”弹窗（右键/长按等值面打开） -->
+      </span>
+      <span class="mol-player hidden" id="molPlayer">
+        <button id="molPrev" class="tool-icon" type="button" title="上一帧" aria-label="上一帧">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4v16M20 4L9 12l11 8V4"/></svg>
+        </button>
+        <button id="molPlay" class="tool-icon" type="button" title="播放" aria-label="播放">
+          <svg id="molPlayIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5l12 7-12 7z"/></svg>
+        </button>
+        <button id="molNext" class="tool-icon" type="button" title="下一帧" aria-label="下一帧">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 4v16M4 4l11 8-11 8V4"/></svg>
+        </button>
+        <input type="range" id="molRange" min="0" max="0" value="0">
+        <span class="mol-count" id="molCount">1 / 1</span>
+        <span class="mol-dd" data-direction="up">
+          <button id="molSpeedBtn" class="mol-dd-btn" type="button" title="播放速度" aria-haspopup="listbox">1× ▲</button>
+          <ul class="mol-dd-menu" id="molSpeedMenu" role="listbox">
+            <li role="option" data-value="0.5">0.5×</li>
+            <li role="option" data-value="1" aria-selected="true">1×</li>
+            <li role="option" data-value="2">2×</li>
+            <li role="option" data-value="4">4×</li>
+          </ul>
+        </span>
+      </span>
+    </div>
+    <div class="mol-pick-panel hidden" id="molPickPanel" role="dialog" aria-label="原子样式">
+      <div class="mol-pick-head">
+        <p class="mol-pick-title" id="molPickTitle">原子样式</p>
+        <button id="molPickReset" type="button">恢复默认</button>
+      </div>
+      <div class="mol-pick-row" id="molPickSizeRow">
+        <span>原子大小</span>
+        <input type="number" id="molPickSize" min="0.05" max="0.80" step="0.01" value="0.30" aria-label="原子大小">
+        <button class="mol-pick-num-btn" id="molPickSizeBtn" type="button" title="调节原子大小" aria-haspopup="true" aria-label="调节原子大小">▼</button>
+        <div class="mol-pick-pop" id="molPickSizePop"><input type="range" id="molPickSizeRange" min="0.05" max="0.80" step="0.01" value="0.30" aria-label="原子大小滑杆"></div>
+      </div>
+      <div class="mol-pick-row" id="molPickColorRow">
+        <span>原子颜色</span><input type="color" id="molPickColor" value="#ff0000" aria-label="原子颜色">
+      </div>
+      <div class="hidden" id="molPickStyleBox"></div>
+    </div>
+    <div class="mol-pick-panel mol-atom-panel hidden" id="molAtomPanel" data-atom-template="1" role="dialog" aria-label="原子坐标">
+      <div class="mol-pick-head">
+        <div class="mol-atom-head-top">
+          <p class="mol-pick-title">原子坐标</p>
+          <div class="mol-atom-head-actions">
+            <button class="mol-atom-close" type="button" title="关闭" aria-label="关闭">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="mol-atom-head-bar">
+          <div class="mol-atom-head-elem">
+            <input type="text" class="mol-atom-elem-input" placeholder="元素" aria-label="修改所有选中原子的元素">
+            <button class="mol-atom-elem-apply" type="button" title="修改所有选中原子的元素" aria-label="修改所有选中原子的元素">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>
+            </button>
+            <button class="mol-add-table-btn mol-atom-elem-table" type="button" title="周期表" aria-label="周期表"><svg viewBox="0 0 48 40" aria-hidden="true" font-family="sans-serif" font-size="7" font-weight="500" text-anchor="middle"><rect x="7" y="7" width="16" height="12" rx="2" fill="#85B7EB" stroke="#185FA5" stroke-width=".7"/><rect x="4" y="4" width="16" height="12" rx="2" fill="#E6F1FB" stroke="#185FA5" stroke-width=".7"/><text x="12" y="12" fill="#042C53">Fe</text><rect x="19" y="17" width="16" height="12" rx="2" fill="#EF9F27" stroke="#854F0B" stroke-width=".7"/><rect x="16" y="14" width="16" height="12" rx="2" fill="#FAEEDA" stroke="#854F0B" stroke-width=".7"/><text x="24" y="22" fill="#412402">Co</text><rect x="31" y="27" width="16" height="12" rx="2" fill="#5DCAA5" stroke="#0F6E56" stroke-width=".7"/><rect x="28" y="24" width="16" height="12" rx="2" fill="#E1F5EE" stroke="#0F6E56" stroke-width=".7"/><text x="36" y="32" fill="#04342C">Ni</text></svg></button>
+          </div>
+          <button class="mol-atom-del-all" type="button" title="删除所有选中原子" aria-label="删除所有选中原子">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="mol-atom-rows"></div>
+    </div>
+    <div class="mol-atom-entry hidden" id="molAtomRow" data-atom-row-template="1">
+      <div class="mol-atom-entry-head">
+        <div class="mol-atom-meta"></div>
+        <div class="mol-atom-row-elem">
+          <input type="text" class="mol-atom-row-elem-input" placeholder="元素" aria-label="修改此原子的元素">
+          <button class="mol-atom-row-elem-apply" type="button" title="修改此原子的元素" aria-label="修改此原子的元素">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>
+          </button>
+          <button class="mol-add-table-btn mol-atom-row-elem-table" type="button" title="周期表" aria-label="周期表"><svg viewBox="0 0 48 40" aria-hidden="true" font-family="sans-serif" font-size="7" font-weight="500" text-anchor="middle"><rect x="7" y="7" width="16" height="12" rx="2" fill="#85B7EB" stroke="#185FA5" stroke-width=".7"/><rect x="4" y="4" width="16" height="12" rx="2" fill="#E6F1FB" stroke="#185FA5" stroke-width=".7"/><text x="12" y="12" fill="#042C53">Fe</text><rect x="19" y="17" width="16" height="12" rx="2" fill="#EF9F27" stroke="#854F0B" stroke-width=".7"/><rect x="16" y="14" width="16" height="12" rx="2" fill="#FAEEDA" stroke="#854F0B" stroke-width=".7"/><text x="24" y="22" fill="#412402">Co</text><rect x="31" y="27" width="16" height="12" rx="2" fill="#5DCAA5" stroke="#0F6E56" stroke-width=".7"/><rect x="28" y="24" width="16" height="12" rx="2" fill="#E1F5EE" stroke="#0F6E56" stroke-width=".7"/><text x="36" y="32" fill="#04342C">Ni</text></svg></button>
+        </div>
+        <button class="mol-atom-del" type="button" title="删除原子" aria-label="删除原子">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/></svg>
+        </button>
+      </div>
+      <div class="mol-atom-blocks">
+        <div class="mol-atom-block">
+          <p class="mol-atom-col-title">分数坐标</p>
+          <div class="mol-atom-row">
+            <label><span>x:</span><input type="number" data-atom-axis="Fx" step="0.001" aria-label="分数坐标 x"></label>
+            <label><span>y:</span><input type="number" data-atom-axis="Fy" step="0.001" aria-label="分数坐标 y"></label>
+            <label><span>z:</span><input type="number" data-atom-axis="Fz" step="0.001" aria-label="分数坐标 z"></label>
+          </div>
+        </div>
+        <div class="mol-atom-block">
+          <p class="mol-atom-col-title">笛卡尔坐标 (Å)</p>
+          <div class="mol-atom-row">
+            <label><span>X:</span><input type="number" data-atom-axis="Cx" step="0.001" aria-label="笛卡尔坐标 X"></label>
+            <label><span>Y:</span><input type="number" data-atom-axis="Cy" step="0.001" aria-label="笛卡尔坐标 Y"></label>
+            <label><span>Z:</span><input type="number" data-atom-axis="Cz" step="0.001" aria-label="笛卡尔坐标 Z"></label>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mol-pick-panel mol-add-panel hidden" id="molAddPanel" role="dialog" aria-label="增加原子">
+      <div class="mol-pick-head">
+        <p class="mol-pick-title" id="molAddTitle">增加原子</p>
+        <button id="molAddConfirm" class="mol-add-icon" type="button" title="添加原子" aria-label="添加原子">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+      </div>
+      <div class="mol-add-row">
+        <span>元素</span>
+        <input type="text" id="molAddElem" placeholder="符号或名称" aria-label="元素名或符号">
+        <button id="molAddTableBtn" class="mol-add-table-btn" type="button" title="周期表" aria-label="周期表"><svg viewBox="0 0 48 40" aria-hidden="true" font-family="sans-serif" font-size="7" font-weight="500" text-anchor="middle"><rect x="7" y="7" width="16" height="12" rx="2" fill="#85B7EB" stroke="#185FA5" stroke-width=".7"/><rect x="4" y="4" width="16" height="12" rx="2" fill="#E6F1FB" stroke="#185FA5" stroke-width=".7"/><text x="12" y="12" fill="#042C53">Fe</text><rect x="19" y="17" width="16" height="12" rx="2" fill="#EF9F27" stroke="#854F0B" stroke-width=".7"/><rect x="16" y="14" width="16" height="12" rx="2" fill="#FAEEDA" stroke="#854F0B" stroke-width=".7"/><text x="24" y="22" fill="#412402">Co</text><rect x="31" y="27" width="16" height="12" rx="2" fill="#5DCAA5" stroke="#0F6E56" stroke-width=".7"/><rect x="28" y="24" width="16" height="12" rx="2" fill="#E1F5EE" stroke="#0F6E56" stroke-width=".7"/><text x="36" y="32" fill="#04342C">Ni</text></svg></button>
+      </div>
+      <p class="mol-atom-col-title" style="margin-top:2px;">分数坐标（晶格）</p>
+      <div class="mol-atom-row">
+        <label><span>x:</span><input type="number" id="molAddFx" step="0.001" value="0" aria-label="新增原子分数坐标 x"></label>
+        <label><span>y:</span><input type="number" id="molAddFy" step="0.001" value="0" aria-label="新增原子分数坐标 y"></label>
+        <label><span>z:</span><input type="number" id="molAddFz" step="0.001" value="0" aria-label="新增原子分数坐标 z"></label>
+      </div>
+    </div>
+    <div class="mol-pick-panel mol-periodic-panel hidden" id="molPeriodicPanel" role="dialog" aria-label="周期表">
+      <div class="mol-pick-head">
+        <p class="mol-pick-title" id="molPeriodicTitle">周期表</p>
+      </div>
+      <div class="mol-add-table" id="molAddTable"></div>
+      <p class="mol-atom-hint">选择元素后自动填入对应输入框。</p>
+    </div>
+    <div class="mol-save hidden" id="molSaveBox">
+      <div class="mol-save-win" role="dialog" aria-modal="true" aria-labelledby="molSaveTitle">
+        <p id="molSaveTitle">保存图片</p>
+        <div class="mol-save-options">
+          <label for="molFormat">图片格式
+            <select id="molFormat">
+              <option value="png" selected>PNG</option>
+              <option value="jpg">JPEG</option>
+              <option value="webp">WebP</option>
+            </select>
+          </label>
+          <label for="molScale">分辨率倍数
+            <select id="molScale">
+              <option value="1">1×</option>
+              <option value="2">2×</option>
+              <option value="4" selected>4×</option>
+              <option value="6">6×</option>
+              <option value="8">8×</option>
+            </select>
+          </label>
+        </div>
+        <label class="mol-save-name-label" for="molSaveName">文件名</label>
+        <input id="molSaveName" type="text" spellcheck="false">
+        <div class="mol-save-ops">
+          <button id="molSaveCancel">取消</button>
+          <button id="molSaveOk">保存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="mol-mask hidden" id="quickView" data-base-id="quickView">
+  <div class="mol-win">
+    <div class="mol-head">
+      <h2 id="quickName"></h2>
+      <button id="quickArchive" class="win-icon hidden" type="button" title="存档" aria-label="存档"><span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/></svg></span></button>
+      <button id="quickAction" class="win-icon hidden" type="button" title="下载到电脑" aria-label="下载到电脑">
+        <span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/></svg></span>
+        <span class="action-text"></span>
+      </button>
+      <button class="min-btn win-icon" type="button" title="最小化" aria-label="最小化"><span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></span></button>
+      <button class="restore-btn win-icon" type="button" title="还原" aria-label="还原"><span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 11a9 9 0 1 1 2.6 6.4"/><path d="M3 5v6h6"/></svg></span></button>
+      <button id="btnQuickMax" class="max-btn win-icon" type="button" title="放大到整个页面" aria-label="放大到整个页面">
+        <span class="max-icon win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 17 17 7"/><path d="M9 7h8v8"/></svg></span>
+        <span class="restore-icon win-glyph hidden" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M17 7 7 17"/><path d="M15 17H7V9"/></svg></span>
+      </button>
+      <button id="btnQuickClose" class="win-icon close-icon" type="button" title="关闭" aria-label="关闭">
+        <span class="win-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span>
+      </button>
+    </div>
+    <div id="quickBody"></div>
+    <div class="mol-tools quick-tools hidden" id="quickPlayer">
+      <span class="mol-player">
+        <button id="mediaPlay" class="tool-icon" type="button" title="播放" aria-label="播放">
+          <svg id="mediaPlayIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5l12 7-12 7z"/></svg>
+        </button>
+        <input type="range" id="mediaRange" min="0" max="0" value="0" step="0.1" aria-label="播放进度">
+        <span class="mol-count" id="mediaCount">0:00 / 0:00</span>
+        <span class="mol-dd" data-direction="up">
+          <button id="mediaSpeedBtn" class="mol-dd-btn" type="button" title="播放速度" aria-haspopup="listbox">1× ▲</button>
+          <ul class="mol-dd-menu" id="mediaSpeedMenu" role="listbox">
+            <li role="option" data-value="0.5">0.5×</li>
+            <li role="option" data-value="1" aria-selected="true">1×</li>
+            <li role="option" data-value="2">2×</li>
+          </ul>
+        </span>
+        <button id="mediaMute" class="tool-icon" type="button" title="静音" aria-label="静音" aria-pressed="false">
+          <svg id="mediaMuteIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4M17 8a5 5 0 0 1 0 8M19.5 5.5a8.5 8.5 0 0 1 0 13"/></svg>
+        </button>
+      </span>
+    </div>
+  </div>
+</div>
+<div class="file-menu hidden" id="fileMenu"></div>
+<div class="confirm-mask hidden" id="confirmMask">
+  <div class="confirm-box">
+    <div class="confirm-head" id="confirmTitle">确认</div>
+    <div class="confirm-body" id="confirmMessage"></div>
+    <div class="confirm-foot">
+      <button class="btn-cancel hidden" id="confirmExtra" type="button">不保存</button>
+      <button class="btn-cancel" id="confirmCancel" type="button">取消</button>
+      <button class="btn-ok" id="confirmOk" type="button">确定</button>
+    </div>
+  </div>
+</div>
+<div class="license-overlay hidden" id="licenseOverlay" role="dialog" aria-label="MIT License" aria-modal="false">
+  <pre class="license-text" id="licenseText"></pre>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="/assets/3dmol-min.js"></script>
+<script src="/assets/xterm.js"></script>
+<script src="/assets/app.js"></script>
+<script src="/assets/viewer.js"></script>
+</html>

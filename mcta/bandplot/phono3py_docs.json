@@ -1,0 +1,1361 @@
+{
+  "meta": {
+    "title": "phono3py documentation",
+    "doc_version": "4.10.0",
+    "source": "https://phonopy.github.io/phono3py/",
+    "page_titles": {
+      "": "Welcome to phono3py — phono3py v.4.10.0",
+      "phono3py": "phono3py command — phono3py v.4.10.0",
+      "phono3py-init": "phono3py-init command — phono3py v.4.10.0",
+      "vasp": "VASP & phono3py calculation — phono3py v.4.10.0",
+      "command-options": "Command options / Setting tags — phono3py v.4.10.0",
+      "auxiliary-tools": "Auxiliary tools — phono3py v.4.10.0",
+      "random-displacements": "Force constants calculation with random displacements of atoms — phono3py v.4.10.0",
+      "migration-v4": "Migrating from phono3py v3 to v4 — phono3py v.4.10.0",
+      "hdf5_howto": "Using phono3py hdf5 files — phono3py v.4.10.0"
+    }
+  },
+  "entries": [
+    {
+      "name": "phono3py",
+      "title": "phono3py",
+      "group": "tool",
+      "keys": [
+        "phono3py",
+        "main command",
+        "phono3py 主命令"
+      ],
+      "en": "The `phono3py` command runs the phonon and thermal-conductivity calculation\nstep of the workflow. It reads a `phono3py.yaml`-like file, constructs the\nphonon and ph-ph interaction, and computes the requested property (thermal\nconductivity, imaginary self energy, joint DOS, ...).\n`phono3py` reads `phono3py_disp.yaml` (or `phono3py.yaml`) automatically when\nthe file is present in the current directory; `phono3py_disp.yaml` takes\nprecedence. It can also be given as the first argument, and the file may be\ncompressed (xz, lzma, gz, bz2).",
+      "zh": "`phono3py` 命令负责流程中「声子 + 热导率」这一步：读取 phono3py.yaml 一类\n文件，构建声子与声子-声子相互作用，算出请求的物理量（热导率、虚部自能、\n联合态密度等）。\n当前目录下有 phono3py_disp.yaml 或 phono3py.yaml 时会自动读取，前者优先；\n也可把它作为第一个位置参数，文件可以是 xz/lzma/gz/bz2 压缩形式。",
+      "url": "https://phonopy.github.io/phono3py/phono3py.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "phono3py-init",
+      "title": "phono3py-init",
+      "group": "tool",
+      "keys": [
+        "phono3py-init",
+        "init",
+        "phono3py 初始化"
+      ],
+      "en": "The `phono3py-init` command handles the setup steps that happen before phonon\nand thermal-conductivity calculation:\n- generate supercells with displacements (`-d`, `--rd`, `--rd-fc2`),\n- collect calculator results into `FORCES_FC3` (`--cf3`, `--cf3-file`) or\n  `FORCES_FC2` (`--cf2`),\n- subtract residual forces (`--cfz`, `--cfz-fc2`),\n- convert between `FORCE_SETS` and `FORCES_FC2` (`--cfs`, `--fs2f2`).\nAfter this step, run the phonon and thermal-conductivity calculation with the\n`phono3py` command.",
+      "zh": "`phono3py-init` 负责计算前的准备工作：\n- 生成含位移的超胞（-d、--rd、--rd-fc2）；\n- 把计算器结果收集成 FORCES_FC3（--cf3、--cf3-file）或 FORCES_FC2（--cf2）；\n- 扣除残余力（--cfz、--cfz-fc2）；\n- 在 FORCE_SETS 与 FORCES_FC2 之间互转（--cfs、--fs2f2）。\n这一步做完后，用 `phono3py` 命令做声子与热导率计算。",
+      "url": "https://phonopy.github.io/phono3py/phono3py-init.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "phono3py-load",
+      "title": "phono3py-load",
+      "group": "tool",
+      "keys": [
+        "phono3py-load",
+        "load"
+      ],
+      "en": "`phono3py-load` is the historical name of the `phono3py` command and is kept\nas a deprecated alias. It emits a warning and otherwise behaves identically\nto `phono3py`. Use `phono3py` in new scripts.",
+      "zh": "`phono3py-load` 是 `phono3py` 命令的旧名字，现在只作为已弃用的别名保留：\n会打印警告，行为与 `phono3py` 完全相同。新脚本请直接用 `phono3py`。",
+      "url": "https://phonopy.github.io/phono3py/phono3py.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "phono3py-kaccum",
+      "title": "phono3py-kaccum",
+      "group": "tool",
+      "keys": [
+        "phono3py-kaccum",
+        "kaccum",
+        "累积热导率"
+      ],
+      "en": "`phono3py-kaccum` calculates cumulative lattice thermal conductivity and\nrelated properties from a kappa-*.hdf5 file written by `phono3py --br` or\n`--lbte`. The output is written as a text table (default file name\nkaccum.dat) and can be redirected with the standard shell `>`.",
+      "zh": "`phono3py-kaccum` 从 `phono3py --br` 或 `--lbte` 生成的 kappa-*.hdf5 计算\n累积晶格热导率及其相关量，结果写成文本表格（默认 kaccum.dat，也可用\nshell 的 `>` 重定向）。",
+      "url": "https://phonopy.github.io/phono3py/auxiliary-tools.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "phono3py-kdeplot",
+      "title": "phono3py-kdeplot",
+      "group": "tool",
+      "keys": [
+        "phono3py-kdeplot",
+        "kdeplot",
+        "寿命分布"
+      ],
+      "en": "`phono3py-kdeplot` draws the distribution of phonon lifetime as a kernel\ndensity estimate (KDE) plot from a kappa-*.hdf5 file produced by\n`phono3py --br`.",
+      "zh": "`phono3py-kdeplot` 从 `phono3py --br` 生成的 kappa-*.hdf5 出发，用核密度\n估计（KDE）画出声子寿命的分布图。",
+      "url": "https://phonopy.github.io/phono3py/auxiliary-tools.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--dim",
+      "title": "--dim",
+      "group": "option",
+      "keys": [
+        "--dim",
+        "dim",
+        "DIM",
+        "超胞尺寸"
+      ],
+      "en": "Supercell dimension for fc3 (and fc2 when --dim-fc2 is not given), e.g.\n`--dim 2 2 2`.\n    % phono3py-init -d --dim 2 2 2 --pa auto -c POSCAR-unitcell",
+      "zh": "fc3 的超胞尺寸（未给 --dim-fc2 时 fc2 也用这个），例如 `--dim 2 2 2`：\n    % phono3py-init -d --dim 2 2 2 --pa auto -c POSCAR-unitcell",
+      "url": "https://phonopy.github.io/phono3py/vasp.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--dim-fc2",
+      "title": "--dim-fc2",
+      "group": "option",
+      "keys": [
+        "--dim-fc2",
+        "dim-fc2",
+        "DIM_FC2"
+      ],
+      "en": "If you want to use a larger supercell size for second-order force constants\n(fc2) calculation than that for third-order force constants (fc3):\n    % phono3py-init -d --dim-fc2 4 4 4 --dim 2 2 2 --pa F -c POSCAR-unitcell\nIn this case, `POSCAR_FC2-xxxxx` files are also created.",
+      "zh": "若想让二阶力常数（fc2）用比三阶力常数（fc3）更大的超胞：\n    % phono3py-init -d --dim-fc2 4 4 4 --dim 2 2 2 --pa F -c POSCAR-unitcell\n此时除 POSCAR-xxxxx 外还会生成 POSCAR_FC2-xxxxx。",
+      "url": "https://phonopy.github.io/phono3py/vasp.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--pa, --primitive-axes",
+      "title": "--pa, --primitive-axes",
+      "group": "option",
+      "keys": [
+        "--pa",
+        "primitive-axes",
+        "PA"
+      ],
+      "en": "`--pa` (primitive axes) specifies the transformation from the input unit cell\nto the primitive cell. `--pa auto` (the default in v4) finds the primitive\ncell automatically from the crystal symmetry.",
+      "zh": "`--pa` 给出输入晶胞到原胞的变换矩阵。v4 起默认值为 `--pa auto`，即按晶体\n对称性自动找原胞。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "-c, --cell-filename",
+      "title": "-c, --cell-filename",
+      "group": "option",
+      "keys": [
+        "-c",
+        "cell-filename",
+        "CELL_FILENAME"
+      ],
+      "en": "`-c` (CELL_FILENAME) gives the input cell file name for `phono3py-init`, e.g.\n`-c POSCAR-unitcell`.",
+      "zh": "`-c` 指定 `phono3py-init` 的输入晶胞文件名，例如 `-c POSCAR-unitcell`。\n注意 `phono3py` 主命令没有 -c：结构从 yaml 文件读取。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--rd",
+      "title": "--rd",
+      "group": "option",
+      "keys": [
+        "--rd",
+        "rd",
+        "random displacements",
+        "随机位移"
+      ],
+      "en": "The option `--rd NUM` is used instead of `-d` in generating displacements:\n    % phono3py --rd 100 --dim 2 2 2 --pa auto -c POSCAR-unitcell\nNUM means the number of supercells with random directional displacements.\nThis must be specified, and the initial guess may be from around the number\nof supercells generated for the systematic displacements by `-d`.",
+      "zh": "用 `--rd NUM` 代替 `-d` 生成随机方向位移：\n    % phono3py --rd 100 --dim 2 2 2 --pa auto -c POSCAR-unitcell\nNUM 是随机方向位移超胞的个数，必须给出；初值可以参考 `-d` 系统位移生成的\n超胞数。",
+      "url": "https://phonopy.github.io/phono3py/random-displacements.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--rd-fc2",
+      "title": "--rd-fc2",
+      "group": "option",
+      "keys": [
+        "--rd-fc2",
+        "rd-fc2"
+      ],
+      "en": "If random directional displacements for fc2 are expected, `--rd-fc2` and\n`--dim-fc2` have to be specified:\n    % phono3py --rd 100 --dim 2 2 2 --rd-fc2 2 --dim-fc2 4 4 4 --pa auto -c POSCAR-unitcell\nwhere `--dim` is necessary but `--rd` is not.",
+      "zh": "若要为 fc2 生成随机方向位移，必须同时给 `--rd-fc2` 与 `--dim-fc2`：\n    % phono3py --rd 100 --dim 2 2 2 --rd-fc2 2 --dim-fc2 4 4 4 --pa auto -c POSCAR-unitcell\n其中 `--dim` 必须给，`--rd` 可省。",
+      "url": "https://phonopy.github.io/phono3py/random-displacements.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--random-seed",
+      "title": "--random-seed",
+      "group": "option",
+      "keys": [
+        "--random-seed",
+        "random-seed",
+        "RANDOM_SEED"
+      ],
+      "en": "`--random-seed` fixes the random number seed used for `--rd` / `--rd-fc2`, so\nthat the same random displacements can be reproduced.",
+      "zh": "`--random-seed` 固定 `--rd` / `--rd-fc2` 使用的随机数种子，使随机位移可\n重现。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--cf3-file",
+      "title": "--cf3-file",
+      "group": "option",
+      "keys": [
+        "--cf3-file",
+        "cf3-file"
+      ],
+      "en": "`--cf3-file` reads the list of force files from a text file instead of listing\nthem on the command line (useful when the number of displacement directories\nis very large).",
+      "zh": "`--cf3-file` 从一个文本文件读取力文件清单，而不在命令行上逐个列出；\n位移目录很多时更方便。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--cfz",
+      "title": "--cfz",
+      "group": "option",
+      "keys": [
+        "--cfz",
+        "cfz",
+        "residual forces",
+        "残余力"
+      ],
+      "en": "`--cfz` subtracts residual forces of the perfect (undisplaced) supercell from\nthe forces of the displaced supercells, by reading the force file of the\nundisplaced supercell.",
+      "zh": "`--cfz` 读取完美（未位移）超胞的力文件，把残余力从各位移超胞的力中扣除，\n使力常数更准确。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--fs2f2, --force-sets-to-forces-fc2",
+      "title": "--fs2f2, --force-sets-to-forces-fc2",
+      "group": "option",
+      "keys": [
+        "--fs2f2",
+        "fs2f2",
+        "force-sets-to-forces-fc2",
+        "FORCE_SETS"
+      ],
+      "en": "Convert `FORCE_SETS` (phonopy format) to `FORCES_FC2`:\n    % phono3py-init --fs2f2",
+      "zh": "把 phonopy 格式的 FORCE_SETS 转成 FORCES_FC2：\n    % phono3py-init --fs2f2",
+      "url": "https://phonopy.github.io/phono3py/phono3py-init.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--cfs, --create-force-sets",
+      "title": "--cfs, --create-force-sets",
+      "group": "option",
+      "keys": [
+        "--cfs",
+        "cfs",
+        "create-force-sets",
+        "FORCE_SETS"
+      ],
+      "en": "Convert `FORCES_FC3` to `FORCE_SETS` (phonopy format):\n    % phono3py-init --cfs\nWith `--dim-fc2`, `FORCES_FC2` is used instead of `FORCES_FC3`.",
+      "zh": "把 FORCES_FC3 转成 phonopy 格式的 FORCE_SETS：\n    % phono3py-init --cfs\n给了 `--dim-fc2` 时改用 FORCES_FC2。",
+      "url": "https://phonopy.github.io/phono3py/phono3py-init.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--fc-calc, --fc-calculator",
+      "title": "--fc-calc, --fc-calculator",
+      "group": "option",
+      "keys": [
+        "--fc-calc",
+        "fc-calc",
+        "fc-calculator"
+      ],
+      "en": "`--fc-calc` (FC_CALCULATOR) selects the external force constants calculator\nused to compute force constants from the displacement-force dataset, e.g.\n`--fc-calc symfc` or `--fc-calc alm`.",
+      "zh": "`--fc-calc` 选择由位移-力数据集计算力常数所用的外部求解器，例如\n`--fc-calc symfc` 或 `--fc-calc alm`。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--fc-calc-opt, --fc-calculator-options",
+      "title": "--fc-calc-opt, --fc-calculator-options",
+      "group": "option",
+      "keys": [
+        "--fc-calc-opt",
+        "fc-calc-opt",
+        "fc-calculator-options"
+      ],
+      "en": "`--fc-calc-opt` passes options to the force constants calculator. For example\nthe cutoff pair-distance for fc3 is introduced by\n    % phono3py --symfc -v --fc-calc-opt \"cutoff=8\"\nThe shortcut of `--fc-calc-opt \"cutoff=8\"` is `--cutoff-pair 8`.",
+      "zh": "`--fc-calc-opt` 把选项传给力常数求解器。例如用配对截断距离求 fc3：\n    % phono3py --symfc -v --fc-calc-opt \"cutoff=8\"\n`--fc-calc-opt \"cutoff=8\"` 的简写是 `--cutoff-pair 8`。",
+      "url": "https://phonopy.github.io/phono3py/random-displacements.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--cutoff-pair",
+      "title": "--cutoff-pair",
+      "group": "option",
+      "keys": [
+        "--cutoff-pair",
+        "cutoff-pair",
+        "cutoff"
+      ],
+      "en": "`--cutoff-pair DIST` is the shortcut of `--fc-calc-opt \"cutoff=DIST\"`: it\nlimits the atom pairs used for the fc3 calculation to those within DIST,\nwhich reduces the number of supercells, memory and computation time.",
+      "zh": "`--cutoff-pair DIST` 是 `--fc-calc-opt \"cutoff=DIST\"` 的简写：只保留距离\nDIST 以内的原子对来求 fc3，可减少所需超胞数、内存与计算时间。",
+      "url": "https://phonopy.github.io/phono3py/random-displacements.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--symfc",
+      "title": "--symfc",
+      "group": "option",
+      "keys": [
+        "--symfc",
+        "symfc option"
+      ],
+      "en": "If `phono3py_disp.yaml` is located in the current directory, force constants\nare calculated from `FORCES_FC3` (and optionally `FORCES_FC2`) and\n`phono3py_disp.yaml` by\n    % phono3py --symfc -v\nor with `phono3py_params.yaml`\n    % phono3py phono3py_params.yaml --symfc -v",
+      "zh": "当前目录有 phono3py_disp.yaml 时，可用 symfc 由 FORCES_FC3（可选\nFORCES_FC2）加 phono3py_disp.yaml 计算力常数：\n    % phono3py --symfc -v\n若用 phono3py_params.yaml：\n    % phono3py phono3py_params.yaml --symfc -v",
+      "url": "https://phonopy.github.io/phono3py/random-displacements.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--alm",
+      "title": "--alm",
+      "group": "option",
+      "keys": [
+        "--alm",
+        "alm"
+      ],
+      "en": "ALM is another external force constants calculator that can be used instead\nof symfc for displacement-force datasets (`--alm`).",
+      "zh": "ALM 是另一款外部力常数求解器，可在位移-力数据集上代替 symfc 使用\n（`--alm`）。",
+      "url": "https://phonopy.github.io/phono3py/random-displacements.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--no-sym-fc",
+      "title": "--no-sym-fc",
+      "group": "option",
+      "keys": [
+        "--no-sym-fc",
+        "no-sym-fc"
+      ],
+      "en": "When force constants are calculated from a displacement and forces dataset,\nforce constants are automatically symmetrized. Use `--no-sym-fc` to opt out.",
+      "zh": "由位移-力数据集计算力常数时，力常数会自动对称化；用 `--no-sym-fc` 可关闭\n这一处理。",
+      "url": "https://phonopy.github.io/phono3py/phono3py.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--full-fc",
+      "title": "--full-fc",
+      "group": "option",
+      "keys": [
+        "--full-fc",
+        "full-fc",
+        "compact force constants"
+      ],
+      "en": "Compact force constants are the default since v4 (the old `--cfc` /\n`--compact-fc` options were removed). `--full-fc` writes full-size force\nconstants instead, e.g. for codes that expect them.",
+      "zh": "v4 起默认写紧凑（compact）力常数（旧的 `--cfc` / `--compact-fc` 已删除）。\n`--full-fc` 改为写全尺寸力常数，供需要这种格式的程序使用。",
+      "url": "https://phonopy.github.io/phono3py/migration-v4.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--mesh",
+      "title": "--mesh",
+      "group": "option",
+      "keys": [
+        "--mesh",
+        "mesh",
+        "MESH",
+        "网格"
+      ],
+      "en": "`--mesh` gives the sampling mesh of the reciprocal space for the phonon and\nthermal-conductivity calculation, e.g. `--mesh 11 11 11`.\n    % phono3py --mesh 11 11 11 --br",
+      "zh": "`--mesh` 指定声子与热导率计算的倒空间取样网格，例如 `--mesh 11 11 11`：\n    % phono3py --mesh 11 11 11 --br",
+      "url": "https://phonopy.github.io/phono3py/vasp.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--br",
+      "title": "--br",
+      "group": "option",
+      "keys": [
+        "--br",
+        "br",
+        "RTA",
+        "relaxation time"
+      ],
+      "en": "`--br` runs the lattice thermal conductivity calculation by the relaxation\ntime approximation (RTA).\n    % phono3py --mesh 11 11 11 --br",
+      "zh": "`--br` 用弛豫时间近似（RTA）计算晶格热导率：\n    % phono3py --mesh 11 11 11 --br",
+      "url": "https://phonopy.github.io/phono3py/vasp.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--lbte",
+      "title": "--lbte",
+      "group": "option",
+      "keys": [
+        "--lbte",
+        "lbte",
+        "Boltzmann equation"
+      ],
+      "en": "`--lbte` solves the linearized phonon Boltzmann equation directly (direct\nsolution), which is more accurate than RTA but needs much more memory and\ntime.",
+      "zh": "`--lbte` 直接求解线性化声子玻尔兹曼方程（direct solution），比 RTA 更准，\n但内存与时间开销大得多。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--sigma",
+      "title": "--sigma",
+      "group": "option",
+      "keys": [
+        "--sigma",
+        "sigma",
+        "smearing"
+      ],
+      "en": "`--thm` invokes a tetrahedron method for Brillouin zone integration for\nphonon lifetime calculation, which is the default option. Instead, the\n`--sigma` option can be used with the smearing widths.",
+      "zh": "`--thm` 用四面体方法做布里渊区积分来算声子寿命，这是默认做法；也可以改用\n`--sigma` 并给出展宽宽度。",
+      "url": "https://phonopy.github.io/phono3py/vasp.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--isotope",
+      "title": "--isotope",
+      "group": "option",
+      "keys": [
+        "--isotope",
+        "isotope",
+        "同位素"
+      ],
+      "en": "`--isotope` adds phonon scattering by isotope mass disorder, using natural\nabundances.",
+      "zh": "`--isotope` 加入同位素质量无序引起的声子散射（按天然丰度）。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--mass-variances",
+      "title": "--mass-variances",
+      "group": "option",
+      "keys": [
+        "--mass-variances",
+        "--mv",
+        "mass-variances"
+      ],
+      "en": "`--mass-variances` (short: `--mv`) gives the isotope mass variance factors\nexplicitly, one per element, instead of using the natural abundances of\n`--isotope`.",
+      "zh": "`--mass-variances`（简写 `--mv`）显式给出各元素的同位素质量方差，用来代替\n`--isotope` 的天然丰度值。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--boundary-mfp",
+      "title": "--boundary-mfp",
+      "group": "option",
+      "keys": [
+        "--boundary-mfp",
+        "--bmfp",
+        "boundary-mfp"
+      ],
+      "en": "`--boundary-mfp` (short: `--bmfp`) adds boundary scattering with the given\nmean free path, e.g. for a thin film or a nanostructure of finite size.",
+      "zh": "`--boundary-mfp`（简写 `--bmfp`）按给定的平均自由程加入边界散射，常用于\n薄膜或有限尺寸纳米结构。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--ave-pp",
+      "title": "--ave-pp",
+      "group": "option",
+      "keys": [
+        "--ave-pp",
+        "ave-pp"
+      ],
+      "en": "`--ave-pp` uses the averaged phonon-phonon interaction instead of the\nmode-dependent one, which is a cheaper but less accurate approximation.",
+      "zh": "`--ave-pp` 用平均的声子-声子相互作用代替逐个模式的相互作用，代价小但精度\n较低。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--nu",
+      "title": "--nu",
+      "group": "option",
+      "keys": [
+        "--nu",
+        "nu",
+        "N process",
+        "U process"
+      ],
+      "en": "`--nu` decomposes the lattice thermal conductivity into contributions of\nnormal (N) and umklapp (U) processes.",
+      "zh": "`--nu` 把晶格热导率分解为正常过程（N）与 umklapp 过程（U）的贡献。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--ts",
+      "title": "--ts",
+      "group": "option",
+      "keys": [
+        "--ts",
+        "ts",
+        "temperatures"
+      ],
+      "en": "`--ts` gives the temperatures in K at which the properties are calculated,\ne.g. `--ts 300` or `--ts 100 300 500`.\n    % phono3py --br --ts 300 --mesh 19 19 19",
+      "zh": "`--ts` 给出计算温度（K），例如 `--ts 300` 或 `--ts 100 300 500`：\n    % phono3py --br --ts 300 --mesh 19 19 19",
+      "url": "https://phonopy.github.io/phono3py/phono3py.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--tmin, --tmax, --tstep",
+      "title": "--tmin, --tmax, --tstep",
+      "group": "option",
+      "keys": [
+        "--tmin",
+        "--tmax",
+        "--tstep",
+        "tmin",
+        "tmax",
+        "tstep"
+      ],
+      "en": "`--tmin`, `--tmax` and `--tstep` give the temperature range and step in K, as\nan alternative to the discrete list of `--ts`.",
+      "zh": "`--tmin`、`--tmax`、`--tstep` 用区间与步长给出温度（K），可代替 `--ts`\n的离散温度列表。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--gp",
+      "title": "--gp",
+      "group": "option",
+      "keys": [
+        "--gp",
+        "gp",
+        "grid points"
+      ],
+      "en": "`--gp` restricts the calculation to the listed irreducible grid points, whose\nnumbering is found in `ir_grid_points.yaml` written by `--wgp`. Phonon\nlifetimes on the first ten irreducible grid points are calculated and stored\nin files with the `--write-gamma` option by:\n    % phono3py --mesh 11 11 11 --br --write-gamma --gp 0 1 2 3 4 5 12 13 14 15",
+      "zh": "`--gp` 只计算列出的不可约网格点，其编号见 `--wgp` 写出的\nir_grid_points.yaml。配合 `--write-gamma` 可只算前十个不可约点：\n    % phono3py --mesh 11 11 11 --br --write-gamma --gp 0 1 2 3 4 5 12 13 14 15",
+      "url": "https://phonopy.github.io/phono3py/vasp.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--wgp",
+      "title": "--wgp",
+      "group": "option",
+      "keys": [
+        "--wgp",
+        "wgp",
+        "ir_grid_points.yaml"
+      ],
+      "en": "First run the same command with the addition option of `--wgp`:\n    % phono3py --mesh 11 11 11 --br --wgp\n`ir_grid_points.yaml` is obtained. Irreducible q-points are found in this\nfile.",
+      "zh": "先加上 `--wgp` 跑一次同样的命令：\n    % phono3py --mesh 11 11 11 --br --wgp\n得到 ir_grid_points.yaml，其中列出不可约 q 点。",
+      "url": "https://phonopy.github.io/phono3py/vasp.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--write-gamma",
+      "title": "--write-gamma",
+      "group": "option",
+      "keys": [
+        "--write-gamma",
+        "write-gamma"
+      ],
+      "en": "`--write-gamma` writes the phonon lifetime (gamma) at each `--gp` grid point\ninto an hdf5 file, so that the grid points can be calculated separately and\nin parallel.",
+      "zh": "`--write-gamma` 把各 `--gp` 网格点的声子寿命（gamma）写进 hdf5 文件，便于\n把网格点拆开并行计算。",
+      "url": "https://phonopy.github.io/phono3py/vasp.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--read-gamma",
+      "title": "--read-gamma",
+      "group": "option",
+      "keys": [
+        "--read-gamma",
+        "read-gamma"
+      ],
+      "en": "After finishing distributed calculations at all irreducible grid points, run\nwith `--read-gamma`:\n    % phono3py --mesh 11 11 11 --br --read-gamma\nOnce this calculation runs without problem, the separately calculated hdf5\nfiles on grid points are no more necessary and may be deleted.",
+      "zh": "所有不可约网格点都算完后，用 `--read-gamma` 汇总：\n    % phono3py --mesh 11 11 11 --br --read-gamma\n这一步跑通后，各网格点单独生成的 hdf5 文件就不再需要，可以删除。",
+      "url": "https://phonopy.github.io/phono3py/vasp.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--nonac",
+      "title": "--nonac",
+      "group": "option",
+      "keys": [
+        "--nonac",
+        "nonac",
+        "NAC"
+      ],
+      "en": "If parameters for non-analytical term correction (NAC) are found, NAC is\nautomatically enabled. Use `--nonac` to disable it. Since v4 the `--nac`\noption was removed.",
+      "zh": "只要找到非解析项修正（NAC）参数，就会自动启用 NAC；用 `--nonac` 显式关闭。\nv4 起 `--nac` 选项已删除。",
+      "url": "https://phonopy.github.io/phono3py/phono3py.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--ise",
+      "title": "--ise",
+      "group": "option",
+      "keys": [
+        "--ise",
+        "ise",
+        "imaginary self energy",
+        "线宽"
+      ],
+      "en": "`--ise` calculates the imaginary part of the phonon self energy, i.e. the\nphonon lifetime / linewidth, instead of the thermal conductivity.",
+      "zh": "`--ise` 计算声子自能的虚部，即声子寿命/线宽，而不是热导率。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--rse",
+      "title": "--rse",
+      "group": "option",
+      "keys": [
+        "--rse",
+        "rse",
+        "real self energy"
+      ],
+      "en": "`--rse` calculates the real part of the phonon self energy (frequency shift).",
+      "zh": "`--rse` 计算声子自能的实部（频率移动）。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--jdos",
+      "title": "--jdos",
+      "group": "option",
+      "keys": [
+        "--jdos",
+        "jdos",
+        "joint DOS",
+        "联合态密度"
+      ],
+      "en": "`--jdos` calculates the joint density of states (JDOS) of three phonons,\nwhich is the harmonic part of the phonon-phonon interaction strength.",
+      "zh": "`--jdos` 计算三声子联合态密度（JDOS），即声子-声子相互作用强度中只含谐波\n项的部分。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--gruneisen",
+      "title": "--gruneisen",
+      "group": "option",
+      "keys": [
+        "--gruneisen",
+        "gruneisen",
+        "格林艾森"
+      ],
+      "en": "`--gruneisen` calculates the mode-Gruneisen parameters from fc3.",
+      "zh": "`--gruneisen` 由 fc3 计算各模式的 Gruneisen 参数。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--config",
+      "title": "--config",
+      "group": "option",
+      "keys": [
+        "--config",
+        "config",
+        "configuration file"
+      ],
+      "en": "`--config` reads a phono3py configuration file, where command options can be\nwritten as setting tags instead of being given on the command line.",
+      "zh": "`--config` 读取 phono3py 配置文件，把命令行选项写成配置标签放在文件里。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "-o, --output-filename",
+      "title": "-o, --output-filename",
+      "group": "option",
+      "keys": [
+        "-o",
+        "output-filename",
+        "OUTPUT"
+      ],
+      "en": "`-o` takes one argument: the output yaml filename that replaces the default\n`phono3py.yaml`.",
+      "zh": "`-o` 接受一个参数：输出 yaml 文件名，用来替换默认的 phono3py.yaml。",
+      "url": "https://phonopy.github.io/phono3py/phono3py.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "FORCES_FC3",
+      "title": "FORCES_FC3",
+      "group": "file",
+      "keys": [
+        "FORCES_FC3",
+        "forces fc3"
+      ],
+      "en": "`FORCES_FC3` contains the supercell forces of the displaced supercells used\nfor the fc3 calculation. It is created by `phono3py-init --cf3` and read by\n`phono3py` together with `phono3py_disp.yaml`.",
+      "zh": "FORCES_FC3 存放求 fc3 用的各位移超胞的受力，由 `phono3py-init --cf3` 生成，\n`phono3py` 会把它与 phono3py_disp.yaml 一起读取。",
+      "url": "https://phonopy.github.io/phono3py/vasp.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "FORCES_FC2",
+      "title": "FORCES_FC2",
+      "group": "file",
+      "keys": [
+        "FORCES_FC2",
+        "forces fc2"
+      ],
+      "en": "`FORCES_FC2` contains the supercell forces used for the fc2 calculation when a\nlarger supercell is used for fc2 than for fc3. It is created by\n`phono3py-init --cf2` or `phono3py-init --fs2f2`.",
+      "zh": "FORCES_FC2 存放求 fc2 用的受力（fc2 超胞比 fc3 大时使用），由\n`phono3py-init --cf2` 或 `phono3py-init --fs2f2` 生成。",
+      "url": "https://phonopy.github.io/phono3py/vasp.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "FORCE_SETS",
+      "title": "FORCE_SETS",
+      "group": "file",
+      "keys": [
+        "FORCE_SETS",
+        "force sets"
+      ],
+      "en": "`FORCE_SETS` is the phonopy-format displacement-force dataset. phono3py can\ncreate it with `--cfs` and convert it back to `FORCES_FC2` with `--fs2f2`.",
+      "zh": "FORCE_SETS 是 phonopy 格式的位移-力数据集。phono3py 可用 `--cfs` 生成它，\n再用 `--fs2f2` 把它转回 FORCES_FC2。",
+      "url": "https://phonopy.github.io/phono3py/phono3py-init.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "phono3py_disp.yaml",
+      "title": "phono3py_disp.yaml",
+      "group": "file",
+      "keys": [
+        "phono3py_disp.yaml",
+        "disp yaml"
+      ],
+      "en": "`phono3py_disp.yaml` is created at the displacement-generation step and is\nrequired by `--cf3` / `--cf2` collection. `phono3py` reads it automatically\nwhen it is in the current directory.",
+      "zh": "phono3py_disp.yaml 在生成位移那一步产生，`--cf3` / `--cf2` 收集力时必须\n有它；当前目录存在时 `phono3py` 会自动读取（优先级高于 phono3py.yaml）。",
+      "url": "https://phonopy.github.io/phono3py/vasp.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "phono3py_params.yaml",
+      "title": "phono3py_params.yaml",
+      "group": "file",
+      "keys": [
+        "phono3py_params.yaml",
+        "params yaml"
+      ],
+      "en": "`phono3py_params.yaml` is written by `--sp` and contains all the information\nrequired to run phono3py: crystal structure, supercell information,\ndisplacements, forces, and parameters for non-analytical term correction. It\ncan be given directly to the `phono3py` command.",
+      "zh": "phono3py_params.yaml 由 `--sp` 写出，包含运行 phono3py 所需的全部信息：\n晶体结构、超胞信息、位移、力以及非解析项修正参数，可直接作为 `phono3py`\n命令的输入。",
+      "url": "https://phonopy.github.io/phono3py/random-displacements.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "phono3py.yaml",
+      "title": "phono3py.yaml",
+      "group": "file",
+      "keys": [
+        "phono3py.yaml"
+      ],
+      "en": "`phono3py.yaml` is the default output yaml of the `phono3py` command (change\nit with `-o`). Together with `phono3py_disp.yaml` it is one of the two files\n`phono3py` looks for in the current directory.",
+      "zh": "phono3py.yaml 是 `phono3py` 命令默认输出的 yaml（可用 `-o` 改名）。它与\nphono3py_disp.yaml 是 `phono3py` 在当前目录查找的两个文件。",
+      "url": "https://phonopy.github.io/phono3py/phono3py.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "fc3.hdf5 / fc2.hdf5",
+      "title": "fc3.hdf5 / fc2.hdf5",
+      "group": "file",
+      "keys": [
+        "fc3.hdf5",
+        "fc2.hdf5",
+        "force constants hdf5"
+      ],
+      "en": "Third- and second-order force constants calculated by `phono3py` are stored in\n`fc3.hdf5` and `fc2.hdf5`. When these files exist, `phono3py` reuses them\ninstead of recomputing the force constants from the displacement-force\ndataset.",
+      "zh": "`phono3py` 算出的三阶、二阶力常数分别存在 fc3.hdf5 与 fc2.hdf5。这两个文件\n已存在时会直接复用，不再由位移-力数据集重新计算。",
+      "url": "https://phonopy.github.io/phono3py/hdf5_howto.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "kappa-m*.hdf5",
+      "title": "kappa-m*.hdf5",
+      "group": "file",
+      "keys": [
+        "kappa",
+        "kappa-m",
+        "kappa.hdf5",
+        "热导率结果"
+      ],
+      "en": "The thermal conductivity result is written to an hdf5 file whose name encodes\nthe mesh, e.g. `kappa-m111111.hdf5` for `--mesh 11 11 11`. It is the input of\n`phono3py-kaccum` and `phono3py-kdeplot`.",
+      "zh": "热导率结果写成 hdf5 文件，文件名带网格信息，例如 `--mesh 11 11 11` 得到\nkappa-m111111.hdf5。它是 `phono3py-kaccum` 与 `phono3py-kdeplot` 的输入。",
+      "url": "https://phonopy.github.io/phono3py/auxiliary-tools.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "kaccum.dat",
+      "title": "kaccum.dat",
+      "group": "file",
+      "keys": [
+        "kaccum.dat",
+        "cumulative kappa"
+      ],
+      "en": "`kaccum.dat` is the default output file of `phono3py-kaccum`, containing the\ncumulative lattice thermal conductivity as a function of mean free path.",
+      "zh": "kaccum.dat 是 `phono3py-kaccum` 的默认输出，内容为累积晶格热导率随平均\n自由程的变化。",
+      "url": "https://phonopy.github.io/phono3py/auxiliary-tools.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "ir_grid_points.yaml",
+      "title": "ir_grid_points.yaml",
+      "group": "file",
+      "keys": [
+        "ir_grid_points.yaml",
+        "irreducible grid points"
+      ],
+      "en": "`ir_grid_points.yaml` is written by `phono3py --wgp` and lists the\nirreducible q-points of the mesh, whose grid point indices are used by `--gp`\nfor distributed calculations.",
+      "zh": "ir_grid_points.yaml 由 `phono3py --wgp` 写出，列出网格中的不可约 q 点，\n其编号供 `--gp` 拆分并行计算使用。",
+      "url": "https://phonopy.github.io/phono3py/vasp.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "BORN",
+      "title": "BORN",
+      "group": "file",
+      "keys": [
+        "BORN",
+        "NAC params",
+        "非解析项"
+      ],
+      "en": "`BORN` holds the Born effective charges and dielectric tensor for the\nnon-analytical term correction (NAC). If NAC parameters are found,\n`phono3py` enables NAC automatically; `--nonac` disables it.",
+      "zh": "BORN 存放 Born 有效电荷与介电张量，用于非解析项修正（NAC）。找到 NAC 参数\n时 `phono3py` 会自动启用，`--nonac` 可关闭。",
+      "url": "https://phonopy.github.io/phono3py/phono3py.html",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--qe",
+      "title": "CALCULATOR = QE",
+      "group": "option",
+      "keys": [
+        "--qe",
+        "qe",
+        "CALCULATOR",
+        "quantum espresso"
+      ],
+      "en": "Quantum ESPRESSO (pw) interface is invoked.",
+      "zh": "启用 Quantum ESPRESSO (pw) 接口。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html#qe-calculator-qe",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--crystal",
+      "title": "CALCULATOR = CRYSTAL",
+      "group": "option",
+      "keys": [
+        "--crystal",
+        "crystal",
+        "CALCULATOR"
+      ],
+      "en": "CRYSTAL interface is invoked.",
+      "zh": "启用 CRYSTAL 接口。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html#crystal-calculator-crystal",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--turbomole",
+      "title": "CALCULATOR = TURBOMOLE",
+      "group": "option",
+      "keys": [
+        "--turbomole",
+        "turbomole",
+        "CALCULATOR"
+      ],
+      "en": "TURBOMOLE interface is invoked.",
+      "zh": "启用 TURBOMOLE 接口。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html#turbomole-calculator-turbomole",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--cf3",
+      "title": "create FORCES_FC3",
+      "group": "option",
+      "keys": [
+        "--cf3",
+        "cf3",
+        "FORCES_FC3",
+        "collect forces"
+      ],
+      "en": "Create FORCES_FC3 from phono3py_disp.yaml and force calculator outputs.\n    % phono3py-init --cf3 disp-{00001..00755}/vasprun.xml",
+      "zh": "由 phono3py_disp.yaml 与力计算器输出收集受力，生成 FORCES_FC3：\n    % phono3py-init --cf3 disp-{00001..00755}/vasprun.xml",
+      "url": "https://phonopy.github.io/phono3py/command-options.html#cf3-command-option-only",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--cf2",
+      "title": "create FORCES_FC2",
+      "group": "option",
+      "keys": [
+        "--cf2",
+        "cf2",
+        "FORCES_FC2"
+      ],
+      "en": "Create FORCES_FC2 similarly to --cf3. Used when fc2 needs a larger\nsupercell than fc3 (--dim-fc2).\n    % phono3py-init --cf2 disp_fc2-{00001..00002}/vasprun.xml",
+      "zh": "类似 --cf3，生成 FORCES_FC2。当 fc2 需要比 fc3 更大的超胞时使用\n（配合 --dim-fc2）：\n    % phono3py-init --cf2 disp_fc2-{00001..00002}/vasprun.xml",
+      "url": "https://phonopy.github.io/phono3py/command-options.html#cf2-command-option-only",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--sp, --save-params",
+      "title": "save params",
+      "group": "option",
+      "keys": [
+        "--sp",
+        "--save-params",
+        "save params",
+        "phono3py_params.yaml"
+      ],
+      "en": "Instead of FORCES_FC3, phono3py_params.yaml is generated. Must be used\nwith --cf3 (and optionally --cf2).\n    % phono3py-init --cf3 disp-{00001..00755}/vasprun.xml --sp",
+      "zh": "不生成 FORCES_FC3，改而写出 phono3py_params.yaml。须与 --cf3 同用\n（可选 --cf2）：\n    % phono3py-init --cf3 disp-{00001..00755}/vasprun.xml --sp",
+      "url": "https://phonopy.github.io/phono3py/command-options.html#sp-or-save-params",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--mass",
+      "title": "MASS",
+      "group": "option",
+      "keys": [
+        "--mass",
+        "mass",
+        "MASS"
+      ],
+      "en": "Atomic masses of the primitive cell are overwritten.",
+      "zh": "覆盖原胞中各原子的质量。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html#mass-mass",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--magmom",
+      "title": "MAGMOM",
+      "group": "option",
+      "keys": [
+        "--magmom",
+        "magmom",
+        "MAGMOM",
+        "magnetic moments"
+      ],
+      "en": "Magnetic moments of the unit cell are specified. Used to find crystal\nsymmetry.",
+      "zh": "指定单胞的磁矩，用于判定晶体对称性。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html#magmom-magmom",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "-d",
+      "title": "CREATE_DISPLACEMENTS = .TRUE.",
+      "group": "option",
+      "keys": [
+        "-d",
+        "create displacements",
+        "CREATE_DISPLACEMENTS"
+      ],
+      "en": "Supercells with displacements and phono3py_disp.yaml are created.\nRecommended with --pa auto.\n    % phono3py-init -c POSCAR -d --dim 2 2 2 --pa auto",
+      "zh": "生成含位移的超胞与 phono3py_disp.yaml。推荐配合 --pa auto：\n    % phono3py-init -c POSCAR -d --dim 2 2 2 --pa auto",
+      "url": "https://phonopy.github.io/phono3py/command-options.html#d-create-displacements-true",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--rd-auto-factor",
+      "title": "RD_NUMBER_ESTIMATION_FACTOR",
+      "group": "option",
+      "keys": [
+        "--rd-auto-factor",
+        "rd auto factor",
+        "RD_NUMBER_ESTIMATION_FACTOR"
+      ],
+      "en": "Scales the number of supercells generated by --rd auto by the specified\nfactor.",
+      "zh": "按指定因子缩放 --rd auto 生成的超胞数目。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html#rd-auto-factor-rd-number-estimation-factor",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--amplitude",
+      "title": "DISPLACEMENT_DISTANCE",
+      "group": "option",
+      "keys": [
+        "--amplitude",
+        "amplitude",
+        "DISPLACEMENT_DISTANCE",
+        "displacement distance"
+      ],
+      "en": "Atomic displacement distance. May be increased for weak-interaction systems\nand decreased for numerically accurate force calculators.",
+      "zh": "原子位移距离。相互作用弱的体系可适当增大，力计算器数值精度高时可减小。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html#amplitude-displacement-distance",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--cfc, --compact-fc",
+      "title": "COMPACT_FC = .TRUE. (deprecated)",
+      "group": "option",
+      "keys": [
+        "--cfc",
+        "--compact-fc",
+        "compact fc",
+        "COMPACT_FC"
+      ],
+      "en": "Use compact-array format for force constants. Deprecated: compact format is\nthe default; use --full-fc to get full-size arrays.",
+      "zh": "力常数用紧凑数组格式。已弃用：紧凑格式已是默认，需完整数组请用 --full-fc。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html#cfc-or-compact-fc-compact-fc-true-deprecated",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--fc-symmetry",
+      "title": "FC_SYMMETRY = .TRUE.",
+      "group": "option",
+      "keys": [
+        "--fc-symmetry",
+        "fc symmetry",
+        "FC_SYMMETRY"
+      ],
+      "en": "Force constants are symmetrized using crystal symmetry.",
+      "zh": "用晶体对称性对力常数做对称化。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html#fc-symmetry-fc-symmetry-true",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--symfc-projector",
+      "title": "USE_SYMFC_PROJECTOR = .TRUE.",
+      "group": "option",
+      "keys": [
+        "--symfc-projector",
+        "symfc projector",
+        "USE_SYMFC_PROJECTOR"
+      ],
+      "en": "Use the symfc projector when computing force constants with symfc.",
+      "zh": "用 symfc 计算力常数时启用 symfc 投影器。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html#symfc-projector-use-symfc-projector-true",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--cutoff-fc3, --cutoff-fc3-distance",
+      "title": "CUTOFF_FC3_DISTANCE",
+      "group": "option",
+      "keys": [
+        "--cutoff-fc3",
+        "--cutoff-fc3-distance",
+        "cutoff fc3",
+        "CUTOFF_FC3_DISTANCE"
+      ],
+      "en": "Cutoff distance for third-order force constants; fc3 interactions beyond\nthis distance are set to zero.",
+      "zh": "三阶力常数的截断距离，超过该距离的 fc3 相互作用置零。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html#cutoff-fc3-or-cutoff-fc3-distance-cutoff-fc3-distance",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--ga",
+      "title": "GRID_ADDRESSES",
+      "group": "option",
+      "keys": [
+        "--ga",
+        "grid addresses",
+        "GRID_ADDRESSES"
+      ],
+      "en": "Grid addresses are specified instead of grid points.",
+      "zh": "用网格地址而非网格点来指定采样位置。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html#ga-grid-addresses",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--bi",
+      "title": "BAND_INDICES",
+      "group": "option",
+      "keys": [
+        "--bi",
+        "band indices",
+        "BAND_INDICES"
+      ],
+      "en": "Band indices to be calculated are specified.",
+      "zh": "指定要计算的能带索引。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html#bi-band-indices",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--stp",
+      "title": "show temperatures",
+      "group": "option",
+      "keys": [
+        "--stp",
+        "show temperatures"
+      ],
+      "en": "Temperatures are printed and phono3py stops (no calculation).",
+      "zh": "仅打印温度列表后退出，不做计算。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html#stp-command-option-only",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--thm",
+      "title": "TETRAHEDRON = .TRUE.",
+      "group": "option",
+      "keys": [
+        "--thm",
+        "tetrahedron",
+        "TETRAHEDRON",
+        "tetrahedron method"
+      ],
+      "en": "Brillouin zone integration by the tetrahedron method.",
+      "zh": "用四面体方法做布里渊区积分。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html#thm-tetrahedron-true",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--symmetrize-tetrahedra",
+      "title": "SYMMETRIZE_TETRAHEDRA = .TRUE.",
+      "group": "option",
+      "keys": [
+        "--symmetrize-tetrahedra",
+        "symmetrize tetrahedra",
+        "SYMMETRIZE_TETRAHEDRA"
+      ],
+      "en": "Tetrahedra are symmetrized for the Brillouin zone integration.",
+      "zh": "对四面体方法所用的四面体做对称化。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html#symmetrize-tetrahedra-symmetrize-tetrahedra-true",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--exclude-gamma-acoustic",
+      "title": "EXCLUDE_GAMMA_ACOUSTIC = .TRUE.",
+      "group": "option",
+      "keys": [
+        "--exclude-gamma-acoustic",
+        "exclude gamma acoustic",
+        "EXCLUDE_GAMMA_ACOUSTIC"
+      ],
+      "en": "Acoustic modes at the Gamma point are excluded from the Brillouin zone\nintegration.",
+      "zh": "布里渊区积分时排除 Gamma 点的声学支。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html#exclude-gamma-acoustic-exclude-gamma-acoustic-true",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--average-degenerate-weights",
+      "title": "AVERAGE_DEGENERATE_WEIGHTS = .TRUE.",
+      "group": "option",
+      "keys": [
+        "--average-degenerate-weights",
+        "average degenerate weights",
+        "AVERAGE_DEGENERATE_WEIGHTS"
+      ],
+      "en": "Weights of degenerate phonon modes are averaged in the tetrahedron method.",
+      "zh": "四面体方法中对简并声子模的权重取平均。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html#average-degenerate-weights-average-degenerate-weights-true",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--sigma-cutoff",
+      "title": "SIGMA_CUTOFF_WIDTH",
+      "group": "option",
+      "keys": [
+        "--sigma-cutoff",
+        "sigma cutoff",
+        "SIGMA_CUTOFF_WIDTH"
+      ],
+      "en": "Cutoff width for the smearing function used with --sigma.",
+      "zh": "与 --sigma 配合使用的展宽函数截断宽度。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html#sigma-cutoff-sigma-cutoff-width",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--full-pp",
+      "title": "FULL_PP = .TRUE.",
+      "group": "option",
+      "keys": [
+        "--full-pp",
+        "full pp",
+        "FULL_PP",
+        "full phonon-phonon"
+      ],
+      "en": "Full phonon-phonon interaction strength is computed (not only the imaginary\npart of the self energy).",
+      "zh": "计算完整的声子-声子相互作用强度（不仅是自能虚部）。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html#full-pp-full-pp-true",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--tt, --transport-type",
+      "title": "TRANSPORT_TYPE",
+      "group": "option",
+      "keys": [
+        "--tt",
+        "--transport-type",
+        "transport type",
+        "TRANSPORT_TYPE"
+      ],
+      "en": "Transport type for the lattice thermal conductivity calculation.",
+      "zh": "晶格热导率计算的输运类型。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html#tt-transport-type-transport-type",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--const-ave-pp",
+      "title": "CONST_AVE_PP = .TRUE.",
+      "group": "option",
+      "keys": [
+        "--const-ave-pp",
+        "const ave pp",
+        "CONST_AVE_PP"
+      ],
+      "en": "The averaged phonon-phonon interaction is treated as constant over\ntemperature.",
+      "zh": "把平均后的声子-声子相互作用视为不随温度变化。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html#const-ave-pp-const-ave-pp-true",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--scattering-event-class",
+      "title": "SCATTERING_EVENT_CLASS",
+      "group": "option",
+      "keys": [
+        "--scattering-event-class",
+        "scattering event class",
+        "SCATTERING_EVENT_CLASS"
+      ],
+      "en": "Scattering event class for the phonon-phonon interaction calculation.",
+      "zh": "声子-声子相互作用计算的散射事件分类。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html#scattering-event-class-scattering-event-class",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--nac",
+      "title": "NAC = .TRUE.",
+      "group": "option",
+      "keys": [
+        "--nac",
+        "nac",
+        "NAC",
+        "non-analytical term correction"
+      ],
+      "en": "Non-analytical term correction is applied (requires BORN parameters).",
+      "zh": "启用非解析项修正（需要 BORN 参数）。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html#nac-nac-true",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--q-direction",
+      "title": "Q_DIRECTION",
+      "group": "option",
+      "keys": [
+        "--q-direction",
+        "q direction",
+        "Q_DIRECTION"
+      ],
+      "en": "Direction of the q-vector used for the non-analytical term correction at\nthe Gamma point.",
+      "zh": "Gamma 点非解析项修正所用 q 矢量的方向。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html#q-direction-q-direction",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--spf",
+      "title": "SPECTRAL_FUNCTION = .TRUE.",
+      "group": "option",
+      "keys": [
+        "--spf",
+        "spectral function",
+        "SPECTRAL_FUNCTION"
+      ],
+      "en": "Phonon spectral function is computed.",
+      "zh": "计算声子谱函数。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html#spf-spectral-function-true",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--num-freq-points, --freq-pitch",
+      "title": "NUM_FREQUENCY_POINTS",
+      "group": "option",
+      "keys": [
+        "--num-freq-points",
+        "--freq-pitch",
+        "num frequency points",
+        "NUM_FREQUENCY_POINTS"
+      ],
+      "en": "Number of frequency points (or frequency pitch) for sampling distribution\nfunctions.",
+      "zh": "采样分布函数所用的频率点数（或频率步长）。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html#num-freq-points-freq-pitch-num-frequency-points",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--fc2",
+      "title": "READ_FC2 = .TRUE.",
+      "group": "option",
+      "keys": [
+        "--fc2",
+        "read fc2",
+        "READ_FC2",
+        "fc2.hdf5"
+      ],
+      "en": "Read fc2 (harmonic force constants) from fc2.hdf5 instead of computing\nfrom FORCES_FC2.",
+      "zh": "从 fc2.hdf5 读入二阶力常数，而不由 FORCES_FC2 计算。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html#fc2-read-fc2-true",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--fc3",
+      "title": "READ_FC3 = .TRUE.",
+      "group": "option",
+      "keys": [
+        "--fc3",
+        "read fc3",
+        "READ_FC3",
+        "fc3.hdf5"
+      ],
+      "en": "Read fc3 (third-order force constants) from fc3.hdf5 instead of computing\nfrom FORCES_FC3.",
+      "zh": "从 fc3.hdf5 读入三阶力常数，而不由 FORCES_FC3 计算。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html#fc3-read-fc3-true",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--write-gamma-detail",
+      "title": "WRITE_GAMMA_DETAIL = .TRUE.",
+      "group": "option",
+      "keys": [
+        "--write-gamma-detail",
+        "write gamma detail",
+        "WRITE_GAMMA_DETAIL"
+      ],
+      "en": "Detailed phonon-phonon interaction (gamma) data is written to file.",
+      "zh": "把详细的声子-声子相互作用（gamma）数据写入文件。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html#write-gamma-detail-write-gamma-detail-true",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--write-phonon",
+      "title": "WRITE_PHONON = .TRUE.",
+      "group": "option",
+      "keys": [
+        "--write-phonon",
+        "write phonon",
+        "WRITE_PHONON"
+      ],
+      "en": "Phonon data (frequencies, eigenvectors) on the grid is written to file.",
+      "zh": "把网格上的声子数据（频率、本征矢）写入文件。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html#write-phonon-write-phonon-true",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--read-phonon",
+      "title": "READ_PHONON = .TRUE.",
+      "group": "option",
+      "keys": [
+        "--read-phonon",
+        "read phonon",
+        "READ_PHONON"
+      ],
+      "en": "Phonon data is read from file instead of being recalculated.",
+      "zh": "从文件读入声子数据，避免重复计算。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html#read-phonon-read-phonon-true",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--write-pp, --read-pp",
+      "title": "WRITE_PP / READ_PP",
+      "group": "option",
+      "keys": [
+        "--write-pp",
+        "--read-pp",
+        "write pp",
+        "read pp",
+        "WRITE_PP",
+        "READ_PP"
+      ],
+      "en": "Write/read the phonon-phonon interaction strength to/from file.",
+      "zh": "把声子-声子相互作用强度写入文件 / 从文件读入。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html#write-pp-write-pp-true-and-read-pp-read-pp-true",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "--hdf5-compression",
+      "title": "hdf5 compression",
+      "group": "option",
+      "keys": [
+        "--hdf5-compression",
+        "hdf5 compression"
+      ],
+      "en": "Compression level for HDF5 output files (0-9).",
+      "zh": "HDF5 输出文件的压缩级别（0-9）。",
+      "url": "https://phonopy.github.io/phono3py/command-options.html#hdf5-compression-command-option-only",
+      "source": "phono3py 4.10.0 documentation"
+    },
+    {
+      "name": "phono3py-coleigplot",
+      "title": "phono3py-coleigplot",
+      "group": "tool",
+      "keys": [
+        "phono3py-coleigplot",
+        "coleigplot",
+        "碰撞矩阵本征值"
+      ],
+      "en": "Plot collision matrix eigenvalues from the linearized phonon Boltzmann\nequation (LBTE) solution.\n    % phono3py-coleigplot kappa-m111111.hdf5",
+      "zh": "绘制线性化声子玻尔兹曼方程（LBTE）解的碰撞矩阵本征值。\n    % phono3py-coleigplot kappa-m111111.hdf5",
+      "url": "https://phonopy.github.io/phono3py/auxiliary-tools.html",
+      "source": "phono3py 4.10.0 --help"
+    }
+  ]
+}
