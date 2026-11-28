@@ -176,7 +176,7 @@ def _checked_export_dir(name: str) -> Path:
     """返回 EXPORT_ROOT/<name>，并确认它确实是 EXPORT_ROOT 的直接子目录。
 
     这是 rmtree 之前的最后一道闸：任何能跳出工作根目录的名字都被拒绝，
-    避免把工作根本身、隐藏状态目录 .mt.seek/ 或别的导出包当成待清理目标。
+    避免把工作根本身或别的导出包当成待清理目标。
     """
     root = config.export_dir_for(name)
     if root.resolve().parent != config.EXPORT_ROOT.resolve():
@@ -399,7 +399,7 @@ def _query_error(err, query: str) -> str:
 def get_structure(mp_id: str) -> dict:
     """按 mp_id 取结构，落本地缓存；返回 structure_dict 与元信息。"""
     mp_id = _safe_name(mp_id)
-    cache = config.STRUCT_CACHE / f"{mp_id}.json"
+    cache = config.STRUCT_JSON_CACHE / f"{mp_id}.json"
     try:
         if cache.exists():
             d = json.loads(cache.read_text(encoding="utf-8"))
@@ -515,11 +515,11 @@ def _make_potcar(out: Path) -> str:
 
 def write_structure_files(mp_id: str, structure_dict: dict = None,
                           formats=None, out_dir: str = None,
-                          with_job_template: bool = False) -> dict:
-    """把一个结构写成 CIF / POSCAR / JSON 等文件，返回文件清单。
+                          jobtm: bool = False) -> dict:
+    """把一个结构写成结构文件，返回文件清单。
 
-    formats 默认 ["cif", "poscar", "json"]；写出的文件名统一用小写，
-    便于服务器端脚本按通配符批量读取。
+    默认只写 POSCAR；CIF / JSON / XYZ 仅在 formats 显式指定时写出。
+    文件名统一用小写，便于服务器端脚本按通配符批量读取。
     """
     try:
         if structure_dict is None:
@@ -537,7 +537,7 @@ def write_structure_files(mp_id: str, structure_dict: dict = None,
         if "error" in info:
             return info
 
-        out = Path(out_dir) if out_dir else (config.STRUCT_CACHE / "files" / mp_id)
+        out = Path(out_dir) if out_dir else (config.STAGING_CACHE / mp_id)
         out.mkdir(parents=True, exist_ok=True)
 
         # 缓存目录会跨命令复用；删除本次未请求的旧产物，避免它们被打进新包。
@@ -553,7 +553,7 @@ def write_structure_files(mp_id: str, structure_dict: dict = None,
         # 作业文件（INCAR/KPOINTS/submit.slurm/POTCAR）直接写在编号目录根。
         # POTCAR 无论是否重生成都先清掉旧的：赝势不可用时不能把上次的留在包里。
         job_names = list(JOB_TEMPLATES) + ["POTCAR"]
-        if with_job_template:
+        if jobtm:
             stale = out / "POTCAR"
             if stale.exists():
                 stale.unlink()
@@ -589,7 +589,7 @@ def write_structure_files(mp_id: str, structure_dict: dict = None,
             written["xyz"] = str(p)
 
         potcar_status = ""
-        if with_job_template:
+        if jobtm:
             # 作业文件直接落进编号目录（不再单独建 job_template/ 子目录），
             # 便于在服务器上 cd 到编号目录即可提交。
             d = {"SYSTEM": f"{mp_id} {info['formula']}",
@@ -613,7 +613,7 @@ def write_structure_files(mp_id: str, structure_dict: dict = None,
                                  "exported", {"files": list(written), **info})
         result = {"mp_id": mp_id, "export_dir": str(out), "files": written,
                   "meta": info}
-        if with_job_template:
+        if jobtm:
             result["potcar"] = potcar_status or "未生成"
         return result
     except Exception as e:  # noqa: BLE001
@@ -732,7 +732,7 @@ def make_bundle(name: str, entries: list, source: str = "Materials Project",
         for fname, text in (extra_files or {}).items():
             (root / fname).write_text(text, encoding="utf-8")
         # 先记本次汇总事件，再复制库：包内 db 也含 make_bundle 这条，自洽可追溯。
-        # 真库仍在 .mt.seek/，包内只是随包快照。
+        # 真库在统一缓存 ~/.cache/mcta/seek/，包内只是随包快照。
         state.log_event("make_bundle", {"name": name, "n": len(rows)},
                         {"dir": str(root)})
         _copy_db_into(root)
@@ -787,8 +787,9 @@ def _bundle_readme(name: str, rows: list, source: str = "Materials Project") -> 
         "├── manifest.csv       # 结构清单与元信息",
         "├── mt.seek.db         # 本次检索/导出的事件与结构状态（SQLite）",
         "├── <编号>/            # 每个结构一个目录（编号即 mp_id 或 SQS 编号）",
-        "│   ├── *.cif / POSCAR / *.json    # 该 id 的结构文件",
-        "│   └── INCAR / KPOINTS / 提交脚本 / POTCAR   # 仅 --job-template 时生成；POTCAR 需赝势目录",
+        "│   ├── POSCAR                     # 默认只有这一个结构文件",
+        "│   ├── *.cif / *.json / *.xyz      # 仅 -F 显式指定这些格式时才有",
+        "│   └── INCAR / KPOINTS / 提交脚本 / POTCAR   # 仅 -j/--jobtm 时生成；POTCAR 需赝势目录",
         "└── ...",
         "```",
         "",

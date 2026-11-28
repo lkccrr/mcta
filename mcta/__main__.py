@@ -33,7 +33,7 @@
     MCTA_RENDER_TOTAL_SECONDS   单次远端渲染总时长上限秒数，默认 60
     MCTA_XFER_CHANNELS          传输通道数，默认 3（第 3 条只传小文件）
     MCTA_XFER_LARGE_MB          大文件阈值 MB，默认 4
-    XDG_CACHE_HOME              缓存根目录（3D 渲染与 -R 文件缓存），默认 ~/.cache
+    XDG_CACHE_HOME              缓存目录本身（含 mt.seek 状态库与 3D 渲染缓存），默认 ~/.cache/mcta；设置后不再追加 mcta
 
   其他工具：
     MT_PH_DOCS             mt.ph 自定义词库 JSON 路径

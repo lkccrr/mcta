@@ -666,7 +666,7 @@ mt &lt; band | dos | phband | phdos | ph | ph3 | seek | skl | sqs | mc | sh | se
           <code>MCTA_RENDER_RETRY_SECONDS</code>（远端渲染失败后的重试间隔秒数）、
           <code>MCTA_RENDER_TOTAL_SECONDS</code>（单次渲染总时长上限秒数）、
           <code>MCTA_XFER_CHANNELS</code>（传输通道数，默认 3，第 3 条仅小文件）、<code>MCTA_XFER_LARGE_MB</code>（大文件阈值 MB）、
-          <code>XDG_CACHE_HOME</code>（3D 渲染、-R 文件与 mt.seek 缓存根目录，默认 ~/.cache；mt.seek 缓存在 ~/.cache/mcta/seek）。
+          <code>XDG_CACHE_HOME</code>（3D 渲染、-R 文件与 mt.seek 缓存目录本身，默认 ~/.cache/mcta；设置后不再追加 mcta，mt.seek 缓存在 &lt;XDG_CACHE_HOME&gt;/seek）。
         </p>
         <p style="margin:0">
           <b>其他工具</b>：<code>MT_PH_DOCS</code>、<code>MT_PH3_DOCS</code>、<code>MTSH_SCRIPTS</code>、
@@ -837,7 +837,7 @@ mt.ph3 W --br --symfc</pre>
       </header>
 
       <h2 class="sec-title">mt.seek · 结构检索</h2>
-      <p style="margin:0 0 10px">从 Materials Project 检索结构，导出 CIF / POSCAR / JSON 与计算模板，并支持对本地数据集去重、筛选与打包。</p>
+      <p style="margin:0 0 10px">从 Materials Project 检索结构，默认导出 POSCAR（可用 -F 加 CIF / JSON / XYZ）与计算模板，并支持对本地数据集去重、筛选与打包。</p>
       <pre>mt.seek -c Ti-C -k 3 -n ti-c
 mt.seek -r -D 8 -o my-pick</pre>
       <ul class="plain">
@@ -1260,7 +1260,7 @@ mt.server -S</pre>
       "三者共用同一工作目录：": "All three share one working directory: ",
       "对导出的清单做描述符分析。": "runs descriptor analysis on the exported manifest.",
       "mt.seek · 结构检索": "mt.seek · Structure search",
-      "从 Materials Project 检索结构，导出 CIF / POSCAR / JSON 与计算模板，并支持对本地数据集去重、筛选与打包。": "Search structures from Materials Project and export CIF / POSCAR / JSON plus calculation templates; local datasets can be deduplicated, filtered and packaged.",
+      "从 Materials Project 检索结构，默认导出 POSCAR（可用 -F 加 CIF / JSON / XYZ）与计算模板，并支持对本地数据集去重、筛选与打包。": "Search structures from Materials Project and export POSCAR by default (use -F to add CIF / JSON / XYZ) plus calculation templates; local datasets can be deduplicated, filtered and packaged.",
       "指定元素组合，": "sets the element combination, ",
       "限定返回数量，": "limits the number of results, ",
       "设置数据集名称。": "sets the dataset name.",
@@ -1852,7 +1852,7 @@ mt.server -S</pre>
   -v, -V, --version     显示版本号（各子命令同样支持）`;
 
     /* 兜底值与当前 mcta/__init__.py 一致；file:// 打开或 fetch 失败时 -v 仍显示正确版本 */
-    let VERSION = 'McTa (Meta Crystal Toolkit & Analysis) 0.0.35';
+    let VERSION = 'McTa (Meta Crystal Toolkit & Analysis) 0.0.36';
 
     /* 版本号以 mcta/__init__.py 为准；站点与包同根目录时可直接读取 */
     fetch('mcta/__init__.py').then(function (r) {
@@ -2031,10 +2031,10 @@ mt.server -S</pre>
   -f --frmla       化学式，如 MoS2
   -I --mpids       直接指定 mp_id，可多个
   -n --names       导出包名称（默认按输入自动生成）
-  -k --topks       检索取前 k 个（默认 3）
+  -k --topks       检索取前 k 个（默认 5）
   -Q --refsh       忽略本地检索缓存，强制重新查询 MP
   -F --formt       结构格式：cif,poscar,json,xyz
-  --job-template   同时生成 INCAR/KPOINTS/slurm 模板（赝势目录可用时含 POTCAR）
+  -j --jobtm       同时生成 INCAR/KPOINTS/slurm 模板（赝势目录可用时含 POTCAR）
   -t --tasks       自然语言任务（LLM 模式）
   -p --provs       LLM 引擎，默认 openai
   -L --lists       列出历史导出包
@@ -2342,10 +2342,10 @@ options:
   -f --frmla       formula, e.g. MoS2
   -I --mpids       specify mp_id directly, multiple allowed
   -n --names       export package name (generated from input by default)
-  -k --topks       keep top k results (default 3)
+  -k --topks       keep top k results (default 5)
   -Q --refsh       ignore the local retrieval cache and force a new Materials Project query
   -F --formt       structure formats: cif,poscar,json,xyz
-  --job-template   INCAR/KPOINTS/slurm templates; POTCAR via mt.sh po when a pseudopotential dir is set
+  -j --jobtm       INCAR/KPOINTS/slurm templates; POTCAR via mt.sh po when a pseudopotential dir is set
   -t --tasks       natural-language task (LLM mode)
   -p --provs       LLM engine (default openai; use ollama/vllm locally)
   -L --lists       list previously exported bundles
@@ -2516,7 +2516,7 @@ options:
     const FILE_TEXT = {
       '/home/demo/mcta/README.md': ['# mcta', '', 'McTa (Meta Crystal Toolkit & Analysis).', '', 'pip install mcta', 'mt -h'],
       '/home/demo/mcta/pyproject.toml': ['[build-system]', 'requires = ["setuptools>=77", "wheel"]', '', '[project]', 'name = "mcta"', 'requires-python = ">=3.9"', 'dynamic = ["version"]'],
-      '/home/demo/mcta/mcta/__init__.py': ['"""McTa —— Meta Crystal Toolkit & Analysis"""', '', '__version__ = "0.0.35"', '', '', 'def version_string() -> str:', '    """统一的 -V 输出格式。"""'],
+      '/home/demo/mcta/mcta/__init__.py': ['"""McTa —— Meta Crystal Toolkit & Analysis"""', '', '__version__ = "0.0.36"', '', '', 'def version_string() -> str:', '    """统一的 -V 输出格式。"""'],
       '/home/demo/mcta/mcta/server/__init__.py': ['"""mt.server：CLI、进程管理与服务入口"""', '', 'from mcta import version_string', 'from ._handlers import _Server, _make_handler', 'from ._structure import ( ... )', 'from ._terminal import ( ... )'],
       '/home/demo/mcta/mcta/server/_handlers.py': ['"""HTTP 路由、文件服务与内嵌页面（PAGE）"""', '', 'PAGE = """<!doctype html>..."""', '', 'class _Server(BaseHTTPRequestHandler):', '    def do_GET(self): ...'],
       '/home/demo/mcta/mcta/server/_remote.py': ['"""mt.server 的 SSH/SFTP 后端（-R/--ssh）"""', '', 'def parse_ssh_spec(parts): ...', 'def connect(spec, password=None): ...', 'class RemoteFS:', '    def list_entries(self, path): ...', 'class _RemoteTerminal:', '    def _open_channel(self): ...'],

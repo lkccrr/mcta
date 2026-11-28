@@ -48,12 +48,12 @@ def _tool_schemas():
                 "mp_id": {"type": "string"}}, "required": ["mp_id"]}}},
         {"type": "function", "function": {
             "name": "write_structure_files",
-            "description": "把结构写成 CIF/POSCAR/JSON/XYZ 文件，可选同时生成服务器作业模板"
+            "description": "把结构写成 POSCAR（需要时可选 CIF/JSON/XYZ），可选同时生成服务器作业模板"
                            "（赝势目录可用时含 POTCAR）",
             "parameters": {"type": "object", "properties": {
                 "mp_id": {"type": "string"},
                 "formats": {"type": "array", "items": {"type": "string"}},
-                "with_job_template": {"type": "boolean",
+                "jobtm": {"type": "boolean",
                                       "description": "是否附带 INCAR/KPOINTS/slurm 模板（赝势目录可用时含 POTCAR）"}},
                 "required": ["mp_id"]}}},
         {"type": "function", "function": {
@@ -69,8 +69,8 @@ def _tool_schemas():
 _TOOL_IMPL = {
     "search_mp": search_mp,
     "get_structure": get_structure,
-    "write_structure_files": lambda mp_id, formats=None, with_job_template=False:
-        _write_with_structure(mp_id, formats, with_job_template),
+    "write_structure_files": lambda mp_id, formats=None, jobtm=False:
+        _write_with_structure(mp_id, formats, jobtm),
     "make_bundle": lambda name, mp_ids: _bundle_from_cache(name, mp_ids),
 }
 
@@ -78,12 +78,12 @@ _TOOL_IMPL = {
 _EXPORTED: dict = {}
 
 
-def _write_with_structure(mp_id: str, formats=None, with_job_template=False) -> dict:
+def _write_with_structure(mp_id: str, formats=None, jobtm=False) -> dict:
     got = get_structure(mp_id)
     if "error" in got:
         return got
     w = write_structure_files(mp_id, got["structure_dict"], formats=formats,
-                              with_job_template=with_job_template)
+                              jobtm=jobtm)
     if "error" not in w:
         _EXPORTED[mp_id] = {"export_dir": w["export_dir"], "meta": w["meta"]}
     return w
@@ -153,8 +153,8 @@ def run_with_llm(client, task: str) -> str:
 
 # ---------------------------------------------------------------- 规则模式
 def pipeline(chemsys: str = None, formula: str = None, mp_ids: list = None,
-             name: str = None, top_k: int = 3, formats=None,
-             with_job_template: bool = False, progress=None,
+             name: str = None, top_k: int = 5, formats=None,
+             jobtm: bool = False, progress=None,
              refresh: bool = False) -> dict:
     """确定性流水线：检索（可选）→ 取结构 → 写文件 → 打包。
 
@@ -183,7 +183,7 @@ def pipeline(chemsys: str = None, formula: str = None, mp_ids: list = None,
                 items.append({"mp_id": mid, "error": got["error"]})
                 continue
             w = write_structure_files(mid, got["structure_dict"], formats=formats,
-                                      with_job_template=with_job_template)
+                                      jobtm=jobtm)
             items.append(w if "error" not in w else {"mp_id": mid, "error": w["error"]})
     else:
         found = search_mp(chemsys=chemsys, formula=formula, limit=top_k,
@@ -203,7 +203,7 @@ def pipeline(chemsys: str = None, formula: str = None, mp_ids: list = None,
                 continue
             w = write_structure_files(c["mp_id"], got["structure_dict"],
                                       formats=formats,
-                                      with_job_template=with_job_template)
+                                      jobtm=jobtm)
             if "error" in w:
                 items.append({"mp_id": c["mp_id"], "error": w["error"]})
                 continue
@@ -278,6 +278,6 @@ def format_report(result: dict) -> str:
         lines.append(f"清单：    {b['manifest']}")
         lines.append(f"数据库：  {b['db']}")
         lines.append("\n包内结构：README.md / manifest.csv / mt.seek.db / <编号>/"
-                     "（各编号目录放该 id 的 CIF / POSCAR / JSON，"
+                     "（各编号目录默认只放该 id 的 POSCAR；显式指定格式时另有 CIF/JSON/XYZ，"
                      "作业模板若生成也直接放编号目录）。已在服务器就地生成，无需上传或解压。")
     return "\n".join(lines)

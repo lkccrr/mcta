@@ -121,9 +121,12 @@ def _ssh_env(extra=None):
 
 
 def cache_base_dir():
-    """与 3D 渲染缓存共用的根目录，默认 ~/.cache/mcta。"""
+    """与 3D 渲染缓存共用的根目录，默认 ~/.cache/mcta。
+
+    XDG_CACHE_HOME 本身就是缓存目录，设置后不再追加 mcta。
+    """
     return Path(os.environ.get("XDG_CACHE_HOME")
-                or str(Path.home() / ".cache")) / "mcta"
+                or str(Path.home() / ".cache" / "mcta"))
 
 
 def cache_root_for(spec):
@@ -2026,13 +2029,12 @@ class _RemoteTerminal:
         threading.Thread(target=self._reader, daemon=True).start()
 
     def _write_shell_rc(self):
-        """在远程写临时 bashrc：加载用户配置后静默设置 OSC 7 并进入初始目录。"""
+        """在远程写临时 rc：登录 shell 加载用户配置后设置 OSC 7 与初始目录。"""
         rc = "/tmp/mcta-shell-rc-%d" % os.getpid()
+        # bash --login 已经读取 /etc/profile 与 ~/.profile（后者通常加载 ~/.bashrc），
+        # 这里不再重复 source，否则 PATH 会被叠加成与登录 shell 不一致的结果。
         content = (
-            '[ -f /etc/profile ] && . /etc/profile\n'
-            '[ -f "$HOME/.profile" ] && . "$HOME/.profile"\n'
-            '[ -f "$HOME/.bashrc" ] && . "$HOME/.bashrc"\n'
-            + _PROMPT_SETUP.decode("utf-8") + "\n"
+            _PROMPT_SETUP.decode("utf-8") + "\n"
             + "cd " + shlex.quote(self.cwd_value) + "\n"
         )
         if hasattr(self.fs, "write_rc"):
@@ -2054,7 +2056,7 @@ class _RemoteTerminal:
             rc = self._write_shell_rc()
             # sshd 直接执行这条命令，输入回显机制不会介入，
             # 因此 PROMPT_COMMAND 与 cd 都不会出现在 xterm 里。
-            channel.exec_command("exec bash --rcfile " + shlex.quote(rc) + " -i")
+            channel.exec_command("exec bash --login --rcfile " + shlex.quote(rc) + " -i")
             self._hide_setup = False
         except Exception:
             if channel is not None:

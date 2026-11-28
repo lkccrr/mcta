@@ -102,14 +102,17 @@ def _rank(r: dict):
 
 # ---------------------------------------------------------------- 去重
 def _structure_of(row: dict):
-    p = Path(row["_dir"]) / "structure.json"
-    if not p.exists():
-        return None
-    try:
-        from pymatgen.core import Structure
-        return Structure.from_file(str(p))
-    except Exception:  # noqa: BLE001
-        return None
+    # 默认导出包只有 POSCAR；旧包或显式 -F 导出时才会有 structure.json。
+    for name in ("POSCAR", "structure.json"):
+        p = Path(row["_dir"]) / name
+        if not p.exists():
+            continue
+        try:
+            from pymatgen.core import Structure
+            return Structure.from_file(str(p))
+        except Exception:  # noqa: BLE001
+            continue
+    return None
 
 
 def _lattice_close(a: dict, b: dict, tol: float = 0.02) -> bool:
@@ -125,8 +128,8 @@ def _lattice_close(a: dict, b: dict, tol: float = 0.02) -> bool:
 def dedup(rows: list, tol: float = 0.2) -> dict:
     """结构级去重：同一化学式的不同相保留，真正重复的只留最优者。
 
-    优先用 StructureMatcher 比对 structure.json；缺文件时退化为
-    「空间群 + 晶格常数 2% 容差」判据。
+    优先用 StructureMatcher 比对 POSCAR（兼容旧包的 structure.json）；
+    缺文件时退化为「空间群 + 晶格常数 2% 容差」判据。
     """
     try:
         from pymatgen.analysis.structure_matcher import StructureMatcher
@@ -357,7 +360,7 @@ def llm_plan(client, task: str, rows: list) -> dict:
 
 # ---------------------------------------------------------------- 补下载
 def top_up(n: int, chemsys: str = None, formula: str = None,
-           exclude=(), formats=None, with_job_template: bool = False,
+           exclude=(), formats=None, jobtm: bool = False,
            max_ehull: float = 0.05) -> dict:
     """按化学体系/化学式再下载 n 个本地没有的结构。"""
     from .tools import get_structure, search_mp, write_structure_files
@@ -386,7 +389,7 @@ def top_up(n: int, chemsys: str = None, formula: str = None,
         if "error" in got:
             continue
         w = write_structure_files(c["mp_id"], got["structure_dict"], formats=formats,
-                                  with_job_template=with_job_template)
+                                  jobtm=jobtm)
         if "error" in w:
             continue
         w["e_above_hull_eV"] = c.get("e_above_hull_eV")
@@ -435,7 +438,7 @@ def run(task: str = None, where: str = None, do_dedup: bool = False,
         diverse_k: int = 0, outliers: bool = False, top_n: int = 0,
         chemsys: str = None, formula: str = None, out: str = None,
         dry_run: bool = False, client=None, formats=None,
-        with_job_template: bool = False, max_ehull: float = 0.05) -> dict:
+        jobtm: bool = False, max_ehull: float = 0.05) -> dict:
     """执行一次策展：LLM 计划 → 筛选 → 去重 → 多样性 → 补下载 → 导出。"""
     if diverse_k < 0 or top_n < 0:
         return {"error": "多样性数量和补下载数量不能为负数"}
@@ -551,11 +554,11 @@ def run(task: str = None, where: str = None, do_dedup: bool = False,
     if top_n and dry_run:
         lines.append(f"补下载：请求 {top_n} 个（-R 仅预览，未联网、未落盘）")
     elif top_n:
-        cached = {p.stem for p in config.STRUCT_CACHE.glob("*.json")} if \
-            config.STRUCT_CACHE.exists() else set()
+        cached = {p.stem for p in config.STRUCT_JSON_CACHE.glob("*.json")} if \
+            config.STRUCT_JSON_CACHE.exists() else set()
         tu = top_up(top_n, chemsys=chemsys, formula=formula,
                     exclude={r["mp_id"] for r in rows} | cached,
-                    formats=formats, with_job_template=with_job_template,
+                    formats=formats, jobtm=jobtm,
                     max_ehull=max_ehull)
         if "error" in tu:
             lines.append(f"补下载失败：{tu['error']}")

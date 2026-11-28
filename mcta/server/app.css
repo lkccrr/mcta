@@ -303,6 +303,12 @@
   .foot a:hover{text-decoration:underline}
   .term-box{position:relative;border-radius:14px;padding:10px;background:#10151d;box-shadow:inset 5px 5px 12px #0a0e14,inset -3px -3px 8px #1a2230;height:260px;overflow:hidden;}
   .term-box .xterm{height:100%;position:relative;z-index:1;}
+  /* 终端滚动条与目录浮窗一致：贴右侧边缘、细条、可拖动 */
+  .term-box .xterm .xterm-viewport{scrollbar-width:thin;scrollbar-color:var(--sd) transparent;}
+  .term-box .xterm .xterm-viewport::-webkit-scrollbar{width:8px;height:8px;}
+  .term-box .xterm .xterm-viewport::-webkit-scrollbar-track{background:transparent;border-radius:8px;margin:10px 0;}
+  .term-box .xterm .xterm-viewport::-webkit-scrollbar-thumb{background:var(--sd);background-clip:padding-box;border:2px solid transparent;border-radius:8px;}
+  .term-box .xterm .xterm-viewport::-webkit-scrollbar-corner{background:transparent;}
   .term-rain{position:absolute;inset:0;z-index:2;pointer-events:none;opacity:.28;transition:opacity .35s ease;border-radius:14px;}
   .term-hint{color:#9aa7bd;font-size:13.5px;line-height:1.8;padding:8px 4px;position:relative;z-index:1;}
   .mol-mask{position:fixed;inset:0;background:transparent;display:flex;align-items:center;justify-content:center;padding:16px;z-index:12;opacity:0;visibility:hidden;transition:opacity .25s ease,visibility .25s ease;}

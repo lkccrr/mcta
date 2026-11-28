@@ -81,7 +81,7 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument('-R', "--dryrn", action="store_true",
                     help="只搜索、不写盘、不打包，把候选 objective 打印出来预览")
     ap.add_argument("--home", type=str, metavar="DIR",
-                    help="工作根目录（导出包 <name>/ 与隐藏状态 .mt.seek/ 落在此处），默认当前目录")
+                    help="工作根目录（导出包 <name>/ 落在此处；状态库与缓存统一放 ~/.cache/mcta/seek），默认当前目录")
     return ap
 
 
@@ -128,7 +128,7 @@ def main(argv=None) -> int:
     r = sqs.run(args.cells, host=args.host, alloy=args.alloy,
                 supercell=args.supcl, iterations=args.iterations,
                 number=args.number, seed=args.seeds, name=args.names,
-                formats=formats, with_job_template=args.job_template,
+                formats=formats, jobtm=args.job_template,
                 dry_run=args.dryrn, progress=_plan)
     if "error" in r:
         print(r["error"], file=sys.stderr)

@@ -30,7 +30,7 @@ def _epilog() -> str:
         ("mt.seek -c Ti-C -k 3", "按化学体系检索近稳定相"),
         ("mt.seek -f MoS2 -k 5", "按化学式精确检索"),
         ("mt.seek -I mp-149 mp-2658", "直接指定结构，不检索（逗号分隔也行）"),
-        ("mt.seek -c Mn-P-S --job-template", "附带 INCAR/KPOINTS/slurm 模板（赝势可用时含 POTCAR）"),
+        ("mt.seek -c Mn-P-S -j", "附带 INCAR/KPOINTS/slurm 模板（赝势可用时含 POTCAR）"),
         ("mt.seek -Q -c Ti-C", "忽略检索缓存（12h），强制重新查询"),
         ("mt.seek -t \"找 Cr-I 的二维磁性候选\"", "自然语言模式（需 LLM 密钥）"),
         ("mt.seek -t \"...\" -p deepseek", "指定 LLM 引擎（默认 openai）"),
@@ -91,7 +91,7 @@ def demo_structures() -> list:
     return [("demo-MoS2", mos2), ("demo-NaCl", nacl), ("demo-Fe", fe)]
 
 
-def offline_demo(with_job_template: bool = False, fmts=None) -> None:
+def offline_demo(jobtm: bool = False, fmts=None) -> None:
     print("== mt.seek 离线自检（不联网，结构为内置示例）==")
     entries = []
     potcar_notes = []
@@ -99,7 +99,7 @@ def offline_demo(with_job_template: bool = False, fmts=None) -> None:
         sd = st.as_dict()
         info = describe_structure(sd)
         w = write_structure_files(mp_id, sd, formats=fmts,
-                                  with_job_template=with_job_template)
+                                  jobtm=jobtm)
         if "error" in w:
             print(f"[{mp_id}] 写文件失败: {w['error']}")
             continue
@@ -143,14 +143,14 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument('-f', "--frmla", type=str, help="化学式，如 MoS2")
     ap.add_argument('-I', "--mpids", nargs="+", help="直接指定 mp_id，可多个")
     ap.add_argument('-n', "--names", type=str, help="导出包名称（默认按输入自动生成）")
-    ap.add_argument('-k', "--topks", type=int, default=3, help="检索取前 k 个（默认 3）")
+    ap.add_argument('-k', "--topks", type=int, default=5, help="检索取前 k 个（默认 5）")
     ap.add_argument('-Q', "--refsh", action="store_true",
                     help="忽略本地检索缓存，强制重新查询 Materials Project")
     ap.add_argument('-F', "--formt", type=str,
                     default=",".join(config.DEFAULT_FORMATS),
-                    help="结构文件格式，逗号分隔：cif,poscar,json,xyz"
-                         "（poscar 也可写 vasp）")
-    ap.add_argument("--job-template", action="store_true",
+                    help="结构文件格式，逗号分隔：poscar,cif,json,xyz"
+                         "（默认只写 POSCAR；poscar 也可写 vasp）")
+    ap.add_argument('-j', "--jobtm", action="store_true",
                     help="同时生成 INCAR/KPOINTS/slurm 模板；赝势目录可用时自动拼接 POTCAR")
     ap.add_argument('-t', "--tasks", type=str, help="自然语言任务（LLM 模式）")
     ap.add_argument('-p', "--provs", type=str, default=None,
@@ -180,7 +180,7 @@ def build_parser() -> argparse.ArgumentParser:
     cur.add_argument('-R', "--dryrn", action="store_true",
                      help="只预览不导出")
     ap.add_argument("--home", type=str, metavar="DIR",
-                    help="工作根目录（导出包直接落在此处，内部缓存/状态收进其下的 .mt.seek/），默认当前目录")
+                    help="工作根目录（导出包直接落在此处；状态库与缓存统一放 ~/.cache/mcta/seek），默认当前目录")
     return ap
 
 
@@ -206,7 +206,7 @@ def _all_cached(mp_ids) -> bool:
     """所有 mp_id 都已在本地缓存时，无需 MP_API_KEY 也能重跑导出。"""
     if not mp_ids:
         return False
-    return all((config.STRUCT_CACHE / f"{_safe_name(m)}.json").exists()
+    return all((config.STRUCT_JSON_CACHE / f"{_safe_name(m)}.json").exists()
                for m in mp_ids)
 
 
@@ -268,7 +268,7 @@ def main(argv=None) -> int:
         return 0
 
     if args.offline:
-        offline_demo(with_job_template=args.job_template, fmts=formats)
+        offline_demo(jobtm=args.jobtm, fmts=formats)
         return 0
 
     # --- 本地策展：筛选 / 去重 / 多样性 / 补下载 ---
@@ -292,7 +292,7 @@ def main(argv=None) -> int:
                        top_n=args.topup, chemsys=args.chems,
                        formula=args.frmla, out=args.outdr, dry_run=args.dryrn,
                        client=client, formats=formats,
-                       with_job_template=args.job_template,
+                       jobtm=args.jobtm,
                        max_ehull=args.maxeh)
         if "error" in r:
             print(r["error"], file=sys.stderr)
@@ -349,7 +349,7 @@ def main(argv=None) -> int:
     result = agent.pipeline(chemsys=args.chems, formula=args.frmla,
                             mp_ids=mp_ids, name=args.names,
                             top_k=args.topks, formats=formats,
-                            with_job_template=args.job_template,
+                            jobtm=args.jobtm,
                             progress=_progress, refresh=args.refsh)
     print(agent.format_report(result))
     return 1 if "error" in result or "error" in (result.get("bundle") or {}) else 0

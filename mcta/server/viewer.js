@@ -5530,11 +5530,73 @@ function b64decode(text) {
   return bytes;
 }
 
+function termCellSize() {
+  // 用 xterm 自己测得的单元格尺寸，避免硬编码字符宽高导致右侧/底端留下空隙。
+  if (state.term && state.term._core && state.term._core._renderService) {
+    const d = state.term._core._renderService.dimensions;
+    if (d && d.css && d.css.cell && d.css.cell.width > 0 && d.css.cell.height > 0) {
+      return {w: d.css.cell.width, h: d.css.cell.height};
+    }
+  }
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  ctx.font = '13px ui-monospace, Consolas, "Courier New", monospace';
+  return {w: ctx.measureText("M").width || 8.2, h: 15.6};
+}
+
+function termPadding(box) {
+  const cs = window.getComputedStyle(box);
+  return {
+    x: (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0),
+    y: (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0)
+  };
+}
+
+function termViewport() {
+  if (!state.term || !state.term.element) return null;
+  return state.term.element.querySelector(".xterm-viewport");
+}
+
+function termScrollbarWidth() {
+  const vp = termViewport();
+  if (vp && vp.offsetWidth > vp.clientWidth) return vp.offsetWidth - vp.clientWidth;
+  // 首次渲染还没有 viewport 时用同款细滚动条宽度兜底。
+  return 8;
+}
+
 function termSize() {
   const box = $("termBox");
-  const cols = Math.max(20, Math.floor((box.clientWidth - 24) / 8.2));
-  const rows = Math.max(10, Math.floor((box.clientHeight - 24) / 17));
-  return {cols: cols, rows: rows};
+  const pad = termPadding(box);
+  const cell = termCellSize();
+  // 视口占满内容区，滚动条在右边缘；列数按「去掉滚动条后的可用宽度」算，
+  // 否则字符会压到滚动条下面导致它无法拖动。
+  const sb = termScrollbarWidth();
+  const cols = Math.max(20, Math.floor((box.clientWidth - pad.x - sb) / cell.w));
+  const rows = Math.max(10, Math.floor((box.clientHeight - pad.y) / cell.h));
+  return {cols: cols, rows: rows, cell: cell, sb: sb};
+}
+
+// 视口贴右边缘，只把字符网格在可用区域内居中：左右留白相等，
+// 右边距是「字符到滚动条」而不是「字符到浮窗边缘」。
+function centerTermGrid(size) {
+  if (!state.term || !state.term.element) return;
+  const box = $("termBox");
+  const pad = termPadding(box);
+  const el = state.term.element;
+  el.style.marginLeft = "0";
+  el.style.marginTop = "0";
+  el.style.width = "100%";
+  el.style.height = "100%";
+  const screen = el.querySelector(".xterm-screen");
+  if (!screen) return;
+  const cell = size.cell || termCellSize();
+  const sb = size.sb != null ? size.sb : termScrollbarWidth();
+  const availW = Math.max(0, box.clientWidth - pad.x - sb);
+  const availH = Math.max(0, box.clientHeight - pad.y);
+  const mx = Math.max(0, (availW - size.cols * cell.w) / 2);
+  const my = Math.max(0, (availH - size.rows * cell.h) / 2);
+  screen.style.marginLeft = mx + "px";
+  screen.style.marginTop = my + "px";
 }
 
 function relFromBase(cwd, base) {

@@ -370,7 +370,7 @@ RENDER_CACHE_COMPRESS_LEVEL = 6
 RENDER_CACHE_MAX_BYTES = max(
     0, int(os.environ.get("MCTA_RENDER_CACHE_MAX_MB", "512") or 512)) * 1024 * 1024
 _RENDER_CACHE_ROOT = Path(os.environ.get("XDG_CACHE_HOME")
-                          or str(Path.home() / ".cache")) / "mcta" / "render-cache"
+                          or str(Path.home() / ".cache" / "mcta")) / "render-cache"
 # 淘汰时保留最近 N 秒内的条目，避免删掉正在流式读取/刚写入的缓存。
 _RENDER_CACHE_FRESH_SECONDS = max(
     0.0, float(os.environ.get("MCTA_CACHE_FRESH_SECONDS", "30") or 30))

@@ -327,14 +327,14 @@ def _tag(i: int) -> str:
 
 
 def export(name: str, candidates: list, info: dict, formats=None,
-           with_job_template: bool = False) -> dict:
+           jobtm: bool = False) -> dict:
     """把 SQS 候选逐个落盘，打成包裹，并写入 SQS 元信息。"""
     entries, failed, exported = [], [], []
     for i, cand in enumerate(candidates, 1):
         tag = _tag(i)
-        # 每个候选固定用 cache/files/<tag> 落盘；先把旧内容清掉，
+        # 每个候选固定用 seek/staging/<tag> 中转；先把旧内容清掉，
         # 否则上一次用 -F poscar 跑出来的 POSCAR 会被这次的 -F cif 一起打包进去
-        out_dir = config.STRUCT_CACHE / "files" / tag
+        out_dir = config.STAGING_CACHE / tag
         if out_dir.exists():
             shutil.rmtree(out_dir, ignore_errors=True)
         # 按元素排一下：SQS 的位点顺序是随机的，直接写 POSCAR 会出现
@@ -342,7 +342,7 @@ def export(name: str, candidates: list, info: dict, formats=None,
         st = cand["structure"].get_sorted_structure()
         w = write_structure_files(tag, st.as_dict(), formats=formats,
                                   out_dir=str(out_dir),
-                                  with_job_template=with_job_template)
+                                  jobtm=jobtm)
         if "error" in w:
             failed.append({"tag": tag, "error": w["error"]})
             continue
@@ -447,7 +447,7 @@ def format_report(res: dict, info: dict) -> str:
               f"清单：    {b['manifest']}",
               f"数据库：  {b['db']}",
               f"SQS 信息：{res['sqs_json']}",
-              "", "包内 <编号>/ 目录放该 id 的 CIF / POSCAR / JSON，"
+              "", "包内 <编号>/ 目录默认只放该 id 的 POSCAR（显式指定格式时另有 CIF/JSON/XYZ），"
                   "作业模板若生成也直接放编号目录；已在服务器就地生成，无需上传或解压。",
               "", "提示：SQS 不唯一，objective 越小越接近理想随机固溶体；",
               "      弛豫时建议固定体积（ISIF=2），弛豫后再算一次 SRO 确认无序度未退化。"]
@@ -457,7 +457,7 @@ def format_report(res: dict, info: dict) -> str:
 # ---------------------------------------------------------------- 入口
 def run(cell_path: str, host: str = None, alloy: str = None, supercell=None,
         iterations: int = DEFAULT_ITERATIONS, number: int = 1, seed=None,
-        name: str = None, formats=None, with_job_template: bool = False,
+        name: str = None, formats=None, jobtm: bool = False,
         dry_run: bool = False, progress=None) -> dict:
     """CLI 调用入口：读晶胞 → 规划 → 优化 → 落盘打包。"""
     info = engine_info()
@@ -493,7 +493,7 @@ def run(cell_path: str, host: str = None, alloy: str = None, supercell=None,
 
     bname = _safe_name(name or f"sqs-{p['formula_in']}-{p['n_super']}")
     res = export(bname, cands, p, formats=formats,
-                 with_job_template=with_job_template)
+                 jobtm=jobtm)
     if "error" in res:
         return res
     res.update({"info": p})

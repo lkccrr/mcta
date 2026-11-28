@@ -7,8 +7,8 @@ def _resolve_workroot() -> Path:
     """工作根目录：MT_SEEK_HOME 优先，否则用当前目录。
 
     导出包直接落在这个根目录下（<包名>/），不再套 exports/ 中间层；
-    状态库放隐藏的 .mt.seek/，缓存统一放 ~/.cache/mcta/seek/
-    （可用 XDG_CACHE_HOME 覆盖根），不污染工作目录。
+    状态库与缓存统一放缓存根下的 seek/（默认 ~/.cache/mcta/seek），
+    不污染工作目录。
     """
     env = os.environ.get("MT_SEEK_HOME")
     if env:
@@ -16,30 +16,34 @@ def _resolve_workroot() -> Path:
     return Path.cwd()
 
 
-def _resolve_cache_dir() -> Path:
-    """mt.seek 缓存根目录：XDG_CACHE_HOME/mcta/seek，默认 ~/.cache/mcta/seek。"""
+def _cache_root() -> Path:
+    """统一缓存根：默认 ~/.cache/mcta；XDG_CACHE_HOME 本身就是缓存目录。
+
+    设置 XDG_CACHE_HOME 时不再自动追加 mcta，避免路径变成 .../mcta/mcta。
+    """
     root = os.environ.get("XDG_CACHE_HOME")
-    base = Path(root).expanduser() if root else Path.home() / ".cache"
-    return (base / "mcta" / "seek").resolve()
+    base = Path(root).expanduser() if root else Path.home() / ".cache" / "mcta"
+    return base.resolve()
 
 
 WORKROOT = _resolve_workroot()
 # 导出包根 = 工作根：每个任务直接生成 <包名>/，内部仍用 EXPORT_ROOT 这个名字
 # 复用扫描逻辑（curate/ml 扫 */manifest.csv）。
 EXPORT_ROOT = WORKROOT
-STATE_DIR = WORKROOT / ".mt.seek"           # 隐藏的内部状态（SQLite 事件库）
-STRUCT_CACHE = _resolve_cache_dir()         # 统一缓存（MP 结构、检索、SQS 中间文件）
+CACHE_ROOT = _cache_root()                  # ~/.cache/mcta（XDG_CACHE_HOME 覆盖时直接用它）
+STRUCT_CACHE = CACHE_ROOT / "seek"          # mt.seek 缓存根：状态库、检索缓存
+STRUCT_JSON_CACHE = STRUCT_CACHE / "structure"  # 下载的 MP 结构 JSON（mp-<id>.json）
+STAGING_CACHE = STRUCT_CACHE / "staging"   # 导出前的结构目录中转：~/.cache/mcta/seek/staging
+STATE_DIR = STRUCT_CACHE                    # 状态库与缓存同处，不再写工作目录
 DB_PATH = STATE_DIR / "mt.seek.db"          # 事件与任务状态（SQLite）；打包时复制进包
 
 
 def set_home(path) -> Path:
     """运行时切换工作根目录（供 --home 使用）。"""
-    global WORKROOT, EXPORT_ROOT, STATE_DIR, DB_PATH, MP_API_KEY
+    global WORKROOT, EXPORT_ROOT, MP_API_KEY
     WORKROOT = Path(path).expanduser().resolve()
     EXPORT_ROOT = WORKROOT
-    STATE_DIR = WORKROOT / ".mt.seek"
-    # 缓存目录是用户级、跨 --home 复用，set_home 不应改变它。
-    DB_PATH = STATE_DIR / "mt.seek.db"
+    # 状态库与缓存都是用户级、跨 --home 复用，切换根目录不应改变它们。
     # MP_API_KEY 在模块导入时解析；切换根目录后必须重读该目录的 mt.seek.conf，
     # 否则 --home 指定的配置永远不会生效。
     MP_API_KEY = os.environ.get("MP_API_KEY", "") or _read_conf_file("MP_API_KEY")
@@ -144,7 +148,7 @@ def set_llm_provider(provider: str) -> dict:
     return cfg
 
 # --- 输出 ---
-DEFAULT_FORMATS = ("cif", "poscar", "json")   # 结构文件格式
+DEFAULT_FORMATS = ("poscar",)     # 默认只在结构目录放 POSCAR；其他格式需 -F 显式指定
 STRUCT_FORMATS = ("cif", "poscar", "vasp", "json", "xyz")   # 允许的格式（vasp 同 poscar）
 MAX_LLM_TURNS = int(os.environ.get("MT_SEEK_MAX_TURNS", "30"))
 MAX_CANDIDATES = int(os.environ.get("MT_SEEK_MAX_CAND", "20"))
@@ -158,9 +162,46 @@ MAGNETIC_ELEMENTS = {
 
 
 def ensure_dirs() -> None:
-    # 状态库留在 .mt.seek/；缓存统一放用户级 ~/.cache/mcta/seek/。
+    """确保缓存目录存在，并从旧位置迁移状态库与结构缓存。"""
+    CACHE_ROOT.mkdir(parents=True, exist_ok=True)
     STATE_DIR.mkdir(parents=True, exist_ok=True)
-    STRUCT_CACHE.mkdir(parents=True, exist_ok=True)
+    STRUCT_JSON_CACHE.mkdir(parents=True, exist_ok=True)
+    STAGING_CACHE.mkdir(parents=True, exist_ok=True)
+    _migrate_legacy_db()
+    _migrate_legacy_structures()
+
+
+def _migrate_legacy_structures() -> None:
+    """把旧版直接放在 seek/ 根的 mp-<id>.json 移入 seek/structure/。"""
+    if not STRUCT_CACHE.is_dir():
+        return
+    for src in sorted(STRUCT_CACHE.glob("mp-*.json")):
+        dst = STRUCT_JSON_CACHE / src.name
+        if dst.exists():
+            continue
+        try:
+            src.rename(dst)
+        except OSError:
+            pass
+
+
+def _migrate_legacy_db() -> None:
+    """把旧版 WORKROOT/.mt.seek/mt.seek.db 复制到统一缓存（保留原件）。"""
+    import shutil
+
+    if DB_PATH.exists():
+        return
+    legacy = WORKROOT / ".mt.seek" / "mt.seek.db"
+    if not legacy.is_file():
+        return
+    try:
+        DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+        for suffix in ("", "-wal", "-shm"):
+            src = legacy.with_name(legacy.name + suffix)
+            if src.exists():
+                shutil.copy2(src, DB_PATH.with_name(DB_PATH.name + suffix))
+    except OSError:
+        pass
 
 
 def export_dir_for(name: str) -> Path:

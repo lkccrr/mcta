@@ -103,8 +103,9 @@ _LOG_PATH = None
 
 # ------------------------------------------------------------------ 通用 ---
 def _state_dir():
-    base = os.environ.get("XDG_CACHE_HOME") or os.path.join(str(Path.home()), ".cache")
-    path = Path(base) / "mcta"
+    # XDG_CACHE_HOME 本身就是缓存目录，默认 ~/.cache/mcta，不再追加 mcta。
+    base = os.environ.get("XDG_CACHE_HOME") or os.path.join(str(Path.home()), ".cache", "mcta")
+    path = Path(base)
     path.mkdir(parents=True, exist_ok=True)
     return path
 

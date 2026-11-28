@@ -378,6 +378,35 @@ function mdInline(s) {
   return t;
 }
 
+function splitMdRow(line) {
+  let s = String(line || "").trim();
+  if (s.charAt(0) === "|") s = s.slice(1);
+  if (s.charAt(s.length - 1) === "|" && !/\\\|$/.test(s)) s = s.slice(0, -1);
+  const cells = [];
+  let cur = "", escaped = false;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (escaped) {
+      if (c === "|") cur += "|";
+      else cur += "\\" + c;
+      escaped = false;
+      continue;
+    }
+    if (c === "\\") { escaped = true; continue; }
+    if (c === "|") { cells.push(cur.trim()); cur = ""; continue; }
+    cur += c;
+  }
+  if (escaped) cur += "\\";
+  cells.push(cur.trim());
+  return cells;
+}
+
+function isMdTableSep(line) {
+  if (String(line || "").indexOf("|") < 0) return false;
+  const cells = splitMdRow(line);
+  return cells.length > 0 && cells.every(function (c) { return /^:?-{3,}:?$/.test(c); });
+}
+
 function renderMarkdown(text) {
   const lines = String(text || "").replace(/\r\n?/g, "\n").split("\n");
   const out = [];
@@ -396,6 +425,24 @@ function renderMarkdown(text) {
     }
     if (code) { out.push(escHtml(line) + "\n"); continue; }
     if (!line.trim()) { closeList(); continue; }
+    // Markdown 表格：表头行 + | --- | 分隔行 + 若干数据行。
+    if (line.indexOf("|") >= 0 && i + 1 < lines.length && isMdTableSep(lines[i + 1])) {
+      closeList();
+      const heads = splitMdRow(line);
+      out.push("<table><thead><tr>");
+      heads.forEach(function (h) { out.push("<th>" + mdInline(h) + "</th>"); });
+      out.push("</tr></thead><tbody>");
+      i++;  // 跳过分隔行
+      while (i + 1 < lines.length && lines[i + 1].indexOf("|") >= 0 && lines[i + 1].trim()) {
+        i++;
+        const cells = splitMdRow(lines[i]);
+        out.push("<tr>");
+        heads.forEach(function (_, j) { out.push("<td>" + mdInline(cells[j] || "") + "</td>"); });
+        out.push("</tr>");
+      }
+      out.push("</tbody></table>");
+      continue;
+    }
     const h = line.match(/^(#{1,6})\s+(.*)$/);
     if (h) {
       closeList();
@@ -2807,12 +2854,12 @@ function fitTerm() {
   if (!state.term) return;
   const next = termSize();
   state.term.resize(next.cols, next.rows);
+  centerTermGrid(next);
 }
 
 function startTerminal() {
   if (state.term || !state.user || !window.Terminal) return;
   $("termHint").classList.add("hidden");
-  const size = termSize();
   const term = new Terminal({
     cursorBlink: true,
     fontSize: 13,
@@ -2820,8 +2867,8 @@ function startTerminal() {
     theme: {background: "#10151d", foreground: "#d7deea", cursor: "#7fa8ff", selectionBackground: "#2a3b57"}
   });
   term.open($("termBox"));
-  term.resize(size.cols, size.rows);
   state.term = term;
+  fitTerm();
 
   const termBox = $("termBox");
   termBox.addEventListener("mouseup", function () {
@@ -2882,7 +2929,7 @@ function startTerminal() {
     }).catch(function () { /* 忽略 */ });
   });
 
-  const es = new EventSource("/api/term/stream?cols=" + size.cols + "&rows=" + size.rows + "&sid=" + q(SESSION_ID));
+  const es = new EventSource("/api/term/stream?cols=" + term.cols + "&rows=" + term.rows + "&sid=" + q(SESSION_ID));
   state.es = es;
   es.onmessage = function (event) {
     if (!event.data) return;

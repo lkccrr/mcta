@@ -89,7 +89,9 @@ class _Terminal:
                 env = os.environ.copy()
                 env.update({"TERM": "xterm-256color", "COLORTERM": "truecolor"})
                 shell = env.get("SHELL") or "/bin/bash"
-                os.execvpe(shell, [shell, "-i"], env)
+                # 登录 shell：与 SSH/普通登录终端一致，读取 /etc/profile 与 ~/.profile，
+                # 避免网页终端的 $PATH 与通常 shell 不一致。
+                os.execvpe(shell, [shell, "-l", "-i"], env)
             finally:
                 os._exit(1)
 
